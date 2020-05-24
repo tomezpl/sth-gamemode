@@ -1,4 +1,31 @@
+-- Game State
+gs = {
+    huntStarted = false,
+    huntedPlayer = -1,
+    winningTeam = -1,
+    timeLimit = 60000, -- 1 minute for testing
+    timeLeft = 60000
+}
 
+-- Update function that will run on each server tick of the hunt
+huntUpdate = function()
+    while gs.huntStarted == true do
+        Citizen.Wait(0)
+
+        if gs.timeLeft <= 0 then
+            gs.huntStarted = false
+            TriggerClientEvent("sth:notifyWinner", gs.huntedPlayer)
+        end
+    end
+end
+
+timeUpdate = function()
+    while gs.huntStarted == true do
+        TriggerClientEvent("sth:tickTime", -1, gs.timeLeft)
+        Citizen.Wait(1000)
+        gs.timeLeft = gs.timeLeft - 1000
+    end
+end
 
 startHunt = function()
     n = 0
@@ -14,6 +41,13 @@ startHunt = function()
             TriggerClientEvent("sth:notifyHunters", players[i], players[randomPlayer])
         end
     end
+
+    gs.huntStarted = true
+    gs.huntedPlayer = randomPlayer
+    gs.winningTeam = 0 -- Make the hunted player a winner by default; this will be only overwritten if the hunted player dies.
+
+    Citizen.CreateThread(huntUpdate)
+    Citizen.CreateThread(timeUpdate)
 end
 
 replicatePlayerModelChange = function(playerId, hash)

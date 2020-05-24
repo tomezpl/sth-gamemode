@@ -110,6 +110,7 @@ team = 1 -- 1 if hunter, 0 if hunted
 blipId = nil
 huntedIdx = 0
 huntStarted = false
+currentTimeLeft = -1
 
 notifyHuntedPlayer = function()
     huntStarted = true
@@ -133,7 +134,7 @@ notifyHunters = function(serverId)
     -- Get index of hunted player from server ID (provided from sth:startHunt)
     huntedIdx = GetPlayerFromServerId(serverId)
     local huntedPed = GetPlayerPed(huntedIdx)
-    local huntedPos = GetEntityCoords(huntedPed)--]]
+    local huntedPos = GetEntityCoords(huntedPed)
 
     blipId = AddBlipForRadius(huntedPos.x, huntedPos.y, huntedPos.z, 200.0)
     -- Maybe try 66 instead of 16 like in .NET?
@@ -143,6 +144,32 @@ notifyHunters = function(serverId)
 
     currentObj = " is the hunted! Track them down."
     team = 1
+end
+
+notifyWinner = function()
+    -- TODO: this might appear after a yellow huntedPlayerName for the hunters
+    currentObj = "You've won the hunt!"
+end
+
+msToMMSS = function(ms)
+    if(ms >= 1000) then
+        local sTotal = math.floor(ms / 1000)
+        local s = sTotal % 60
+        local m = math.floor((sTotal - s) / 60)
+        local sStr = ""
+        if(s < 10) then
+            sStr = "0"
+        end
+        sStr = sStr .. tostring(s)
+        mStr = tostring(m)
+        return mStr .. ":" .. sStr
+    end
+    return "0:00"
+end
+
+-- Receives current time from server
+tickTime = function(time)
+    currentTimeLeft = time
 end
 
 -- Tick thread
@@ -163,6 +190,23 @@ tickUpdate = function()
                 SetColourOfNextTextComponent(0)
                 AddTextComponentString(currentObj)
                 EndTextCommandPrint(1, true)
+
+                --local timeStr = msToMMSS(currentTimeLeft)
+                local timeStr = msToMMSS(currentTimeLeft)
+                local rectWidth = 0.001
+                BeginTextCommandWidth("STRING")
+                AddTextComponentString("00:00")
+                rectWidth = EndTextCommandGetWidth(true)
+                local textWidth = 0.001
+                BeginTextCommandWidth("STRING")
+                AddTextComponentString(timeStr)
+                textWidth = EndTextCommandGetWidth(true)
+
+                DrawRect(0.94, 0.875, rectWidth + 0.001, 0.06, 0, 0, 0, 128)
+
+                BeginTextCommandDisplayText("STRING")
+                AddTextComponentString(timeStr)
+                EndTextCommandDisplayText(0.89 + 0.0005 + (rectWidth/6), 0.835)
             end
         end
     end
@@ -176,3 +220,7 @@ RegisterNetEvent("sth:notifyHuntedPlayer")
 AddEventHandler("sth:notifyHuntedPlayer", notifyHuntedPlayer)
 RegisterNetEvent("sth:notifyHunters")
 AddEventHandler("sth:notifyHunters", notifyHunters)
+RegisterNetEvent("sth:notifyWinner")
+AddEventHandler("sth:notifyWinner", notifyWinner)
+RegisterNetEvent("sth:tickTime")
+AddEventHandler("sth:tickTime", tickTime)
