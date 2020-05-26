@@ -2,9 +2,19 @@
 currentObj = "" -- Current objective text displayed at the bottom of the screen.
 team = 1 -- 1 if hunter, 0 if hunted
 blipId = nil
-huntedIdx = 0
+huntedIdx = nil
 huntStarted = false
 currentTimeLeft = -1
+
+-- Time it takes for the blip to fade
+blipTimeLimit = 5000
+blipTimer = 5000
+
+-- Time it takes for the blip to start fading
+blipLifespan = 3000
+
+-- Hunted player ping interval
+huntedPingInterval = 10000
 
 -- Spawns
 dockSpawn = vector3(851.379, -3140.005, 5.900808)
@@ -95,6 +105,16 @@ onClientResourceStart = function()
     RegisterCommand("setskin", setSkin)
 end
 
+keepPingingPlayer = function()
+    while huntStarted == true do
+        pingBlipOnMap(blipId, blipLifespan)
+        Citizen.Wait(huntedPingInterval)
+        if huntStarted == true then
+            blipId = createBlipForPlayer(huntedIdx)
+        end
+    end
+end
+
 notifyHuntedPlayer = function()
     huntStarted = true
     -- Get current (hunted) player's ped
@@ -102,11 +122,10 @@ notifyHuntedPlayer = function()
     local huntedPed = GetPlayerPed(PlayerId())
     local huntedPos = GetEntityCoords(huntedPed)
 
-    blipId = AddBlipForRadius(huntedPos.x, huntedPos.y, huntedPos.z, 200.0)
-    -- Maybe try 66 instead of 16 like in .NET?
-    SetBlipColour(blipId, 66)
-    SetBlipAlpha(blipId, 128)
-    SetBlipNameToPlayerName(blipId, GetPlayerName(PlayerId()))
+    blipId = createBlipForPlayer(huntedIdx)
+    
+    -- Regularly ping the hunted player on the map
+    Citizen.CreateThread(keepPingingPlayer)
 
     currentObj = "Survive"
     team = 0
@@ -119,19 +138,72 @@ notifyHunters = function(serverId)
     local huntedPed = GetPlayerPed(huntedIdx)
     local huntedPos = GetEntityCoords(huntedPed)
 
-    blipId = AddBlipForRadius(huntedPos.x, huntedPos.y, huntedPos.z, 200.0)
-    -- Maybe try 66 instead of 16 like in .NET?
-    SetBlipColour(blipId, 66)
-    SetBlipAlpha(blipId, 128)
-    SetBlipNameToPlayerName(blipId, GetPlayerName(huntedIdx))
+    blipId = createBlipForPlayer(huntedIdx)
+    
+    -- Regularly ping the hunted player on the map
+    Citizen.CreateThread(keepPingingPlayer)
 
     currentObj = " is the hunted! Track them down."
     team = 1
 end
 
-notifyWinner = function()
+endHunt = function()
+    currentObj = ""
+    currentTimeLeft = -1
+    huntStarted = false
+    huntedIdx = nil
+end
+
+fadeBlip = function(blip, initialOpacity, duration)
+    Citizen.CreateThread(function() 
+        local timeWaited = 0
+        TriggerEvent("chat:addMessage", { args = { blip } })
+        while timeWaited < duration do
+            local alpha = math.floor(128.0 * (1.0 - (timeWaited / duration)))
+            SetBlipAlpha(blip, alpha)
+            if alpha <= 0 then
+                DeleteEntity(blip)
+            end
+            Citizen.Wait(100)
+            timeWaited = timeWaited + 100
+        end
+    end)
+end
+
+-- Shows a 200m radius blip of a player on the map
+createBlipForPlayer = function(playerId)
+    blipTimer = blipTimeLimit
+    local playerPos = GetEntityCoords(GetPlayerPed(playerId))
+    local radius = 200.0
+    -- "Error" of the radius
+    local randomRadiusLimit = radius * 0.875
+    local offsetX = math.random(-1.0 * randomRadiusLimit, randomRadiusLimit)
+    local offsetY = math.random(-1.0 * randomRadiusLimit, randomRadiusLimit)
+    local newBlip = AddBlipForRadius(playerPos.x + offsetX, playerPos.y, playerPos.z + offsetY, radius)
+    SetBlipColour(newBlip, 66)
+    SetBlipAlpha(newBlip, 128)
+    SetBlipNameToPlayerName(newBlip, GetPlayerName(playerId))
+
+    return newBlip
+end
+
+pingBlipOnMap = function(blip, duration)
+    SetBlipAlpha(blip, 128)
+    Citizen.SetTimeout(duration, 
+    function() 
+        fadeBlip(blip, 128, blipTimeLimit) 
+    end)
+end
+
+notifyWinner = function(winningTeam)
     -- TODO: this might appear after a yellow huntedPlayerName for the hunters
-    currentObj = "You've won the hunt!"
+    TriggerEvent("chat:addMessage", {args={"Yuo win"}})
+    if team == winningTeam then
+        currentObj = "You've won the hunt!"
+    else
+        currentObj = "You've lost the hunt!"
+    end
+    Citizen.SetTimeout(5000, endHunt)
 end
 
 -- Receives current time from server
@@ -144,20 +216,21 @@ tickUpdate = function()
     while true do
         Citizen.Wait(1)
         if GetPlayerPed(PlayerId()) ~= 0 then
-          ResetPlayerStamina(PlayerId())
+            ResetPlayerStamina(PlayerId())
 
-            if (huntStarted == true and blipId ~= nil and GetPlayerPed(huntedIdx) ~= 0) then
-                SetBlipCoords(blipId, GetEntityCoords(GetPlayerPed(huntedIdx)))
-                AddTextEntry("CURRENT_OBJECTIVE", "~a~~a~")
-                BeginTextCommandPrint("CURRENT_OBJECTIVE")
+            AddTextEntry("CURRENT_OBJECTIVE", "~a~~a~")
+            BeginTextCommandPrint("CURRENT_OBJECTIVE")
+            if (huntStarted == true and huntedIdx ~= nil and GetPlayerPed(huntedIdx) ~= 0) then
                 if(team == 1) then
                     SetColourOfNextTextComponent(12)
                     AddTextComponentString(GetPlayerName(huntedIdx))
                 end
-                SetColourOfNextTextComponent(0)
-                AddTextComponentString(currentObj)
-                EndTextCommandPrint(1, true)
+            end
+            SetColourOfNextTextComponent(0)
+            AddTextComponentString(currentObj)
+            EndTextCommandPrint(1, true)
 
+            if(currentTimeLeft >= 0) then
                 --local timeStr = msToMMSS(currentTimeLeft)
                 local timeStr = msToMMSS(currentTimeLeft)
                 local rectWidth = 0.001

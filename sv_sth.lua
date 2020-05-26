@@ -14,7 +14,7 @@ huntUpdate = function()
 
         if gs.timeLeft <= 0 then
             gs.huntStarted = false
-            TriggerClientEvent("sth:notifyWinner", gs.huntedPlayer)
+            TriggerClientEvent("sth:notifyWinner", -1, gs.winningTeam)
         end
     end
 end
