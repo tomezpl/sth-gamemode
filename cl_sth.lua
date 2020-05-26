@@ -1,40 +1,37 @@
--- FiveM events
+-- Globals
+currentObj = "" -- Current objective text displayed at the bottom of the screen.
+team = 1 -- 1 if hunter, 0 if hunted
+blipId = nil
+huntedIdx = 0
+huntStarted = false
+currentTimeLeft = -1
 
+-- Spawns
+dockSpawn = vector3(851.379, -3140.005, 5.900808)
+
+-- FiveM events
 autoSpawnCallback = function()
-    --[[spawnData = json.decode(exports["spawnmanager"].loadSpawns())
-    spawn = spawnData.spawns[1]--]]
-    --exports["spawnmanager"].spawnPlayer(x=spawn.x, y=spawn.y, z=spawn.z, model=spawn.model)
-    exports.spawnmanager:spawnPlayer({x=851.379, y=-3140.005, z=5.900808, model="a_m_m_skater_01"})
+    exports.spawnmanager:spawnPlayer({x=dockSpawn.x, y=dockSpawn.y, z=dockSpawn.z, model="a_m_m_skater_01"})
 end
 
 onClientGameTypeStart = function()
-    --if GetCurrentResourceName() == resName then
     exports.spawnmanager:setAutoSpawnCallback(autoSpawnCallback)
     exports.spawnmanager:setAutoSpawn(true)
     exports.spawnmanager:forceRespawn()
 
     Citizen.CreateThread(tickUpdate)
-    --end
 end
 
+-- Survive the Hunt events
 startHunt = function(source, args)
     TriggerServerEvent("sth:startHunt")
 end
 
 setSkin = function(source, args)
-    TriggerEvent("chat:addMessage", {
-        args = { tostring("args") }
-    })
-    TriggerEvent("chat:addMessage", {
-        args = { tostring(args) }
-    })
     local count = 0
     for _,v in ipairs(args) do
         count = count + 1
     end
-    TriggerEvent("chat:addMessage", {
-        args = { tostring(count) }
-    })
     if count >= 1 then
         local hash = GetHashKey(args[1])
         if IsModelValid(hash) then
@@ -46,10 +43,6 @@ setSkin = function(source, args)
             SetPedDefaultComponentVariation(GetPlayerPed(PlayerId()))
             SetPedDefaultComponentVariation(GetPlayerPed(PlayerId()))
             TriggerServerEvent("sth:replicatePlayerModelChange", PlayerId(), hash)
-            --[[msg = "You're now Lester, " . GetPlayerName(PlayerId()) . "!"
-            TriggerEvent('chat:addMessage', {
-                args = { msg }
-            })--]]
         else
             TriggerEvent('chat:addMessage', {
                 args = { "Invalid model hash!" }
@@ -62,31 +55,33 @@ setSkin = function(source, args)
     end
 end
 
+-- Converts milliseconds to minutes:seconds string
+msToMMSS = function(ms)
+    if(ms >= 1000) then
+        local sTotal = math.floor(ms / 1000)
+        local s = sTotal % 60
+        local m = math.floor((sTotal - s) / 60)
+        local sStr = ""
+        if(s < 10) then
+            sStr = "0"
+        end
+        sStr = sStr .. tostring(s)
+        mStr = tostring(m)
+        return mStr .. ":" .. sStr
+    end
+    return "0:00"
+end
+
 replicatePlayerModelChangeCl = function(playerId, hash)
-    TriggerEvent('chat:addMessage', {
-        args = { "cunt" }
-    })
     if playerId ~= PlayerId() then
-        TriggerEvent('chat:addMessage', {
-            args = { "cunt1" }
-        })
         if IsModelValid(hash) then
             RequestModel(hash)
             while HasModelLoaded(hash) == false do
                 Wait(500)
             end
-            TriggerEvent('chat:addMessage', {
-                args = { "cunt2" }
-            })
             SetPlayerModel(playerId, hash)
-            TriggerEvent('chat:addMessage', {
-                args = { "cunt3" }
-            })
             SetPedDefaultComponentVariation(GetPlayerPed(playerId))
             SetPedDefaultComponentVariation(GetPlayerPed(playerId))
-            TriggerEvent('chat:addMessage', {
-                args = { "cunt4" }
-            })
         else
             TriggerEvent('chat:addMessage', {
                 args = { "Invalid model hash!" }
@@ -96,21 +91,9 @@ replicatePlayerModelChangeCl = function(playerId, hash)
 end
 
 onClientResourceStart = function()
-    --if GetCurrentResourceName() == resName then
-        RegisterCommand("starthunt", startHunt)
-        RegisterCommand("setskin", setSkin)
-    --end
+    RegisterCommand("starthunt", startHunt)
+    RegisterCommand("setskin", setSkin)
 end
-
--- Survive the Hunt events
-
--- Current objective text displayed at the bottom of the screen.
-currentObj = ""
-team = 1 -- 1 if hunter, 0 if hunted
-blipId = nil
-huntedIdx = 0
-huntStarted = false
-currentTimeLeft = -1
 
 notifyHuntedPlayer = function()
     huntStarted = true
@@ -149,22 +132,6 @@ end
 notifyWinner = function()
     -- TODO: this might appear after a yellow huntedPlayerName for the hunters
     currentObj = "You've won the hunt!"
-end
-
-msToMMSS = function(ms)
-    if(ms >= 1000) then
-        local sTotal = math.floor(ms / 1000)
-        local s = sTotal % 60
-        local m = math.floor((sTotal - s) / 60)
-        local sStr = ""
-        if(s < 10) then
-            sStr = "0"
-        end
-        sStr = sStr .. tostring(s)
-        mStr = tostring(m)
-        return mStr .. ":" .. sStr
-    end
-    return "0:00"
 end
 
 -- Receives current time from server
@@ -212,6 +179,7 @@ tickUpdate = function()
     end
 end
 
+-- Register & Add Events
 RegisterNetEvent("sth:replicatePlayerModelChangeCl")
 AddEventHandler("sth:replicatePlayerModelChangeCl", replicatePlayerModelChangeCl)
 AddEventHandler("onClientResourceStart", onClientResourceStart)
