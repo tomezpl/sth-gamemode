@@ -19,6 +19,8 @@ huntUpdate = function()
     end
 end
 
+-- Update the timer for all clients during the hunt
+-- TODO: Move to client-side script to avoid spamming ClientEvents every second?
 timeUpdate = function()
     while gs.huntStarted == true do
         TriggerClientEvent("sth:tickTime", -1, gs.timeLeft)
