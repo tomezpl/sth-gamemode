@@ -47,6 +47,7 @@ startHunt = function()
     gs.huntStarted = true
     gs.huntedPlayer = randomPlayer
     gs.winningTeam = 0 -- Make the hunted player a winner by default; this will be only overwritten if the hunted player dies.
+    gs.timeLeft = gs.timeLimit;
 
     Citizen.CreateThread(huntUpdate)
     Citizen.CreateThread(timeUpdate)
