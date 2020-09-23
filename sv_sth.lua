@@ -4,7 +4,8 @@ gs = {
     huntedPlayer = -1,
     winningTeam = -1,
     timeLimit = 60000, -- 1 minute for testing
-    timeLeft = 60000
+    timeLeft = 60000,
+    huntedPingInterval = 10000
 }
 
 -- Update function that will run on each server tick of the hunt
@@ -51,11 +52,31 @@ startHunt = function()
 
     Citizen.CreateThread(huntUpdate)
     Citizen.CreateThread(timeUpdate)
+    Citizen.CreateThread(keepPinging)
 end
 
 replicatePlayerModelChange = function(playerId, hash)
     print("Replicating model change")
     TriggerClientEvent("sth:replicatePlayerModelChangeCl", -1, playerId, hash)
+end
+
+keepPinging = function()
+    while gs.huntStarted == true do
+        createPing()
+        Citizen.Wait(gs.huntedPingInterval)
+    end
+end
+
+createPing = function()
+    playerPos = GetEntityCoords(GetPlayerPed(gs.huntedPlayer))
+    radius = 200.0
+    randomRadiusLimit = radius * 0.875
+    offsetX = math.random(-1, 1) * randomRadiusLimit
+    offsetY = math.random(-1, 1) * randomRadiusLimit
+
+    -- Subtracting 1 as we'll be using this in JS (0-indexed)
+    TriggerClientEvent("sth:showPingOnMap", -1, { pid = gs.huntedPlayer-1, ox = offsetX, oy = offsetY, r = radius })
+    print("Test!")
 end
 
 RegisterNetEvent("sth:startHunt")

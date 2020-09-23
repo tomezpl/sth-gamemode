@@ -157,10 +157,10 @@ function notifyHuntedPlayer() {
 
     //if(DoesEntityExist(blipId)) {
     //}
-    createBlipForPlayer(huntedIdx);
+    //createBlipForPlayer(huntedIdx);
 
-    keepPingingPlayer();
-    var ping = setInterval(() => { if(ping && !huntStarted) { clearInterval(ping); } else { keepPingingPlayer(); } }, huntedPingInterval);
+    //keepPingingPlayer();
+    //var ping = setInterval(() => { if(ping && !huntStarted) { clearInterval(ping); } else { keepPingingPlayer(); } }, huntedPingInterval);
 
     currentObj = "Survive";
     team = 0;
@@ -174,10 +174,10 @@ function notifyHunters(serverId) {
 
     //if(DoesEntityExist(blipId)) {
     //}
-    createBlipForPlayer(huntedIdx);
+    //createBlipForPlayer(huntedIdx);
 
-    keepPingingPlayer();
-    var ping = setInterval(() => { if(ping && !huntStarted) { clearInterval(ping); } else { keepPingingPlayer(); } }, huntedPingInterval);
+    //keepPingingPlayer();
+    //var ping = setInterval(() => { if(ping && !huntStarted) { clearInterval(ping); } else { keepPingingPlayer(); } }, huntedPingInterval);
 
     currentObj = " is the hunted! Track them down."
     team = 1;
@@ -211,26 +211,32 @@ function fadeBlip(blip, initialOpacity, duration) {
     //}, duration);
 }
 
-// TODO:
-// This needs to go into server code!
-function createBlipForPlayer(playerId) {
+function createBlipForPlayer(args) {
     blipTimer = blipTimeLimit;
-    let playerPos = GetEntityCoords(GetPlayerPed(playerId));
-    let radius = 200.0;
-    let randomRadiusLimit = radius * 0.875;
-    let offsetX = ((Math.random() * 2) - 1) * randomRadiusLimit;
-    let offsetY = ((Math.random() * 2) - 1) * randomRadiusLimit;
+    const radius = parseInt(args.r);
+    const offsetX = Number(args.ox);
+    const offsetY = Number(args.oy);
+    const playerId = Number(args.pid);
+    TriggerEvent("chat:addMessage", {args: [`local id: ${PlayerId()}, server id: ${playerId}`]});
+    TriggerEvent("chat:addMessage", {args: [`radius: ${radius === 200}`]});
+    TriggerEvent("chat:addMessage", {args: [`offsetX: ${offsetX}`]});
+    let playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
+    TriggerEvent("chat:addMessage", {args: ["Test"]});
     if(blipId === null) {
+        TriggerEvent("chat:addMessage", {args: ["Creating blip"]});
         blipId = AddBlipForRadius(playerPos[0] + offsetX, playerPos[1], playerPos[2] + offsetY, radius);
     }
     else {
+        TriggerEvent("chat:addMessage", {args: ["Updating blip"]});
         SetBlipCoords(blipId, playerPos[0] + offsetX, playerPos[1], playerPos[2] + offsetY);
     }
-    SetBlipColour(blipId)
+    TriggerEvent("chat:addMessage", {args: ["Test2"]});
     SetBlipColour(blipId, 66);
     SetBlipAlpha(blipId, 128);
     SetBlipDisplay(blipId, 6);
-    SetBlipNameToPlayerName(blipId, GetPlayerName(playerId));
+    TriggerEvent("chat:addMessage", {args: ["Test3"]});
+    SetBlipNameToPlayerName(blipId, GetPlayerName(GetPlayerFromServerId(playerId)));
+    TriggerEvent("chat:addMessage", {args: ["Test4"]});
 }
 
 function notifyWinner(winningTeam) {
@@ -291,8 +297,9 @@ function tickUpdate() {
         }
 }
 
-addNetEventListener("sth:replicatePlayerModelChangeCl", replicatePlayerModelChangeCl);
-addNetEventListener("sth:notifyHuntedPlayer", notifyHuntedPlayer);
-addNetEventListener("sth:notifyHunters", notifyHunters);
-addNetEventListener("sth:notifyWinner", notifyWinner);
-addNetEventListener("sth:tickTime", tickTime);
+onNet("sth:replicatePlayerModelChangeCl", replicatePlayerModelChangeCl);
+onNet("sth:notifyHuntedPlayer", notifyHuntedPlayer);
+onNet("sth:notifyHunters", notifyHunters);
+onNet("sth:notifyWinner", notifyWinner);
+onNet("sth:tickTime", tickTime);
+onNet("sth:showPingOnMap", createBlipForPlayer);
