@@ -23,9 +23,11 @@ end
 -- Update the timer for all clients during the hunt
 -- TODO: Move to client-side script to avoid spamming ClientEvents every second?
 timeUpdate = function()
-    while gs.huntStarted == true do
+    if gs.huntStarted == true then
         TriggerClientEvent("sth:tickTime", -1, gs.timeLeft)
-        Citizen.Wait(1000)
+        Citizen.SetTimeout(1000, function()
+            timeUpdate()
+        end)
         gs.timeLeft = gs.timeLeft - 1000
     end
 end
@@ -51,8 +53,8 @@ startHunt = function()
     gs.timeLeft = gs.timeLimit;
 
     Citizen.CreateThread(huntUpdate)
-    Citizen.CreateThread(timeUpdate)
-    Citizen.CreateThread(keepPinging)
+    timeUpdate()
+    keepPinging()
 end
 
 replicatePlayerModelChange = function(playerId, hash)
@@ -61,9 +63,11 @@ replicatePlayerModelChange = function(playerId, hash)
 end
 
 keepPinging = function()
-    while gs.huntStarted == true do
+    if gs.huntStarted == true then
         createPing()
-        Citizen.Wait(gs.huntedPingInterval)
+        Citizen.SetTimeout(gs.huntedPingInterval, function()
+            keepPinging()
+        end)
     end
 end
 

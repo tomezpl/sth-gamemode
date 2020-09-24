@@ -152,15 +152,6 @@ function keepPingingPlayer() {
 function notifyHuntedPlayer() {
     huntStarted = true;
     huntedIdx = PlayerId();
-    let huntedPed = GetPlayerPed(huntedIdx);
-    let huntedPos = GetEntityCoords(huntedPed);
-
-    //if(DoesEntityExist(blipId)) {
-    //}
-    //createBlipForPlayer(huntedIdx);
-
-    //keepPingingPlayer();
-    //var ping = setInterval(() => { if(ping && !huntStarted) { clearInterval(ping); } else { keepPingingPlayer(); } }, huntedPingInterval);
 
     currentObj = "Survive";
     team = 0;
@@ -169,15 +160,6 @@ function notifyHuntedPlayer() {
 function notifyHunters(serverId) {
     huntStarted = true;
     huntedIdx = GetPlayerFromServerId(serverId);
-    let huntedPed = GetPlayerPed(huntedIdx);
-    let huntedPos = GetEntityCoords(huntedPed);
-
-    //if(DoesEntityExist(blipId)) {
-    //}
-    //createBlipForPlayer(huntedIdx);
-
-    //keepPingingPlayer();
-    //var ping = setInterval(() => { if(ping && !huntStarted) { clearInterval(ping); } else { keepPingingPlayer(); } }, huntedPingInterval);
 
     currentObj = " is the hunted! Track them down."
     team = 1;
@@ -196,7 +178,7 @@ function fadeBlip(blip, initialOpacity, duration) {
     var fadeInterval = setInterval(() => {
         let alpha = Math.floor(128 * (1.0 - (timeWaited / duration)));
         SetBlipAlpha(blip, alpha);
-        if(alpha <= 0 || timeWaited >= duration) {
+        if(timeWaited >= duration) {
             if(fadeInterval) {
                 clearInterval(fadeInterval);
             }
@@ -234,9 +216,9 @@ function createBlipForPlayer(args) {
     SetBlipColour(blipId, 66);
     SetBlipAlpha(blipId, 128);
     SetBlipDisplay(blipId, 6);
-    TriggerEvent("chat:addMessage", {args: ["Test3"]});
     SetBlipNameToPlayerName(blipId, GetPlayerName(GetPlayerFromServerId(playerId)));
-    TriggerEvent("chat:addMessage", {args: ["Test4"]});
+
+    pingBlipOnMap(blipId, blipLifespan);
 }
 
 function notifyWinner(winningTeam) {
