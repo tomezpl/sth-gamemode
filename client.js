@@ -3,6 +3,9 @@
 
 // require('@citizenfx/client');
 
+// Team enum
+const Team = { Hunters: 0, Hunted: 1 };
+
 var currentObj = "";
 var team = 1;
 var blipId = null;
@@ -87,7 +90,11 @@ function setSkin(source, args) {
     }
 }
 
-function replicatePlayerModelChangeCl(playerId, hash) {
+function replicatePlayerModelChangeCl(args) {
+    // Unpack arguments
+    const playerId = args.playerId;
+    const hash = args.hash;
+    
     if(playerId != PlayerId()) {
         if(IsModelValid(hash)) {
             RequestModel(hash);
@@ -154,7 +161,7 @@ function notifyHuntedPlayer() {
     huntedIdx = PlayerId();
 
     currentObj = "Survive";
-    team = 0;
+    team = Team.Hunted;
 }
 
 function notifyHunters(serverId) {
@@ -162,7 +169,7 @@ function notifyHunters(serverId) {
     huntedIdx = GetPlayerFromServerId(serverId);
 
     currentObj = " is the hunted! Track them down."
-    team = 1;
+    team = Team.Hunters;
 }
 
 function endHunt() {
