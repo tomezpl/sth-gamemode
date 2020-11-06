@@ -2,5 +2,8 @@
     "dependencies": {
         "@citizenfx/client": "^1.0.2949-1",
         "@citizenfx/server": "1.0.2969-1"
+    },
+    "devDependencies": {
+        "gulp": "^4.0.2"
     }
 }

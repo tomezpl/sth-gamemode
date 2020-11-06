@@ -1,7 +1,4 @@
-// <reference path="./node_modules/@citizenfx/client/natives_universal.d.ts" />
-// <reference path="./node_modules/@citizenfx/client/index.d.ts" />
-
-// require('@citizenfx/client');
+require('@citizenfx/client');//ignore
 
 // Team enum
 const Team = { Hunters: 0, Hunted: 1 };
@@ -266,7 +263,7 @@ function tickUpdate() {
                 seconds = (seconds < 10 ? `0${seconds}` : seconds);
                 let minutes = dateTime.getMinutes();
                 minutes = (minutes < 10 ? `0${minutes}` : minutes);
-                let timeStr = `${dateTime.getMinutes()}:${dateTime.getSeconds()}`;
+                let timeStr = `${minutes}:${seconds}`;
 
                 let rectWidth = 0.001;
                 BeginTextCommandWidth("STRING");
@@ -281,7 +278,7 @@ function tickUpdate() {
 
                 BeginTextCommandDisplayText("STRING");
                 AddTextComponentString(timeStr);
-                EndTextCommandDisplayText(0.89 + 0.0005 + (rectWidth/6), 0.835);
+                EndTextCommandDisplayText(0.94 - rectWidth / 2, 0.835);
             }
         }
 }

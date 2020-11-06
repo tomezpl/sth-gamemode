@@ -1,4 +1,4 @@
-require('@citizenfx/server')
+require('@citizenfx/server')//ignore
 
 // Team enum
 const Team = { Hunters: 0, Hunted: 1 };
@@ -44,7 +44,7 @@ function Tick() {
 // Updates the game state time every second.
 function TimeUpdate() {
     if(gs.huntStarted) {
-        gs.timeLeft -= 1000;
+        gs.timeLeft -= 10000;
         TriggerClientEvent("sth:tickTime", -1, gs.timeLeft);
     }
     else {
@@ -99,7 +99,7 @@ const Events = {
         }
 
         if(gs.gameTimer === null) {
-            setInterval(TimeUpdate, 1000);
+            setInterval(TimeUpdate, 10000);
         }
 
         if(gs.pingTimer === null) {
