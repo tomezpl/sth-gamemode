@@ -3,12 +3,21 @@ require('@citizenfx/client');//ignore
 // Team enum
 const Team = { Hunters: 0, Hunted: 1 };
 
+// Constants to start the game
+const GameSettings = {
+    TimeLimit: 60000, // Time limit for each hunt (in ms)
+    HuntedPingInterval: 10000 // Amount of time between pinging the hunted player's location on the map (in ms)
+};
+
 var currentObj = "";
 var team = 1;
 var blipId = null;
 var huntedIdx = null;
+var huntedName = null;
 var huntStarted = false;
+var huntOver = false;
 var currentTimeLeft = -1;
+var timer = null;
 
 const blipTimeLimit = 5000;
 const blipLifespan = 3000; // Time it takes for blip to start fading
@@ -22,6 +31,17 @@ on('onClientGameTypeStart', () => {
     exports.spawnmanager.setAutoSpawnCallback(autoSpawnCallback);
     exports.spawnmanager.setAutoSpawn(true);
     exports.spawnmanager.forceRespawn();
+    on("baseevents:onPlayerKilled", () => {
+        emitNet("sth:playerDied", { pid: GetPlayerServerId(PlayerId()) });
+    });
+
+    on("playerSpawned", () => {
+        let playerPed = GetPlayerPed(PlayerId());
+        GiveWeaponToPed(playerPed, GetHashKey("WEAPON_APPISTOL"), 300, false, true);
+
+        NetworkSetFriendlyFireOption(true);
+        SetCanAttackFriendly(playerPed, true, true);
+    });
 
     setTick(tickUpdate);
 });
@@ -33,7 +53,9 @@ function autoSpawnCallback() {
     });
 }
 
-function startHunt() { TriggerServerEvent("sth:startHunt"); }
+function startHunt() { 
+    TriggerServerEvent("sth:startHunt");
+}
 
 function setSkin(source, args) {
     if(args.length >= 1)
@@ -135,6 +157,10 @@ function replicatePlayerModelChangeCl(args) {
 on('onClientResourceStart', () => {
     RegisterCommand("starthunt", startHunt);
     RegisterCommand("setskin", setSkin);
+    RegisterCommand("suicide", () => {
+        SetEntityHealth(PlayerPedId(), 0);
+        TriggerEvent("baseevents:onPlayerKilled");
+    });
 });
 
 function Repeat(callback, ms) {
@@ -161,9 +187,13 @@ function notifyHuntedPlayer() {
     team = Team.Hunted;
 }
 
-function notifyHunters(serverId) {
+function notifyHunters({ serverId, huntedPlayerName }) {
     huntStarted = true;
     huntedIdx = GetPlayerFromServerId(serverId);
+    TriggerEvent("chat:addMessage", {
+        args: [`huntedPlayerName: ${huntedPlayerName}`]
+    });
+    huntedName = huntedPlayerName;
 
     currentObj = " is the hunted! Track them down."
     team = Team.Hunters;
@@ -172,6 +202,10 @@ function notifyHunters(serverId) {
 function endHunt() {
     currentObj = "";
     currentTimeLeft = -1;
+    if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+    }
     huntStarted = false;
     huntedIdx = null;
 }
@@ -182,13 +216,9 @@ function fadeBlip(blip, initialOpacity, duration) {
     var fadeInterval = setInterval(() => {
         let alpha = Math.floor(128 * (1.0 - (timeWaited / duration)));
         SetBlipAlpha(blip, alpha);
-        if(timeWaited >= duration) {
-            if(fadeInterval) {
-                clearInterval(fadeInterval);
-            }
-        }
         timeWaited += 100;
     }, 100);
+    setTimeout(() => { clearInterval(fadeInterval); }, duration);
     setTimeout(() => {
         if(blip) {
             SetBlipDisplay(blip, 0);
@@ -226,7 +256,10 @@ function createBlipForPlayer(args) {
 }
 
 function notifyWinner(winningTeam) {
-    TriggerEvent("chat:addMessage", {args: ["You win"]});
+    huntOver = true;
+    TriggerEvent("chat:addMessage", {
+        args: [`You ${team === winningTeam ? 'win' : 'lose'}`]
+    });
     if(team == winningTeam) {
         currentObj = "You've won the hunt!";
     }
@@ -245,17 +278,19 @@ function tickUpdate() {
         if(GetPlayerPed(PlayerId()) != 0) {
             ResetPlayerStamina(PlayerId());
 
-            AddTextEntry("CURRENT_OBJECTIVE", "~a~~a~");
-            BeginTextCommandPrint("CURRENT_OBJECTIVE");
-            if(huntStarted && huntedIdx && GetPlayerPed(huntedIdx) != 0) {
-                if(team == 1) {
-                    SetColourOfNextTextComponent(12);
-                    AddTextComponentString(GetPlayerName(huntedIdx));
+            if (currentObj !== null && currentObj.trim() !== "") {
+                AddTextEntry("CURRENT_OBJECTIVE", "~a~~a~");
+                BeginTextCommandPrint("CURRENT_OBJECTIVE");
+                if (huntStarted === true && huntOver === false && huntedName !== null && GetPlayerPed(huntedIdx) != 0) {
+                    if (team == Team.Hunters) {
+                        SetColourOfNextTextComponent(12);
+                        AddTextComponentString(huntedName);
+                    }
                 }
+                SetColourOfNextTextComponent(0);
+                AddTextComponentString(currentObj);
+                EndTextCommandPrint(1, true);
             }
-            SetColourOfNextTextComponent(0);
-            AddTextComponentString(currentObj);
-            EndTextCommandPrint(1, true);
 
             if(currentTimeLeft >= 0) {
                 let dateTime = new Date(currentTimeLeft);
@@ -283,9 +318,24 @@ function tickUpdate() {
         }
 }
 
+function resetTimer() {
+    if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+    }
+
+    timer = setInterval(() => { currentTimeLeft -= 1000; }, 1000);
+    setTimeout(() => { if (timer !== null) { clearInterval(timer); timer = null; } }, GameSettings.TimeLimit);
+}
+
+function huntStartedByServer() {
+    resetTimer();
+}
+
 onNet("sth:replicatePlayerModelChangeCl", replicatePlayerModelChangeCl);
 onNet("sth:notifyHuntedPlayer", notifyHuntedPlayer);
 onNet("sth:notifyHunters", notifyHunters);
 onNet("sth:notifyWinner", notifyWinner);
 onNet("sth:tickTime", tickTime);
 onNet("sth:showPingOnMap", createBlipForPlayer);
+onNet("sth:huntStartedByServer", huntStartedByServer);

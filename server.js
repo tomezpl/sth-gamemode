@@ -9,17 +9,42 @@ const GameSettings = {
     HuntedPingInterval: 10000 // Amount of time between pinging the hunted player's location on the map (in ms)
 };
 
-// Game state
-var gs = {
-    huntStarted: false, // is there an ongoing hunt?
-    huntedPlayer: -1, // server ID of the currently hunted player. Default: -1 (nobody)
-    winningTeam: -1, // team winning the match. Default: -1 (neither)
-    timeLeft: GameSettings.TimeLimit, // Time left on this hunt (in ms)
+function defaultGameState() {
+    return {
+        huntStarted: false, // is there an ongoing hunt?
+        huntedPlayer: -1, // server ID of the currently hunted player. Default: -1 (nobody)
+        winningTeam: -1, // team winning the match. Default: -1 (neither)
+        timeLeft: GameSettings.TimeLimit, // Time left on this hunt (in ms)
 
-    tickSet: false, // Is the Main Tick set yet?
-    gameTimer: null, // Handle of our main timer interval
-    pingTimer: null // Handle of our blip ping (showing the player's surrounding radius on map) timer interval
-};
+        tickSet: false, // Is the Main Tick set yet?
+        gameTimer: null, // Handle of our main timer interval
+        pingTimer: null, // Handle of our blip ping (showing the player's surrounding radius on map) timer interval
+
+        gameTimeout: null, // Handle of our main timeout (needs to be cleared if a hunt ends prematurely),
+        pingTimeout: null // Handle of our pinging interval timeout (same as above)
+    }
+}
+
+// Game state
+var gs = defaultGameState();
+
+function clearTimers() {
+    if (gs.gameTimer !== null) {
+        clearInterval(gs.gameTimer);
+        gs.gameTimer = null;
+    }
+    if (gs.pingTimer !== null) {
+        clearInterval(gs.pingTimer);
+        gs.pingTimer = null;
+    }
+}
+
+function endHunt() {
+    clearTimers();
+    gs.huntStarted = false;
+    TriggerClientEvent("sth:notifyWinner", -1, gs.winningTeam);
+    gs = defaultGameState();
+}
 
 function beginGame(player) {
     gs.huntStarted = true;
@@ -31,30 +56,19 @@ function beginGame(player) {
 // Main tick (main loop?)
 // Checks game state and ends the hunt if needed.
 function Tick() {
-    if(gs.huntStarted) {
 
-        // Check if time ran out and end the hunt if needed, notifying the winning team.
-        if(gs.timeLeft <= 0) {
-            gs.huntStarted = false;
-            TriggerClientEvent("sth:notifyWinner", -1, gs.winningTeam);
-        }
-    }
 }
 
-// Updates the game state time every second.
-function TimeUpdate() {
+// Updates the game state time every 10 seconds.
+function TimeUpdate(firstTick = false) {
     if(gs.huntStarted) {
-        gs.timeLeft -= 10000;
+        gs.timeLeft -= firstTick ? 0 : 10000;
         TriggerClientEvent("sth:tickTime", -1, gs.timeLeft);
-    }
-    else {
-        clearInterval(gs.gameTimer);
-        gs.gameTimer = null;
     }
 }
 
 function PingBlip() {
-    if(gs.huntStarted) {
+    if(gs.huntStarted === true) {
         // Radius of the blip
         const radius = 200.0;
         // Radius in which the player's location can be pinged. The smaller the multiplier, the more precise the ping is.
@@ -65,10 +79,6 @@ function PingBlip() {
         const offsetY = ((Math.random() * 2) - 1) * playerLocationRadius;
 
         TriggerClientEvent("sth:showPingOnMap", -1, { pid: gs.huntedPlayer, ox: offsetX, oy: offsetY, r: radius });
-    }
-    else {
-        clearInterval(gs.pingTimer);
-        gs.pingTimer = null;
     }
 }
 
@@ -87,7 +97,9 @@ const Events = {
         for(let i = 0; i < playerCount; i++) {
             if(i != randomPlayerIndex) {
                 // TODO: Can't we rewrite this with issuing a request to -1 players (everyone) but just reject it on the hunted player's client?
-                TriggerClientEvent("sth:notifyHunters", GetPlayerFromIndex(i), GetPlayerFromIndex(randomPlayerIndex));
+                TriggerClientEvent("sth:notifyHunters", GetPlayerFromIndex(i), {
+                    serverId: GetPlayerFromIndex(randomPlayerIndex), huntedPlayerName: GetPlayerName(GetPlayerFromIndex(randomPlayerIndex))
+                });
             }
         }
 
@@ -98,16 +110,35 @@ const Events = {
             setTick(Tick);
         }
 
-        if(gs.gameTimer === null) {
-            setInterval(TimeUpdate, 10000);
+        if (gs.pingTimer === null) {
+            gs.pingTimer = setInterval(PingBlip, GameSettings.HuntedPingInterval);
+            gs.pingTimeout = setTimeout(() => { clearInterval(gs.pingTimer); gs.pingTimer = null; }, GameSettings.TimeLimit);
         }
 
-        if(gs.pingTimer === null) {
-            setInterval(PingBlip, GameSettings.HuntedPingInterval);
+        if(gs.gameTimer === null) {
+            TimeUpdate(true);
+            gs.gameTimer = setInterval(TimeUpdate, 10000);
+            gs.gameTimeout = setTimeout(() => { clearInterval(gs.gameTimer); gs.gameTimer = null; endHunt(); }, GameSettings.TimeLimit);
         }
+
+        TriggerClientEvent("sth:huntStartedByServer", -1);
     },
     replicatePlayerModelChange: (playerId, hash) => {
         TriggerClientEvent("sth:replicatePlayerModelChangeCl", -1, { playerId, hash });
+    },
+    playerDied: ({ pid }) => {
+        console.log("Test ClientKilled");
+        console.log(`pid: ${GetPlayerName(pid)}`);
+        if (pid == gs.huntedPlayer) {
+            gs.winningTeam = Team.Hunters;
+            if (gs.gameTimeout !== null) {
+                clearTimeout(gs.gameTimeout);
+            }
+            if (gs.pingTimeout !== null) {
+                clearTimeout(gs.pingTimeout);
+            }
+            endHunt();
+        }
     }
 };
 
