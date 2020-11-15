@@ -1,2 +1,6 @@
 node_modules/
 compiled/
+*.user
+/yarn.lock
+/.yarn.installed
+/.vs
