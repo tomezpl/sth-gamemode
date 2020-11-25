@@ -163,40 +163,10 @@ on('onClientResourceStart', () => {
     });
 });
 
-function Repeat(callback, ms) {
-    setTimeout(() => {callback(); Repeat(callback, ms); }, ms);
-}
-
 function pingBlipOnMap(blip, duration) {
     SetBlipDisplay(blipId, 6);
     SetBlipAlpha(blip, 128);
     setTimeout(() => { fadeBlip(blip, 128, blipTimeLimit); }, duration);
-}
-
-function keepPingingPlayer() {
-    if(huntStarted) {
-        pingBlipOnMap(blipId, blipLifespan);
-    }
-}
-
-function notifyHuntedPlayer() {
-    huntStarted = true;
-    huntedIdx = PlayerId();
-
-    currentObj = "Survive";
-    team = Team.Hunted;
-}
-
-function notifyHunters({ serverId, huntedPlayerName }) {
-    huntStarted = true;
-    huntedIdx = GetPlayerFromServerId(serverId);
-    TriggerEvent("chat:addMessage", {
-        args: [`huntedPlayerName: ${huntedPlayerName}`]
-    });
-    huntedName = huntedPlayerName;
-
-    currentObj = " is the hunted! Track them down."
-    team = Team.Hunters;
 }
 
 function endHunt() {
@@ -211,7 +181,6 @@ function endHunt() {
 }
 
 function fadeBlip(blip, initialOpacity, duration) {
-    //setTimeout(() => {
     var timeWaited = 0;
     var fadeInterval = setInterval(() => {
         let alpha = Math.floor(128 * (1.0 - (timeWaited / duration)));
@@ -224,7 +193,6 @@ function fadeBlip(blip, initialOpacity, duration) {
             SetBlipDisplay(blip, 0);
         }
     }, duration);
-    //}, duration);
 }
 
 function createBlipForPlayer(args) {
@@ -253,24 +221,6 @@ function createBlipForPlayer(args) {
     SetBlipNameToPlayerName(blipId, GetPlayerName(GetPlayerFromServerId(playerId)));
 
     pingBlipOnMap(blipId, blipLifespan);
-}
-
-function notifyWinner(winningTeam) {
-    huntOver = true;
-    TriggerEvent("chat:addMessage", {
-        args: [`You ${team === winningTeam ? 'win' : 'lose'}`]
-    });
-    if(team == winningTeam) {
-        currentObj = "You've won the hunt!";
-    }
-    else {
-        currentObj = "You've lost the hunt!";
-    }
-    setTimeout(endHunt, 5000);
-}
-
-function tickTime(time) {
-    currentTimeLeft = time;
 }
 
 function tickUpdate() {
@@ -328,14 +278,51 @@ function resetTimer() {
     setTimeout(() => { if (timer !== null) { clearInterval(timer); timer = null; } }, GameSettings.TimeLimit);
 }
 
-function huntStartedByServer() {
-    resetTimer();
+const Events = {
+    huntStartedByServer: () => { resetTimer(); },
+    showPingOnMap: (args) => { createBlipForPlayer(args); },
+    tickTime: (time) => { currentTimeLeft = time; },
+    notifyWinner: (winningTeam) => {
+        huntOver = true;
+        TriggerEvent("chat:addMessage", {
+            args: [`You ${team === winningTeam ? 'win' : 'lose'}`]
+        });
+        if (team == winningTeam) {
+            currentObj = "You've won the hunt!";
+        }
+        else {
+            currentObj = "You've lost the hunt!";
+        }
+        setTimeout(endHunt, 5000);
+    },
+    notifyHunters: ({ serverId, huntedPlayerName }) => {
+        huntStarted = true;
+        huntedIdx = GetPlayerFromServerId(serverId);
+        TriggerEvent("chat:addMessage", {
+            args: [`huntedPlayerName: ${huntedPlayerName}`]
+        });
+        huntedName = huntedPlayerName;
+
+        currentObj = " is the hunted! Track them down."
+        team = Team.Hunters;
+    },
+    notifyHuntedPlayer: () => {
+        huntStarted = true;
+        huntedIdx = PlayerId();
+
+        currentObj = "Survive";
+        team = Team.Hunted;
+    }
+};
+
+// Register all client events with names so that they can be called from the server.
+function registerEvents() {
+    Object.keys(Events).forEach((evName) => {
+        onNet(`sth:${evName}`, Events[evName]);
+    });
 }
 
+registerEvents();
+
+// skin change bugfix
 onNet("sth:replicatePlayerModelChangeCl", replicatePlayerModelChangeCl);
-onNet("sth:notifyHuntedPlayer", notifyHuntedPlayer);
-onNet("sth:notifyHunters", notifyHunters);
-onNet("sth:notifyWinner", notifyWinner);
-onNet("sth:tickTime", tickTime);
-onNet("sth:showPingOnMap", createBlipForPlayer);
-onNet("sth:huntStartedByServer", huntStartedByServer);
