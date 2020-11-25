@@ -54,7 +54,12 @@ function autoSpawnCallback() {
 }
 
 function startHunt() { 
-    TriggerServerEvent("sth:startHunt");
+    if (huntOver === true) {
+        TriggerEvent("chat:addMessage", { args: ["You must wait 5 seconds before starting another hunt."] });
+    }
+    else {
+        TriggerServerEvent("sth:startHunt");
+    }
 }
 
 function setSkin(source, args) {
@@ -177,6 +182,7 @@ function endHunt() {
         timer = null;
     }
     huntStarted = false;
+    huntOver = false;
     huntedIdx = null;
 }
 
