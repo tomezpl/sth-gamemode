@@ -256,20 +256,29 @@ function tickUpdate() {
                 minutes = (minutes < 10 ? `0${minutes}` : minutes);
                 let timeStr = `${minutes}:${seconds}`;
 
+                SetTextScale(0, 0.55);
                 let rectWidth = 0.001;
                 BeginTextCommandWidth("STRING");
-                AddTextComponentString("00:00")
+                AddTextComponentString("TIME LEFT  00:00")
                 rectWidth = EndTextCommandGetWidth(true);
                 let textWidth = 0.001;
                 BeginTextCommandWidth("STRING");
                 AddTextComponentString(timeStr);
                 textWidth = EndTextCommandGetWidth(true);
 
-                DrawRect(0.94, 0.875, rectWidth + 0.001, 0.06, 0,0,0, 128);
+                RequestStreamedTextureDict("timerbars");
+                if (HasStreamedTextureDictLoaded("timerbars")) {
+                    DrawSprite("timerbars", "all_black_bg", 0.92, 0.875, rectWidth, 0.06 * 0.5 * 1.4, 0.0, 255, 255, 255, 128);
+                }
 
                 BeginTextCommandDisplayText("STRING");
-                AddTextComponentString(timeStr);
-                EndTextCommandDisplayText(0.94 - rectWidth / 2, 0.835);
+                AddTextComponentString(`${timeStr}`);
+                EndTextCommandDisplayText(0.94, 0.855);
+                SetTextScale(0, 0.35);
+                BeginTextCommandDisplayText("STRING");
+                AddTextComponentString("TIME LEFT");
+                EndTextCommandDisplayText(0.94 - rectWidth / 2.35, 0.865);
+                SetTextScale(0, 1.0);
             }
         }
 }
