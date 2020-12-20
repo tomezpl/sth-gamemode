@@ -20,6 +20,8 @@ var currentTimeLeft = -1; // Time left in the hunt.
 var timer = null; // Timer (interval) used to track time.
 var deleteTimerTimeout = null; // Timeout used to delete timer (interval) at the end of a hunt.
 
+var PlayerBlips = [];
+
 // Car handle array to sync with the server.
 var SpawnedCars = [];
 var CarsToDespawn = [];
@@ -38,6 +40,15 @@ on('onClientGameTypeStart', () => {
     on("baseevents:onPlayerKilled", () => {
         emitNet("sth:playerDied", { pid: GetPlayerServerId(PlayerId()) });
     });
+
+    setInterval(updateWeapons, 1000);
+    setInterval(() => {
+        PlayerBlips.forEach((playerBlip) => {
+            RemoveBlip(playerBlip.blip);
+        })
+
+        PlayerBlips = [];
+    }, 5000);
 
     on("playerSpawned", () => {
         let playerPed = GetPlayerPed(PlayerId());
@@ -270,12 +281,61 @@ function tickUpdate() {
         }
 
         updateCars();
+        updatePlayerBlips();
 
         // Show remaining time if hunt still going.
         if (currentTimeLeft >= 0) {
             const timeStr = formatIntoMMSS(currentTimeLeft);
             drawRemainingTime(timeStr);
         }
+    }
+}
+
+function updatePlayerBlips() {
+    for (let i = 0; i < 32; i++) {
+        if (NetworkIsPlayerActive(i) && !PlayerBlips.some((playerBlip) => playerBlip.id === i)) {
+            const index = PlayerBlips.push({ id: i, blip: AddBlipForEntity(GetPlayerPed(i)) }) - 1;
+            SetBlipNameToPlayerName(PlayerBlips[index].blip, i);
+            SetBlipColour(PlayerBlips[index].blip, i + 10);
+            SetBlipCategory(PlayerBlips[index].blip, 2);
+            SetBlipShrink(PlayerBlips[index].blip, true);
+            SetBlipScale(PlayerBlips[index].blip, 0.9);
+        }
+    }
+
+    PlayerBlips.forEach((playerBlip) => {
+        if (GetPlayerName(playerBlip.id) === huntedName || team === Team.Hunted) {
+            SetBlipDisplay(playerBlip.blip, 7);
+        }
+        else {
+            SetBlipDisplay(playerBlip.blip, 2);
+        }
+    });
+}
+
+function updateWeapons() {
+    const takeWeaponsAway = () => {
+        RemoveAllPedWeapons(PlayerPedId(), false);
+    };
+
+    const giveWeaponsBack = () => {
+        if (team == Team.Hunted) {
+            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_APPISTOL"), 9999, false, false);
+            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_CARBINERIFLE"), 9999, false, false);
+            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_STICKYBOMB"), 25, false, false);
+            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_RPG"), 25, false, false);
+            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_ASSAULTSHOTGUN"), 25, false, false);
+        }
+        else {
+            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_COMBATPISTOL"), 9999, false, false);
+        }
+    };
+
+    if (IsPedInAnyVehicle(PlayerPedId(), true) !== false) {
+        takeWeaponsAway();
+    }
+    else {
+        giveWeaponsBack();
     }
 }
 
