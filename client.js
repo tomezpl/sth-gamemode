@@ -5,8 +5,8 @@ const Team = { Hunters: 0, Hunted: 1 };
 
 // Constants to start the game
 const GameSettings = {
-    TimeLimit: 60000, // Time limit for each hunt (in ms)
-    HuntedPingInterval: 10000 // Amount of time between pinging the hunted player's location on the map (in ms)
+    TimeLimit: GetConvarInt("sth_timelimit", 60000 * 24), // Time limit for each hunt (in ms)
+    HuntedPingInterval: GetConvarInt("sth_pinginterval", 120000) // Amount of time between pinging the hunted player's location on the map (in ms)
 };
 
 var currentObj = ""; // Objective displayed to the local player, based on the team.
@@ -20,11 +20,8 @@ var currentTimeLeft = -1; // Time left in the hunt.
 var timer = null; // Timer (interval) used to track time.
 var deleteTimerTimeout = null; // Timeout used to delete timer (interval) at the end of a hunt.
 
-const blipTimeLimit = 5000; // Time the blip is shown for before it starts fading.
-const blipLifespan = 3000; // Time it takes for blip to start fading
-var blipTimer = blipTimeLimit;
-
-const huntedPingInterval = 10000; // How many milliseconds between showing the hunted player's radius.
+const blipTimeLimit = GetConvarInt("sth_blipfadetime", 5000); // Amount of time it takes for the blip to fade completely (after blipLifespan runs out).
+const blipLifespan = GetConvarInt("sth_bliplifespan", 25000); // Time it takes for blip to start fading
 
 const dockSpawn = {x: 851.379, y: -3140.005, z: 5.900808}; // Spawn coordinates
 
@@ -212,7 +209,6 @@ function fadeBlip(blip, initialOpacity, duration) {
 }
 
 function createBlipForPlayer(args) {
-    blipTimer = blipTimeLimit;
     const radius = parseInt(args.r);
     const offsetX = Number(args.ox);
     const offsetY = Number(args.oy);
