@@ -32,6 +32,10 @@ const blipLifespan = GetConvarInt("sth_bliplifespan", 25000); // Time it takes f
 
 const dockSpawn = { x: 851.379, y: -3140.005, z: 5.900808 }; // Spawn coordinates
 
+const mapBounds = { topLeft: [-3078.28, 364.85, 7.01], topRight: [-7.07, 1823.70, 207.73] };
+
+const zLimit = 1130.0;
+
 // Called when this script is loaded on the client.
 on('onClientGameTypeStart', () => {
     exports.spawnmanager.setAutoSpawnCallback(autoSpawnCallback);
@@ -77,6 +81,11 @@ function startHunt() {
     else {
         TriggerServerEvent("sth:startHunt");
     }
+}
+
+function checkIfPedTooFar(ped) {
+    const pos = GetEntityCoords(ped);
+    return pos[1] >= zLimit;
 }
 
 function setSkin(source, args) {
@@ -280,6 +289,8 @@ function tickUpdate() {
             EndTextCommandPrint(1, true);
         }
 
+        ClearPlayerWantedLevel(PlayerId());
+
         updateCars();
         updatePlayerBlips();
 
@@ -304,10 +315,12 @@ function updatePlayerBlips() {
     }
 
     PlayerBlips.forEach((playerBlip) => {
-        if (GetPlayerName(playerBlip.id) === huntedName || team === Team.Hunted) {
+        if ((GetPlayerName(playerBlip.id) === huntedName && !checkIfPedTooFar(GetPlayerPed(playerBlip.id))) || team === Team.Hunted) {
+            // Hide the blip
             SetBlipDisplay(playerBlip.blip, 7);
         }
-        else {
+        else if ((playerBlip.id !== PlayerId()) || checkIfPedTooFar(GetPlayerPed(playerBlip.id))) {
+            // Show the blip
             SetBlipDisplay(playerBlip.blip, 2);
         }
     });
