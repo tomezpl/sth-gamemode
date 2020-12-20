@@ -232,55 +232,65 @@ function createBlipForPlayer(args) {
 function tickUpdate() {
         Wait(1);
         if(GetPlayerPed(PlayerId()) != 0) {
+            // Infinite stamina.
             ResetPlayerStamina(PlayerId());
 
+            // Show current objective if hunt still going.
             if (currentObj !== null && currentObj.trim() !== "") {
                 AddTextEntry("CURRENT_OBJECTIVE", "~a~~a~");
                 BeginTextCommandPrint("CURRENT_OBJECTIVE");
                 if (huntStarted === true && huntOver === false && huntedName !== null && GetPlayerPed(huntedIdx) != 0) {
+                    // If current player is a hunter, set initial text colour to yellow
+                    // as it's meant to say the hunted player's name.
                     if (team == Team.Hunters) {
                         SetColourOfNextTextComponent(12);
                         AddTextComponentString(huntedName);
                     }
                 }
+                // Ensure the main objective string is displayed in default (white) text colour.
                 SetColourOfNextTextComponent(0);
                 AddTextComponentString(currentObj);
                 EndTextCommandPrint(1, true);
             }
 
-            if(currentTimeLeft >= 0) {
-                let dateTime = new Date(currentTimeLeft);
-                let seconds = dateTime.getSeconds();
-                seconds = (seconds < 10 ? `0${seconds}` : seconds);
-                let minutes = dateTime.getMinutes();
-                minutes = (minutes < 10 ? `0${minutes}` : minutes);
-                let timeStr = `${minutes}:${seconds}`;
-
-                SetTextScale(0, 0.55);
-                let rectWidth = 0.001;
-                BeginTextCommandWidth("STRING");
-                AddTextComponentString("TIME LEFT  00:00")
-                rectWidth = EndTextCommandGetWidth(true);
-                let textWidth = 0.001;
-                BeginTextCommandWidth("STRING");
-                AddTextComponentString(timeStr);
-                textWidth = EndTextCommandGetWidth(true);
-
-                RequestStreamedTextureDict("timerbars");
-                if (HasStreamedTextureDictLoaded("timerbars")) {
-                    DrawSprite("timerbars", "all_black_bg", 0.92, 0.875, rectWidth, 0.06 * 0.5 * 1.4, 0.0, 255, 255, 255, 128);
-                }
-
-                BeginTextCommandDisplayText("STRING");
-                AddTextComponentString(`${timeStr}`);
-                EndTextCommandDisplayText(0.94, 0.855);
-                SetTextScale(0, 0.35);
-                BeginTextCommandDisplayText("STRING");
-                AddTextComponentString("TIME LEFT");
-                EndTextCommandDisplayText(0.94 - rectWidth / 2.35, 0.865);
-                SetTextScale(0, 1.0);
+            // Show remaining time if hunt still going.
+            if (currentTimeLeft >= 0) {
+                const timeStr = formatIntoMMSS(currentTimeLeft);
+                drawRemainingTime(timeStr);
             }
         }
+}
+
+// Formats milliseconds into a mm:ss string.
+function formatIntoMMSS(milliseconds) {
+    const dateTime = new Date(milliseconds);
+    let seconds = dateTime.getSeconds();
+    seconds = (seconds < 10 ? `0${seconds}` : seconds);
+    let minutes = dateTime.getMinutes();
+    minutes = (minutes < 10 ? `0${minutes}` : minutes);
+    return `${minutes}:${seconds}`;
+}
+
+// Draws a timerbar with the remaining time in the bottom right corner of the screen.
+function drawRemainingTime(timeStr) {
+    SetTextScale(0, 0.55);
+    BeginTextCommandWidth("STRING");
+    AddTextComponentString("TIME LEFT  00:00")
+    const rectWidth = EndTextCommandGetWidth(true);
+
+    RequestStreamedTextureDict("timerbars");
+    if (HasStreamedTextureDictLoaded("timerbars")) {
+        DrawSprite("timerbars", "all_black_bg", 0.92, 0.875, rectWidth, 0.06 * 0.5 * 1.4, 0.0, 255, 255, 255, 128);
+    }
+
+    BeginTextCommandDisplayText("STRING");
+    AddTextComponentString(`${timeStr}`);
+    EndTextCommandDisplayText(0.94, 0.855);
+    SetTextScale(0, 0.35);
+    BeginTextCommandDisplayText("STRING");
+    AddTextComponentString("TIME LEFT");
+    EndTextCommandDisplayText(0.94 - rectWidth / 2.35, 0.865);
+    SetTextScale(0, 1.0);
 }
 
 function resetTimer() {
@@ -290,13 +300,22 @@ function resetTimer() {
     }
 
     timer = setInterval(() => { currentTimeLeft -= 1000; }, 1000);
+    // TODO: won't this potentially cause the timer to clear itself in the middle of a game after being cleared prematurely?
     setTimeout(() => { if (timer !== null) { clearInterval(timer); timer = null; } }, GameSettings.TimeLimit);
 }
 
+// Network-aware events.
 const Events = {
+    // Reset the timer when the hunt starts on the server.
     huntStartedByServer: () => { resetTimer(); },
+
+    // Ping the hunted player on the map.
     showPingOnMap: (args) => { createBlipForPlayer(args); },
+
+    // Update the remaining time to sync with the server.
     tickTime: (time) => { currentTimeLeft = time; },
+
+    // Notify the winning team at the end of a hunt.
     notifyWinner: (winningTeam) => {
         huntOver = true;
         TriggerEvent("chat:addMessage", {
@@ -310,6 +329,8 @@ const Events = {
         }
         setTimeout(endHunt, 5000);
     },
+
+    // Notify the hunters about their objective when the hunt starts.
     notifyHunters: ({ serverId, huntedPlayerName }) => {
         huntStarted = true;
         huntedIdx = GetPlayerFromServerId(serverId);
@@ -321,6 +342,8 @@ const Events = {
         currentObj = " is the hunted! Track them down."
         team = Team.Hunters;
     },
+
+    // Notify the hunted player(s) about their objective when the hunt starts.
     notifyHuntedPlayer: () => {
         huntStarted = true;
         huntedIdx = PlayerId();
