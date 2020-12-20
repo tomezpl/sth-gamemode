@@ -5,28 +5,27 @@ const Team = { Hunters: 0, Hunted: 1 };
 
 // Constants to start the game
 const GameSettings = {
-    TimeLimit: 60000, // Time limit for each hunt (in ms)
-    HuntedPingInterval: 10000 // Amount of time between pinging the hunted player's location on the map (in ms)
+    TimeLimit: GetConvarInt("sth_timelimit", 60000 * 24), // Time limit for each hunt (in ms)
+    HuntedPingInterval: GetConvarInt("sth_pinginterval", 120000) // Amount of time between pinging the hunted player's location on the map (in ms)
 };
 
-var currentObj = "";
-var team = 1;
-var blipId = null;
-var huntedIdx = null;
-var huntedName = null;
-var huntStarted = false;
-var huntOver = false;
-var currentTimeLeft = -1;
-var timer = null;
+var currentObj = ""; // Objective displayed to the local player, based on the team.
+var team = 1; // Local player's team.
+var blipId = null; // ID of the hunted player's blip.
+var huntedIdx = null; // ID of the hunted player.
+var huntedName = null; // Name of the hunted player.
+var huntStarted = false; // Is a hunt running? This and huntOver can be true at the same time.
+var huntOver = false; // Has a hunt just finished? This is false if the hunt hasn't started yet.
+var currentTimeLeft = -1; // Time left in the hunt.
+var timer = null; // Timer (interval) used to track time.
+var deleteTimerTimeout = null; // Timeout used to delete timer (interval) at the end of a hunt.
 
-const blipTimeLimit = 5000;
-const blipLifespan = 3000; // Time it takes for blip to start fading
-var blipTimer = blipTimeLimit;
+const blipTimeLimit = GetConvarInt("sth_blipfadetime", 5000); // Amount of time it takes for the blip to fade completely (after blipLifespan runs out).
+const blipLifespan = GetConvarInt("sth_bliplifespan", 25000); // Time it takes for blip to start fading
 
-const huntedPingInterval = 10000;
+const dockSpawn = {x: 851.379, y: -3140.005, z: 5.900808}; // Spawn coordinates
 
-const dockSpawn = {x: 851.379, y: -3140.005, z: 5.900808};
-
+// Called when this script is loaded on the client.
 on('onClientGameTypeStart', () => {
     exports.spawnmanager.setAutoSpawnCallback(autoSpawnCallback);
     exports.spawnmanager.setAutoSpawn(true);
@@ -46,6 +45,7 @@ on('onClientGameTypeStart', () => {
     setTick(tickUpdate);
 });
 
+// Called when spawn is triggered.
 function autoSpawnCallback() {
     exports.spawnmanager.spawnPlayer({
         ...dockSpawn, 
@@ -53,8 +53,14 @@ function autoSpawnCallback() {
     });
 }
 
+// Called when user issues /starthunt
 function startHunt() { 
-    TriggerServerEvent("sth:startHunt");
+    if (huntOver === true) {
+        TriggerEvent("chat:addMessage", { args: ["You must wait 5 seconds before starting another hunt."] });
+    }
+    else {
+        TriggerServerEvent("sth:startHunt");
+    }
 }
 
 function setSkin(source, args) {
@@ -109,6 +115,8 @@ function setSkin(source, args) {
     }
 }
 
+// This is an event handler for changing the player model. The event is fired over the network from the server to all players.
+// Seems like calling the change model native twice fixes ped appearance sync issues across clients.
 function replicatePlayerModelChangeCl(args) {
     // Unpack arguments
     const playerId = args.playerId;
@@ -154,6 +162,7 @@ function replicatePlayerModelChangeCl(args) {
     }
 }
 
+// Fired when resource is loaded. Registers commands etc.
 on('onClientResourceStart', () => {
     RegisterCommand("starthunt", startHunt);
     RegisterCommand("setskin", setSkin);
@@ -163,42 +172,14 @@ on('onClientResourceStart', () => {
     });
 });
 
-function Repeat(callback, ms) {
-    setTimeout(() => {callback(); Repeat(callback, ms); }, ms);
-}
-
+// Pings a blip on the map, then sets it to start fading after a specified duration.
 function pingBlipOnMap(blip, duration) {
     SetBlipDisplay(blipId, 6);
     SetBlipAlpha(blip, 128);
     setTimeout(() => { fadeBlip(blip, 128, blipTimeLimit); }, duration);
 }
 
-function keepPingingPlayer() {
-    if(huntStarted) {
-        pingBlipOnMap(blipId, blipLifespan);
-    }
-}
-
-function notifyHuntedPlayer() {
-    huntStarted = true;
-    huntedIdx = PlayerId();
-
-    currentObj = "Survive";
-    team = Team.Hunted;
-}
-
-function notifyHunters({ serverId, huntedPlayerName }) {
-    huntStarted = true;
-    huntedIdx = GetPlayerFromServerId(serverId);
-    TriggerEvent("chat:addMessage", {
-        args: [`huntedPlayerName: ${huntedPlayerName}`]
-    });
-    huntedName = huntedPlayerName;
-
-    currentObj = " is the hunted! Track them down."
-    team = Team.Hunters;
-}
-
+// Resets the necessary globals after a hunt.
 function endHunt() {
     currentObj = "";
     currentTimeLeft = -1;
@@ -207,11 +188,12 @@ function endHunt() {
         timer = null;
     }
     huntStarted = false;
+    huntOver = false;
     huntedIdx = null;
 }
 
+// Fades blip over time.
 function fadeBlip(blip, initialOpacity, duration) {
-    //setTimeout(() => {
     var timeWaited = 0;
     var fadeInterval = setInterval(() => {
         let alpha = Math.floor(128 * (1.0 - (timeWaited / duration)));
@@ -224,29 +206,31 @@ function fadeBlip(blip, initialOpacity, duration) {
             SetBlipDisplay(blip, 0);
         }
     }, duration);
-    //}, duration);
 }
 
 function createBlipForPlayer(args) {
-    blipTimer = blipTimeLimit;
     const radius = parseInt(args.r);
     const offsetX = Number(args.ox);
     const offsetY = Number(args.oy);
     const playerId = Number(args.pid);
+
+    /*
     TriggerEvent("chat:addMessage", {args: [`local id: ${PlayerId()}, server id: ${playerId}`]});
     TriggerEvent("chat:addMessage", {args: [`radius: ${radius === 200}`]});
     TriggerEvent("chat:addMessage", {args: [`offsetX: ${offsetX}`]});
+    */
+
     let playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
-    TriggerEvent("chat:addMessage", {args: ["Test"]});
+    //TriggerEvent("chat:addMessage", {args: ["Test"]});
     if(blipId === null) {
-        TriggerEvent("chat:addMessage", {args: ["Creating blip"]});
+        //TriggerEvent("chat:addMessage", {args: ["Creating blip"]});
         blipId = AddBlipForRadius(playerPos[0] + offsetX, playerPos[1], playerPos[2] + offsetY, radius);
     }
     else {
-        TriggerEvent("chat:addMessage", {args: ["Updating blip"]});
+        //TriggerEvent("chat:addMessage", {args: ["Updating blip"]});
         SetBlipCoords(blipId, playerPos[0] + offsetX, playerPos[1], playerPos[2] + offsetY);
     }
-    TriggerEvent("chat:addMessage", {args: ["Test2"]});
+    //TriggerEvent("chat:addMessage", {args: ["Test2"]});
     SetBlipColour(blipId, 66);
     SetBlipAlpha(blipId, 128);
     SetBlipDisplay(blipId, 6);
@@ -255,67 +239,68 @@ function createBlipForPlayer(args) {
     pingBlipOnMap(blipId, blipLifespan);
 }
 
-function notifyWinner(winningTeam) {
-    huntOver = true;
-    TriggerEvent("chat:addMessage", {
-        args: [`You ${team === winningTeam ? 'win' : 'lose'}`]
-    });
-    if(team == winningTeam) {
-        currentObj = "You've won the hunt!";
-    }
-    else {
-        currentObj = "You've lost the hunt!";
-    }
-    setTimeout(endHunt, 5000);
-}
-
-function tickTime(time) {
-    currentTimeLeft = time;
-}
-
 function tickUpdate() {
         Wait(1);
         if(GetPlayerPed(PlayerId()) != 0) {
+            // Infinite stamina.
             ResetPlayerStamina(PlayerId());
 
+            // Show current objective if hunt still going.
             if (currentObj !== null && currentObj.trim() !== "") {
                 AddTextEntry("CURRENT_OBJECTIVE", "~a~~a~");
                 BeginTextCommandPrint("CURRENT_OBJECTIVE");
                 if (huntStarted === true && huntOver === false && huntedName !== null && GetPlayerPed(huntedIdx) != 0) {
+                    // If current player is a hunter, set initial text colour to yellow
+                    // as it's meant to say the hunted player's name.
                     if (team == Team.Hunters) {
                         SetColourOfNextTextComponent(12);
                         AddTextComponentString(huntedName);
                     }
                 }
+                // Ensure the main objective string is displayed in default (white) text colour.
                 SetColourOfNextTextComponent(0);
                 AddTextComponentString(currentObj);
                 EndTextCommandPrint(1, true);
             }
 
-            if(currentTimeLeft >= 0) {
-                let dateTime = new Date(currentTimeLeft);
-                let seconds = dateTime.getSeconds();
-                seconds = (seconds < 10 ? `0${seconds}` : seconds);
-                let minutes = dateTime.getMinutes();
-                minutes = (minutes < 10 ? `0${minutes}` : minutes);
-                let timeStr = `${minutes}:${seconds}`;
-
-                let rectWidth = 0.001;
-                BeginTextCommandWidth("STRING");
-                AddTextComponentString("00:00")
-                rectWidth = EndTextCommandGetWidth(true);
-                let textWidth = 0.001;
-                BeginTextCommandWidth("STRING");
-                AddTextComponentString(timeStr);
-                textWidth = EndTextCommandGetWidth(true);
-
-                DrawRect(0.94, 0.875, rectWidth + 0.001, 0.06, 0,0,0, 128);
-
-                BeginTextCommandDisplayText("STRING");
-                AddTextComponentString(timeStr);
-                EndTextCommandDisplayText(0.94 - rectWidth / 2, 0.835);
+            // Show remaining time if hunt still going.
+            if (currentTimeLeft >= 0) {
+                const timeStr = formatIntoMMSS(currentTimeLeft);
+                drawRemainingTime(timeStr);
             }
         }
+}
+
+// Formats milliseconds into a mm:ss string.
+function formatIntoMMSS(milliseconds) {
+    const dateTime = new Date(milliseconds);
+    let seconds = dateTime.getSeconds();
+    seconds = (seconds < 10 ? `0${seconds}` : seconds);
+    let minutes = dateTime.getMinutes();
+    minutes = (minutes < 10 ? `0${minutes}` : minutes);
+    return `${minutes}:${seconds}`;
+}
+
+// Draws a timerbar with the remaining time in the bottom right corner of the screen.
+function drawRemainingTime(timeStr) {
+    SetTextScale(0, 0.55);
+    BeginTextCommandWidth("STRING");
+    AddTextComponentString("TIME LEFT  00:00")
+    const rectWidth = EndTextCommandGetWidth(true);
+
+    RequestStreamedTextureDict("timerbars");
+    if (HasStreamedTextureDictLoaded("timerbars")) {
+        DrawSprite("timerbars", "all_black_bg", 0.92, 0.875, rectWidth, 0.06 * 0.5 * 1.4, 0.0, 255, 255, 255, 128);
+    }
+
+    BeginTextCommandDisplayText("STRING");
+    AddTextComponentString(`${timeStr}`);
+    EndTextCommandDisplayText(0.94, 0.855);
+    SetTextScale(0, 0.35);
+    BeginTextCommandDisplayText("STRING");
+    AddTextComponentString("TIME LEFT");
+    EndTextCommandDisplayText(0.94 - rectWidth / 2.35, 0.865);
+    SetTextScale(0, 1.0);
 }
 
 function resetTimer() {
@@ -325,17 +310,70 @@ function resetTimer() {
     }
 
     timer = setInterval(() => { currentTimeLeft -= 1000; }, 1000);
-    setTimeout(() => { if (timer !== null) { clearInterval(timer); timer = null; } }, GameSettings.TimeLimit);
+    if (deleteTimerTimeout !== null) {
+        clearTimeout(deleteTimerTimeout);
+        deleteTimerTimeout = null;
+    }
+    deleteTimerTimeout = setTimeout(() => { if (timer !== null) { clearInterval(timer); timer = null; deleteTimerTimeout = null; } }, GameSettings.TimeLimit);
 }
 
-function huntStartedByServer() {
-    resetTimer();
+// Network-aware events.
+const Events = {
+    // Reset the timer when the hunt starts on the server.
+    huntStartedByServer: () => { resetTimer(); },
+
+    // Ping the hunted player on the map.
+    showPingOnMap: (args) => { createBlipForPlayer(args); },
+
+    // Update the remaining time to sync with the server.
+    tickTime: (time) => { currentTimeLeft = time; },
+
+    // Notify the winning team at the end of a hunt.
+    notifyWinner: (winningTeam) => {
+        huntOver = true;
+        TriggerEvent("chat:addMessage", {
+            args: [`You ${team === winningTeam ? 'win' : 'lose'}`]
+        });
+        if (team == winningTeam) {
+            currentObj = "You've won the hunt!";
+        }
+        else {
+            currentObj = "You've lost the hunt!";
+        }
+        setTimeout(endHunt, 5000);
+    },
+
+    // Notify the hunters about their objective when the hunt starts.
+    notifyHunters: ({ serverId, huntedPlayerName }) => {
+        huntStarted = true;
+        huntedIdx = GetPlayerFromServerId(serverId);
+        TriggerEvent("chat:addMessage", {
+            args: [`huntedPlayerName: ${huntedPlayerName}`]
+        });
+        huntedName = huntedPlayerName;
+
+        currentObj = " is the hunted! Track them down."
+        team = Team.Hunters;
+    },
+
+    // Notify the hunted player(s) about their objective when the hunt starts.
+    notifyHuntedPlayer: () => {
+        huntStarted = true;
+        huntedIdx = PlayerId();
+
+        currentObj = "Survive";
+        team = Team.Hunted;
+    }
+};
+
+// Register all client events with names so that they can be called from the server.
+function registerEvents() {
+    Object.keys(Events).forEach((evName) => {
+        onNet(`sth:${evName}`, Events[evName]);
+    });
 }
 
+registerEvents();
+
+// skin change bugfix
 onNet("sth:replicatePlayerModelChangeCl", replicatePlayerModelChangeCl);
-onNet("sth:notifyHuntedPlayer", notifyHuntedPlayer);
-onNet("sth:notifyHunters", notifyHunters);
-onNet("sth:notifyWinner", notifyWinner);
-onNet("sth:tickTime", tickTime);
-onNet("sth:showPingOnMap", createBlipForPlayer);
-onNet("sth:huntStartedByServer", huntStartedByServer);

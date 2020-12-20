@@ -5,8 +5,8 @@ const Team = { Hunters: 0, Hunted: 1 };
 
 // Constants to start the game
 const GameSettings = {
-    TimeLimit: 60000, // Time limit for each hunt (in ms)
-    HuntedPingInterval: 10000 // Amount of time between pinging the hunted player's location on the map (in ms)
+    TimeLimit: GetConvarInt("sth_timelimit", 60000 * 24), // Time limit for each hunt (in ms)
+    HuntedPingInterval: GetConvarInt("sth_pinginterval", 120000) // Amount of time between pinging the hunted player's location on the map (in ms)
 };
 
 function defaultGameState() {
@@ -127,8 +127,7 @@ const Events = {
         TriggerClientEvent("sth:replicatePlayerModelChangeCl", -1, { playerId, hash });
     },
     playerDied: ({ pid }) => {
-        console.log("Test ClientKilled");
-        console.log(`pid: ${GetPlayerName(pid)}`);
+        console.log(`Player died: ${GetPlayerName(pid)}`);
         if (pid == gs.huntedPlayer) {
             gs.winningTeam = Team.Hunters;
             if (gs.gameTimeout !== null) {

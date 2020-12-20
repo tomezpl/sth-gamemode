@@ -2,11 +2,14 @@
 
 const exec = require("child_process").exec;
 
+const srcFiles = ['client.js', 'server.js'];
+
 function build(cb) {
-    exec("node ./build.js ./client.js ./server.js");
+    const argList = ['', ...srcFiles].reduce((acc, fName) => ((acc && acc.length >= 0) ? `${acc} ` : '') + `./${fName}`);
+    exec('node ./build.js ' + argList);
     cb();
 }
 
 exports.default = () => {
-    gulp.watch(["client.js", "server.js"], build);
+    gulp.watch(srcFiles, build);
 };
