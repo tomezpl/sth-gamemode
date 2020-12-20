@@ -9,24 +9,26 @@ const GameSettings = {
     HuntedPingInterval: 10000 // Amount of time between pinging the hunted player's location on the map (in ms)
 };
 
-var currentObj = "";
-var team = 1;
-var blipId = null;
-var huntedIdx = null;
-var huntedName = null;
-var huntStarted = false;
-var huntOver = false;
-var currentTimeLeft = -1;
-var timer = null;
+var currentObj = ""; // Objective displayed to the local player, based on the team.
+var team = 1; // Local player's team.
+var blipId = null; // ID of the hunted player's blip.
+var huntedIdx = null; // ID of the hunted player.
+var huntedName = null; // Name of the hunted player.
+var huntStarted = false; // Is a hunt running? This and huntOver can be true at the same time.
+var huntOver = false; // Has a hunt just finished? This is false if the hunt hasn't started yet.
+var currentTimeLeft = -1; // Time left in the hunt.
+var timer = null; // Timer (interval) used to track time.
+var deleteTimerTimeout = null; // Timeout used to delete timer (interval) at the end of a hunt.
 
-const blipTimeLimit = 5000;
+const blipTimeLimit = 5000; // Time the blip is shown for before it starts fading.
 const blipLifespan = 3000; // Time it takes for blip to start fading
 var blipTimer = blipTimeLimit;
 
-const huntedPingInterval = 10000;
+const huntedPingInterval = 10000; // How many milliseconds between showing the hunted player's radius.
 
-const dockSpawn = {x: 851.379, y: -3140.005, z: 5.900808};
+const dockSpawn = {x: 851.379, y: -3140.005, z: 5.900808}; // Spawn coordinates
 
+// Called when this script is loaded on the client.
 on('onClientGameTypeStart', () => {
     exports.spawnmanager.setAutoSpawnCallback(autoSpawnCallback);
     exports.spawnmanager.setAutoSpawn(true);
@@ -46,6 +48,7 @@ on('onClientGameTypeStart', () => {
     setTick(tickUpdate);
 });
 
+// Called when spawn is triggered.
 function autoSpawnCallback() {
     exports.spawnmanager.spawnPlayer({
         ...dockSpawn, 
@@ -53,6 +56,7 @@ function autoSpawnCallback() {
     });
 }
 
+// Called when user issues /starthunt
 function startHunt() { 
     if (huntOver === true) {
         TriggerEvent("chat:addMessage", { args: ["You must wait 5 seconds before starting another hunt."] });
@@ -114,6 +118,8 @@ function setSkin(source, args) {
     }
 }
 
+// This is an event handler for changing the player model. The event is fired over the network from the server to all players.
+// Seems like calling the change model native twice fixes ped appearance sync issues across clients.
 function replicatePlayerModelChangeCl(args) {
     // Unpack arguments
     const playerId = args.playerId;
@@ -159,6 +165,7 @@ function replicatePlayerModelChangeCl(args) {
     }
 }
 
+// Fired when resource is loaded. Registers commands etc.
 on('onClientResourceStart', () => {
     RegisterCommand("starthunt", startHunt);
     RegisterCommand("setskin", setSkin);
@@ -168,12 +175,14 @@ on('onClientResourceStart', () => {
     });
 });
 
+// Pings a blip on the map, then sets it to start fading after a specified duration.
 function pingBlipOnMap(blip, duration) {
     SetBlipDisplay(blipId, 6);
     SetBlipAlpha(blip, 128);
     setTimeout(() => { fadeBlip(blip, 128, blipTimeLimit); }, duration);
 }
 
+// Resets the necessary globals after a hunt.
 function endHunt() {
     currentObj = "";
     currentTimeLeft = -1;
@@ -186,6 +195,7 @@ function endHunt() {
     huntedIdx = null;
 }
 
+// Fades blip over time.
 function fadeBlip(blip, initialOpacity, duration) {
     var timeWaited = 0;
     var fadeInterval = setInterval(() => {
@@ -207,20 +217,24 @@ function createBlipForPlayer(args) {
     const offsetX = Number(args.ox);
     const offsetY = Number(args.oy);
     const playerId = Number(args.pid);
+
+    /*
     TriggerEvent("chat:addMessage", {args: [`local id: ${PlayerId()}, server id: ${playerId}`]});
     TriggerEvent("chat:addMessage", {args: [`radius: ${radius === 200}`]});
     TriggerEvent("chat:addMessage", {args: [`offsetX: ${offsetX}`]});
+    */
+
     let playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
-    TriggerEvent("chat:addMessage", {args: ["Test"]});
+    //TriggerEvent("chat:addMessage", {args: ["Test"]});
     if(blipId === null) {
-        TriggerEvent("chat:addMessage", {args: ["Creating blip"]});
+        //TriggerEvent("chat:addMessage", {args: ["Creating blip"]});
         blipId = AddBlipForRadius(playerPos[0] + offsetX, playerPos[1], playerPos[2] + offsetY, radius);
     }
     else {
-        TriggerEvent("chat:addMessage", {args: ["Updating blip"]});
+        //TriggerEvent("chat:addMessage", {args: ["Updating blip"]});
         SetBlipCoords(blipId, playerPos[0] + offsetX, playerPos[1], playerPos[2] + offsetY);
     }
-    TriggerEvent("chat:addMessage", {args: ["Test2"]});
+    //TriggerEvent("chat:addMessage", {args: ["Test2"]});
     SetBlipColour(blipId, 66);
     SetBlipAlpha(blipId, 128);
     SetBlipDisplay(blipId, 6);
@@ -300,8 +314,11 @@ function resetTimer() {
     }
 
     timer = setInterval(() => { currentTimeLeft -= 1000; }, 1000);
-    // TODO: won't this potentially cause the timer to clear itself in the middle of a game after being cleared prematurely?
-    setTimeout(() => { if (timer !== null) { clearInterval(timer); timer = null; } }, GameSettings.TimeLimit);
+    if (deleteTimerTimeout !== null) {
+        clearTimeout(deleteTimerTimeout);
+        deleteTimerTimeout = null;
+    }
+    deleteTimerTimeout = setTimeout(() => { if (timer !== null) { clearInterval(timer); timer = null; deleteTimerTimeout = null; } }, GameSettings.TimeLimit);
 }
 
 // Network-aware events.
