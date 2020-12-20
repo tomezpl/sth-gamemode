@@ -3,6 +3,66 @@ require('@citizenfx/server')//ignore
 // Team enum
 const Team = { Hunters: 0, Hunted: 1 };
 
+// List of cars that can be spawned for the players.
+const AllowedCars = [
+    'adder',
+    'banshee',
+    'bfinjection',
+    'blista',
+    'buffalo',
+    'buffalo2',
+    'bullet',
+    'carbonizzare',
+    'coquette',
+    'dubsta2',
+    'exemplar',
+    'gauntlet',
+    'dominator',
+    'infernus',
+    'sultan',
+    'khamelion',
+    'mesa3',
+    'oracle2',
+    'phoenix',
+    'schafter2',
+    'schwarzer',
+    'serrano',
+    'comet3',
+    'phantom2'
+];
+
+const CarSpawnPoints = [
+    { xyz: [818.21, -3128.38, 5.9], rot: 180 }, // 1
+    { xyz: [822.22, -3129.37, 5.9], rot: 180 }, // 2
+    { xyz: [826.22, -3129.37, 5.9], rot: 180 }, // 3
+    { xyz: [830.22, -3129.37, 5.9], rot: 180 }, // 4
+    { xyz: [834.22, -3129.37, 5.9], rot: 180 }, // 5
+    { xyz: [838.22, -3129.37, 5.9], rot: 180 }, // 6
+    { xyz: [842.22, -3129.37, 5.9], rot: 180 }, // 7
+    { xyz: [846.22, -3129.37, 5.9], rot: 180 }, // 8
+    { xyz: [850.22, -3129.37, 5.9], rot: 180 }, // 9
+    { xyz: [854.22, -3129.37, 5.9], rot: 180 }, // 10
+    { xyz: [858.22, -3129.37, 5.9], rot: 180 }, // 11
+    { xyz: [862.22, -3129.37, 5.9], rot: 180 }, // 12
+    { xyz: [866.22, -3129.37, 5.9], rot: 180 }, // 13
+    { xyz: [866.22, -3143.73, 5.9], rot: 0 }, // 14
+    { xyz: [862.22, -3143.73, 5.9], rot: 0 }, // 15
+    { xyz: [858.22, -3143.73, 5.9], rot: 0 }, // 16
+    { xyz: [854.22, -3143.73, 5.9], rot: 0 }, // 17
+    { xyz: [850.22, -3143.73, 5.9], rot: 0 }, // 18
+    { xyz: [846.22, -3143.73, 5.9], rot: 0 }, // 19
+    { xyz: [842.22, -3143.73, 5.9], rot: 0 }, // 20
+    { xyz: [838.22, -3143.73, 5.9], rot: 0 }, // 21
+    { xyz: [834.22, -3143.73, 5.9], rot: 0 }, // 22
+    { xyz: [830.22, -3143.73, 5.9], rot: 0 }, // 23
+    { xyz: [826.22, -3143.73, 5.9], rot: 0 }, // 24
+    { xyz: [822.22, -3143.73, 5.9], rot: 0 }, // 25
+    { xyz: [818.22, -3143.73, 5.9], rot: 0 }  // 26
+];
+
+// List of spawned cars for the players. Can be refreshed.
+var SpawnedCars = [];
+
 // Constants to start the game
 const GameSettings = {
     TimeLimit: GetConvarInt("sth_timelimit", 60000 * 24), // Time limit for each hunt (in ms)
@@ -82,6 +142,30 @@ function PingBlip() {
     }
 }
 
+function spawnCars({ pid }) {
+    console.log("Spawning cars for players...");
+
+    console.log("Getting rid of already spawned cars.");
+    // Delete any cars already spawned.
+    SpawnedCars.forEach((car) => {
+        DeleteEntity(car);
+    });
+    console.log("Existing cars deleted.");
+
+    SpawnedCars = [];
+
+    console.log("Spawning new cars...");
+    CarSpawnPoints.forEach((spawnPoint, index) => {
+        const randomCar = AllowedCars[Math.floor((AllowedCars.length - 1) * Math.random())];
+        console.log(`Chosen random car '${randomCar}'`);
+        const hash = GetHashKey(randomCar);
+        console.log("Obtained hash key for random car");
+        console.log(`Spawning ${randomCar} at spawn point ${index + 1}.`);
+        emitNet("sth:spawnCar", pid, { hash, spawnPoint });
+        console.log(`Dispatched 'spawn ${randomCar} at spawn point ${index + 1}' event to client ${pid}.`);
+    });
+}
+
 // Server events (callable from clients)
 const Events = {
     startHunt: () => {
@@ -89,10 +173,10 @@ const Events = {
         const playerCount = GetNumPlayerIndices();
         // Choose a random player.
         let randomPlayerIndex = Math.round(Math.random() * (playerCount - 1));
-        
+
         // Notify the hunted player's game.
         TriggerClientEvent("sth:notifyHuntedPlayer", GetPlayerFromIndex(randomPlayerIndex));
-        
+
         // Notify everyone else (the hunters).
         for(let i = 0; i < playerCount; i++) {
             if(i != randomPlayerIndex) {
@@ -138,6 +222,29 @@ const Events = {
             }
             endHunt();
         }
+    },
+    spawnCars: ({ pid }) => {
+        console.log("Spawning cars for player " + pid + "...");
+
+        TriggerClientEvent("sth:despawnCars", pid, SpawnedCars);
+
+        setTimeout(() => {
+            let carArr = [];
+
+            console.log("Spawning new cars...");
+            CarSpawnPoints.forEach((spawnPoint, index) => {
+                const randomCar = AllowedCars[Math.floor((AllowedCars.length - 1) * Math.random())];
+                console.log(`Chosen random car '${randomCar}'`);
+                console.log(`Spawning ${randomCar} at spawn point ${index + 1}.`);
+                carArr.push({ car: randomCar, spawnPoint });
+            });
+
+            TriggerClientEvent("sth:createCars", pid, carArr);
+        }, 1000);
+    },
+    saveSpawnedCars: (carHandles) => {
+        console.log("Saving " + carHandles.length + " cars.");
+        SpawnedCars = carHandles;
     }
 };
 

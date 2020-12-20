@@ -20,10 +20,15 @@ var currentTimeLeft = -1; // Time left in the hunt.
 var timer = null; // Timer (interval) used to track time.
 var deleteTimerTimeout = null; // Timeout used to delete timer (interval) at the end of a hunt.
 
+// Car handle array to sync with the server.
+var SpawnedCars = [];
+var CarsToDespawn = [];
+var CarsToSpawn = [];
+
 const blipTimeLimit = GetConvarInt("sth_blipfadetime", 5000); // Amount of time it takes for the blip to fade completely (after blipLifespan runs out).
 const blipLifespan = GetConvarInt("sth_bliplifespan", 25000); // Time it takes for blip to start fading
 
-const dockSpawn = {x: 851.379, y: -3140.005, z: 5.900808}; // Spawn coordinates
+const dockSpawn = { x: 851.379, y: -3140.005, z: 5.900808 }; // Spawn coordinates
 
 // Called when this script is loaded on the client.
 on('onClientGameTypeStart', () => {
@@ -48,13 +53,13 @@ on('onClientGameTypeStart', () => {
 // Called when spawn is triggered.
 function autoSpawnCallback() {
     exports.spawnmanager.spawnPlayer({
-        ...dockSpawn, 
+        ...dockSpawn,
         model: "a_m_m_skater_01"
     });
 }
 
 // Called when user issues /starthunt
-function startHunt() { 
+function startHunt() {
     if (huntOver === true) {
         TriggerEvent("chat:addMessage", { args: ["You must wait 5 seconds before starting another hunt."] });
     }
@@ -64,51 +69,46 @@ function startHunt() {
 }
 
 function setSkin(source, args) {
-    if(args.length >= 1)
-    {
+    if (args.length >= 1) {
         let hash = GetHashKey(args[0]);
-        if(IsModelValid(hash))
-        {
+        if (IsModelValid(hash)) {
             RequestModel(hash);
             var modelLoaded = false;
             var finishedSetting = false;
             var modelLoaderId = setTick(() => {
-                if(!HasModelLoaded(hash)) {
+                if (!HasModelLoaded(hash)) {
                     Wait(500);
                 }
                 else {
                     modelLoaded = true;
                 }
 
-                if(modelLoaderId && modelLoaded) {
-                    TriggerEvent("chat:addMessage", {args: [`setSkin: modelLoader tick ${modelLoaderId} about to be cleared`]});
+                if (modelLoaderId && modelLoaded) {
+                    TriggerEvent("chat:addMessage", { args: [`setSkin: modelLoader tick ${modelLoaderId} about to be cleared`] });
                     clearTick(modelLoaderId);
-                    TriggerEvent("chat:addMessage", {args: [`setSkin: modelLoader tick ${modelLoaderId} was cleared`]});
+                    TriggerEvent("chat:addMessage", { args: [`setSkin: modelLoader tick ${modelLoaderId} was cleared`] });
                 }
-                TriggerEvent("chat:addMessage", {args: [`setSkin: modelLoader tick ${modelLoaderId} is still alive`]});
+                TriggerEvent("chat:addMessage", { args: [`setSkin: modelLoader tick ${modelLoaderId} is still alive`] });
             });
             var modelSetterId = setTick(() => {
-                if(modelLoaded && !finishedSetting)
-                {
+                if (modelLoaded && !finishedSetting) {
                     SetPlayerModel(PlayerId(), hash);
-                    for(let i = 0; i < 2; i++) { SetPedDefaultComponentVariation(GetPlayerPed(PlayerId())); }
+                    for (let i = 0; i < 2; i++) { SetPedDefaultComponentVariation(GetPlayerPed(PlayerId())); }
                     TriggerServerEvent("sth:replicatePlayerModelChange", PlayerId(), hash);
                     finishedSetting = true;
                 }
-                if(modelSetterId && finishedSetting) {
+                if (modelSetterId && finishedSetting) {
                     clearTick(modelSetterId);
                 }
             });
         }
-        else
-        {
+        else {
             TriggerEvent("chat:addMessage", {
                 args: ["Invalid model mesh!"]
             })
         }
     }
-    else
-    {
+    else {
         TriggerEvent("chat:addMessage", {
             args: ["Need to provide a valid ped model!"]
         });
@@ -121,35 +121,34 @@ function replicatePlayerModelChangeCl(args) {
     // Unpack arguments
     const playerId = args.playerId;
     const hash = args.hash;
-    
-    if(playerId != PlayerId()) {
-        if(IsModelValid(hash)) {
+
+    if (playerId != PlayerId()) {
+        if (IsModelValid(hash)) {
             RequestModel(hash);
             var modelLoaded = false;
             var finishedSetting = false;
             var modelLoaderId = setTick(() => {
-                if(!HasModelLoaded(hash)) {
+                if (!HasModelLoaded(hash)) {
                     Wait(500);
                 }
                 else {
                     modelLoaded = true;
                 }
 
-                if(modelLoaderId && modelLoaded) {
-                    TriggerEvent("chat:addMessage", {args: [`modelLoader tick ${modelLoaderId} about to be cleared`]});
+                if (modelLoaderId && modelLoaded) {
+                    TriggerEvent("chat:addMessage", { args: [`modelLoader tick ${modelLoaderId} about to be cleared`] });
                     clearTick(modelLoaderId);
-                    TriggerEvent("chat:addMessage", {args: [`modelLoader tick ${modelLoaderId} was cleared`]});
+                    TriggerEvent("chat:addMessage", { args: [`modelLoader tick ${modelLoaderId} was cleared`] });
                 }
-                TriggerEvent("chat:addMessage", {args: [`modelLoader tick ${modelLoaderId} is still alive`]});
+                TriggerEvent("chat:addMessage", { args: [`modelLoader tick ${modelLoaderId} is still alive`] });
             });
             var modelSetterId = setTick(() => {
-                if(modelLoaded && !finishedSetting)
-                {
+                if (modelLoaded && !finishedSetting) {
                     SetPlayerModel(playerId, hash);
-                    for(let i = 0; i < 2; i++) { SetPedDefaultComponentVariation(GetPlayerPed(playerId)); }
+                    for (let i = 0; i < 2; i++) { SetPedDefaultComponentVariation(GetPlayerPed(playerId)); }
                     finishedSetting = true;
                 }
-                if(modelSetterId && finishedSetting) {
+                if (modelSetterId && finishedSetting) {
                     clearTick(modelSetterId);
                 }
             });
@@ -166,9 +165,16 @@ function replicatePlayerModelChangeCl(args) {
 on('onClientResourceStart', () => {
     RegisterCommand("starthunt", startHunt);
     RegisterCommand("setskin", setSkin);
+    RegisterCommand("spawncars", () => { emitNet("sth:spawnCars", { pid: GetPlayerServerId(PlayerId()) }) });
     RegisterCommand("suicide", () => {
         SetEntityHealth(PlayerPedId(), 0);
         TriggerEvent("baseevents:onPlayerKilled");
+    });
+    RegisterCommand("xyz", () => {
+        const pos = GetEntityCoords(PlayerPedId());
+        const rot = GetEntityHeading(PlayerPedId());
+        TriggerEvent("chat:addMessage", { args: [`${pos[0]}, ${pos[1]}, ${pos[2]}`] });
+        TriggerEvent("chat:addMessage", { args: [`Yaw: ${rot}`] });
     });
 });
 
@@ -202,7 +208,7 @@ function fadeBlip(blip, initialOpacity, duration) {
     }, 100);
     setTimeout(() => { clearInterval(fadeInterval); }, duration);
     setTimeout(() => {
-        if(blip) {
+        if (blip) {
             SetBlipDisplay(blip, 0);
         }
     }, duration);
@@ -222,7 +228,7 @@ function createBlipForPlayer(args) {
 
     let playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
     //TriggerEvent("chat:addMessage", {args: ["Test"]});
-    if(blipId === null) {
+    if (blipId === null) {
         //TriggerEvent("chat:addMessage", {args: ["Creating blip"]});
         blipId = AddBlipForRadius(playerPos[0] + offsetX, playerPos[1], playerPos[2] + offsetY, radius);
     }
@@ -240,35 +246,71 @@ function createBlipForPlayer(args) {
 }
 
 function tickUpdate() {
-        Wait(1);
-        if(GetPlayerPed(PlayerId()) != 0) {
-            // Infinite stamina.
-            ResetPlayerStamina(PlayerId());
+    Wait(1);
+    if (GetPlayerPed(PlayerId()) != 0) {
+        // Infinite stamina.
+        ResetPlayerStamina(PlayerId());
 
-            // Show current objective if hunt still going.
-            if (currentObj !== null && currentObj.trim() !== "") {
-                AddTextEntry("CURRENT_OBJECTIVE", "~a~~a~");
-                BeginTextCommandPrint("CURRENT_OBJECTIVE");
-                if (huntStarted === true && huntOver === false && huntedName !== null && GetPlayerPed(huntedIdx) != 0) {
-                    // If current player is a hunter, set initial text colour to yellow
-                    // as it's meant to say the hunted player's name.
-                    if (team == Team.Hunters) {
-                        SetColourOfNextTextComponent(12);
-                        AddTextComponentString(huntedName);
-                    }
+        // Show current objective if hunt still going.
+        if (currentObj !== null && currentObj.trim() !== "") {
+            AddTextEntry("CURRENT_OBJECTIVE", "~a~~a~");
+            BeginTextCommandPrint("CURRENT_OBJECTIVE");
+            if (huntStarted === true && huntOver === false && huntedName !== null && GetPlayerPed(huntedIdx) != 0) {
+                // If current player is a hunter, set initial text colour to yellow
+                // as it's meant to say the hunted player's name.
+                if (team == Team.Hunters) {
+                    SetColourOfNextTextComponent(12);
+                    AddTextComponentString(huntedName);
                 }
-                // Ensure the main objective string is displayed in default (white) text colour.
-                SetColourOfNextTextComponent(0);
-                AddTextComponentString(currentObj);
-                EndTextCommandPrint(1, true);
             }
+            // Ensure the main objective string is displayed in default (white) text colour.
+            SetColourOfNextTextComponent(0);
+            AddTextComponentString(currentObj);
+            EndTextCommandPrint(1, true);
+        }
 
-            // Show remaining time if hunt still going.
-            if (currentTimeLeft >= 0) {
-                const timeStr = formatIntoMMSS(currentTimeLeft);
-                drawRemainingTime(timeStr);
+        updateCars();
+
+        // Show remaining time if hunt still going.
+        if (currentTimeLeft >= 0) {
+            const timeStr = formatIntoMMSS(currentTimeLeft);
+            drawRemainingTime(timeStr);
+        }
+    }
+}
+
+function updateCars() {
+    CarsToDespawn.forEach((car) => {
+        DeleteVehicle(car);
+    });
+
+    CarsToDespawn = [];
+
+    let updateServer = false;
+    if (CarsToSpawn.length > 0) {
+        updateServer = true;
+    }
+
+    if (updateServer === true) {
+        SpawnedCars = [];
+    }
+
+    CarsToSpawn.forEach(({ car, spawnPoint }) => {
+        const hash = GetHashKey(car);
+        if (IsModelInCdimage(hash) && IsModelAVehicle(hash)) {
+            RequestModel(hash);
+            Wait(50);
+            if (HasModelLoaded(hash)) {
+                SpawnedCars.push(CreateVehicle(hash, spawnPoint.xyz[0], spawnPoint.xyz[1], spawnPoint.xyz[2], spawnPoint.rot, true, false));
             }
         }
+    });
+
+    CarsToSpawn = [];
+
+    if (updateServer === true) {
+        emitNet("sth:saveSpawnedCars", SpawnedCars);
+    }
 }
 
 // Formats milliseconds into a mm:ss string.
@@ -363,6 +405,14 @@ const Events = {
 
         currentObj = "Survive";
         team = Team.Hunted;
+    },
+
+    createCars: (cars) => {
+        CarsToSpawn = cars;
+    },
+
+    despawnCars: (spawnedCarHandles) => {
+        CarsToDespawn = spawnedCarHandles;
     }
 };
 
