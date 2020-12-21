@@ -73,6 +73,7 @@ function defaultGameState() {
     return {
         huntStarted: false, // is there an ongoing hunt?
         huntedPlayer: -1, // server ID of the currently hunted player. Default: -1 (nobody)
+        lastHuntedPlayer: -1, // INDEX of the last hunted player (used to make random pick more "unique")
         winningTeam: -1, // team winning the match. Default: -1 (neither)
         timeLeft: GameSettings.TimeLimit, // Time left on this hunt (in ms)
 
@@ -103,7 +104,9 @@ function endHunt() {
     clearTimers();
     gs.huntStarted = false;
     TriggerClientEvent("sth:notifyWinner", -1, gs.winningTeam);
+    const lastHuntedPlayer = gs.lastHuntedPlayer;
     gs = defaultGameState();
+    gs.lastHuntedPlayer = lastHuntedPlayer;
 }
 
 function beginGame(player) {
@@ -171,8 +174,21 @@ const Events = {
     startHunt: () => {
         // Get number of players present.
         const playerCount = GetNumPlayerIndices();
+        console.log("Picking a random player from " + playerCount + " players.");
         // Choose a random player.
-        let randomPlayerIndex = Math.round(Math.random() * (playerCount - 1));
+        let randomFloat = 0;
+        let randomPlayerIndex = 0;
+        for (let i = 0; i < playerCount * playerCount; i++) {
+            randomFloat = Math.random();
+            randomPlayerIndex = Math.min(Math.round(randomFloat * playerCount), playerCount - 1);
+            if (randomPlayerIndex !== gs.lastHuntedPlayer) {
+                break;
+            }
+        }
+        console.log("Random float was " + randomFloat);
+        console.log("Picking player " + randomPlayerIndex);
+
+        gs.lastHuntedPlayer = randomPlayerIndex;
 
         // Notify the hunted player's game.
         TriggerClientEvent("sth:notifyHuntedPlayer", GetPlayerFromIndex(randomPlayerIndex));
@@ -182,7 +198,8 @@ const Events = {
             if(i != randomPlayerIndex) {
                 // TODO: Can't we rewrite this with issuing a request to -1 players (everyone) but just reject it on the hunted player's client?
                 TriggerClientEvent("sth:notifyHunters", GetPlayerFromIndex(i), {
-                    serverId: GetPlayerFromIndex(randomPlayerIndex), huntedPlayerName: GetPlayerName(GetPlayerFromIndex(randomPlayerIndex))
+                    serverId: GetPlayerFromIndex(randomPlayerIndex),
+                    huntedPlayerName: GetPlayerName(GetPlayerFromIndex(randomPlayerIndex))
                 });
             }
         }
