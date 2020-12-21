@@ -317,7 +317,7 @@ function updatePlayerBlips() {
     PlayerBlips.forEach((playerBlip) => {
         if ((GetPlayerName(playerBlip.id) === huntedName && !checkIfPedTooFar(GetPlayerPed(playerBlip.id))) || team === Team.Hunted) {
             // Hide the blip
-            SetBlipDisplay(playerBlip.blip, 7);
+            SetBlipDisplay(playerBlip.blip, 0);
         }
         else if ((playerBlip.id !== PlayerId()) || checkIfPedTooFar(GetPlayerPed(playerBlip.id))) {
             // Show the blip
