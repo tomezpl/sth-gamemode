@@ -262,6 +262,9 @@ const Events = {
     saveSpawnedCars: (carHandles) => {
         console.log("Saving " + carHandles.length + " cars.");
         SpawnedCars = carHandles;
+    },
+    cleanClothes: ({ pid }) => {
+        emitNet("sth:cleanClothesForPlayer", -1, { pid });
     }
 };
 

@@ -57,6 +57,7 @@ on('onClientGameTypeStart', () => {
     on("playerSpawned", () => {
         let playerPed = GetPlayerPed(PlayerId());
         GiveWeaponToPed(playerPed, GetHashKey("WEAPON_APPISTOL"), 300, false, true);
+        emitNet("sth:cleanClothes", { pid: PlayerId() });
 
         NetworkSetFriendlyFireOption(true);
         SetCanAttackFriendly(playerPed, true, true);
@@ -491,6 +492,10 @@ const Events = {
 
     despawnCars: (spawnedCarHandles) => {
         CarsToDespawn = spawnedCarHandles;
+    },
+
+    cleanClothesForPlayer: ({ pid }) => {
+        ClearPedBloodDamage(GetPlayerPed(pid));
     }
 };
 
