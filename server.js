@@ -126,7 +126,7 @@ function Tick() {
 function TimeUpdate(firstTick = false) {
     if(gs.huntStarted) {
         gs.timeLeft -= firstTick ? 0 : 10000;
-        TriggerClientEvent("sth:tickTime", -1, gs.timeLeft);
+        emitNet("sth:tickTime", -1, gs.timeLeft);
     }
 }
 
