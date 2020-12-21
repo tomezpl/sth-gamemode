@@ -240,13 +240,18 @@ function createBlipForPlayer(args) {
     const offsetY = Number(args.oy);
     const playerId = Number(args.pid);
 
+    let playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
+
+    if (team !== Team.Hunted) {
+        SetNewWaypoint(playerPos[0] + offsetX, playerPos[2] + offsetY);
+    }
+
     /*
     TriggerEvent("chat:addMessage", {args: [`local id: ${PlayerId()}, server id: ${playerId}`]});
     TriggerEvent("chat:addMessage", {args: [`radius: ${radius === 200}`]});
     TriggerEvent("chat:addMessage", {args: [`offsetX: ${offsetX}`]});
     */
 
-    let playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
     //TriggerEvent("chat:addMessage", {args: ["Test"]});
     if (blipId === null) {
         //TriggerEvent("chat:addMessage", {args: ["Creating blip"]});
