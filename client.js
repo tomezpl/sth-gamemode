@@ -63,6 +63,8 @@ on('onClientGameTypeStart', () => {
         SetCanAttackFriendly(playerPed, true, true);
     });
 
+    SetWeatherTypeNowPersist("XMAS");
+
     setTick(tickUpdate);
 });
 
