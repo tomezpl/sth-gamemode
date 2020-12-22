@@ -247,7 +247,11 @@ function createBlipForPlayer(args) {
     const offsetY = Number(args.oy);
     const playerId = Number(args.pid);
 
-    let playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
+    const playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
+    const zoneName = GetLabelText(GetNameOfZone(playerPos[0], playerPos[1], playerPos[2]));
+    BeginTextCommandThefeedPost("STRING");
+    AddTextComponentString(`${huntedName} is somewhere in ${zoneName} right now.`);
+    EndTextCommandThefeedPostTicker(true, true);
 
     /*
     TriggerEvent("chat:addMessage", {args: [`local id: ${PlayerId()}, server id: ${playerId}`]});
@@ -502,6 +506,7 @@ const Events = {
     notifyHuntedPlayer: () => {
         huntStarted = true;
         huntedIdx = PlayerId();
+        huntedName = GetPlayerName(PlayerId());
 
         currentObj = "Survive";
         team = Team.Hunted;
