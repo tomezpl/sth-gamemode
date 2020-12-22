@@ -266,7 +266,7 @@ function createBlipForPlayer(args) {
     SetBlipColour(blipId, 66);
     SetBlipAlpha(blipId, 128);
     SetBlipDisplay(blipId, 6);
-    SetBlipNameToPlayerName(blipId, GetPlayerName(GetPlayerFromServerId(playerId)));
+    SetBlipNameToPlayerName(blipId, GetPlayerFromServerId(playerId));
 
     pingBlipOnMap(blipId, blipLifespan);
 }
