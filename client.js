@@ -382,7 +382,26 @@ function updateCars() {
             RequestModel(hash);
             Wait(50);
             if (HasModelLoaded(hash)) {
-                SpawnedCars.push(CreateVehicle(hash, spawnPoint.xyz[0], spawnPoint.xyz[1], spawnPoint.xyz[2], spawnPoint.rot, true, false));
+                const index = SpawnedCars.push(CreateVehicle(hash, spawnPoint.xyz[0], spawnPoint.xyz[1], spawnPoint.xyz[2], spawnPoint.rot, true, false)) - 1;
+                const spawnedCar = SpawnedCars[index];
+                // Set all vehicle mods to maximum
+                for (let i = 0; i < 50; i++) {
+                    const nbMods = GetNumVehicleMods(spawnedCar, i);
+                    if (nbMods > 0) {
+                        SetVehicleModKit(spawnedCar, 0);
+                        SetVehicleMod(spawnedCar, i, nbMods - 1, false);
+                    }
+                }
+                // Add neons
+                for (let i = 0; i < 4; i++) {
+                    SetVehicleNeonLightEnabled(spawnedCar, i, Math.random() >= 0.5);
+                }
+                SetVehicleNeonLightsColour(spawnedCar, Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
+
+                SetVehicleXenonLightsColour(spawnedCar, Math.round(Math.random() * 12));
+
+                SetVehicleCustomPrimaryColour(spawnedCar, Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
+                SetVehicleCustomSecondaryColour(spawnedCar, Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
             }
         }
     });
