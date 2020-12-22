@@ -63,8 +63,6 @@ on('onClientGameTypeStart', () => {
         SetCanAttackFriendly(playerPed, true, true);
     });
 
-    SetWeatherTypeNowPersist("XMAS");
-
     setTick(tickUpdate);
 });
 
@@ -275,6 +273,8 @@ function createBlipForPlayer(args) {
 
 function tickUpdate() {
     Wait(1);
+
+    SetWeatherTypeNowPersist("XMAS");
     if (GetPlayerPed(PlayerId()) != 0) {
         // Infinite stamina.
         ResetPlayerStamina(PlayerId());
