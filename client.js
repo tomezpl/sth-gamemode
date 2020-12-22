@@ -203,6 +203,10 @@ on('onClientResourceStart', () => {
 function pingBlipOnMap(blip, duration) {
     SetBlipDisplay(blipId, 6);
     SetBlipAlpha(blip, 128);
+    SetBlipHiddenOnLegend(blip, false);
+    if (team === Team.Hunters) {
+        SetBlipRoute(blip, true);
+    }
     setTimeout(() => { fadeBlip(blip, 128, blipTimeLimit); }, duration);
 }
 
@@ -231,6 +235,8 @@ function fadeBlip(blip, initialOpacity, duration) {
     setTimeout(() => {
         if (blip) {
             SetBlipDisplay(blip, 0);
+            SetBlipRoute(blip, false);
+            SetBlipHiddenOnLegend(blip, true);
         }
     }, duration);
 }
@@ -242,10 +248,6 @@ function createBlipForPlayer(args) {
     const playerId = Number(args.pid);
 
     let playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
-
-    if (team !== Team.Hunted) {
-        SetNewWaypoint(playerPos[0] + offsetX, playerPos[2] + offsetY);
-    }
 
     /*
     TriggerEvent("chat:addMessage", {args: [`local id: ${PlayerId()}, server id: ${playerId}`]});
@@ -266,7 +268,7 @@ function createBlipForPlayer(args) {
     SetBlipColour(blipId, 66);
     SetBlipAlpha(blipId, 128);
     SetBlipDisplay(blipId, 6);
-    SetBlipNameToPlayerName(blipId, GetPlayerName(GetPlayerFromServerId(playerId)));
+    SetBlipNameToPlayerName(blipId, GetPlayerFromServerId(playerId));
 
     pingBlipOnMap(blipId, blipLifespan);
 }
