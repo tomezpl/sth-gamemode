@@ -265,6 +265,10 @@ const Events = {
     },
     cleanClothes: ({ pid }) => {
         emitNet("sth:cleanClothesForPlayer", -1, { pid });
+    },
+    // TODO: need some RPC-like template for these server->client->server->broadcast events
+    broadcastHuntedZone: ({ pos }) => {
+        emitNet("sth:notifyAboutHuntedZone", -1, { pos });
     }
 };
 

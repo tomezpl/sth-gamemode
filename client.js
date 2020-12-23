@@ -248,10 +248,6 @@ function createBlipForPlayer(args) {
     const playerId = Number(args.pid);
 
     const playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
-    const zoneName = GetLabelText(GetNameOfZone(playerPos[0], playerPos[1], playerPos[2]));
-    BeginTextCommandThefeedPost("STRING");
-    AddTextComponentString(`${huntedName} is somewhere in ${zoneName} right now.`);
-    EndTextCommandThefeedPostTicker(true, true);
 
     /*
     TriggerEvent("chat:addMessage", {args: [`local id: ${PlayerId()}, server id: ${playerId}`]});
@@ -469,7 +465,21 @@ const Events = {
     huntStartedByServer: () => { resetTimer(); },
 
     // Ping the hunted player on the map.
-    showPingOnMap: (args) => { createBlipForPlayer(args); },
+    showPingOnMap: (args) => {
+        createBlipForPlayer(args);
+        if (huntedIdx === PlayerId()) {
+            const pos = GetEntityCoords(GetPlayerPed(huntedIdx));
+            emitNet("sth:broadcastHuntedZone", { pos });
+        }
+    },
+
+    // Show a notification about the hunted player's zone.
+    notifyAboutHuntedZone: ({ pos }) => {
+        const zoneName = GetLabelText(GetNameOfZone(pos[0], pos[1], pos[2]));
+        BeginTextCommandThefeedPost("STRING");
+        AddTextComponentString(`${huntedName} is somewhere in ${zoneName} right now.`);
+        EndTextCommandThefeedPostTicker(true, true);
+    },
 
     // Update the remaining time to sync with the server.
     tickTime: (time) => { currentTimeLeft = time; },
