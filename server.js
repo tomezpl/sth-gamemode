@@ -66,7 +66,7 @@ var SpawnedCars = [];
 // Constants to start the game
 const GameSettings = {
     TimeLimit: GetConvarInt("sth_timelimit", 60000 * 24), // Time limit for each hunt (in ms)
-    HuntedPingInterval: GetConvarInt("sth_pinginterval", 120000) // Amount of time between pinging the hunted player's location on the map (in ms)
+    HuntedPingInterval: GetConvarInt("sth_pinginterval", 60000 * 1) // Amount of time between pinging the hunted player's location on the map (in ms)
 };
 
 function defaultGameState() {
@@ -265,6 +265,10 @@ const Events = {
     },
     cleanClothes: ({ pid }) => {
         emitNet("sth:cleanClothesForPlayer", -1, { pid });
+    },
+    // TODO: need some RPC-like template for these server->client->server->broadcast events
+    broadcastHuntedZone: ({ pos }) => {
+        emitNet("sth:notifyAboutHuntedZone", -1, { pos });
     }
 };
 

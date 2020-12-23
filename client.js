@@ -5,8 +5,7 @@ const Team = { Hunters: 0, Hunted: 1 };
 
 // Constants to start the game
 const GameSettings = {
-    TimeLimit: GetConvarInt("sth_timelimit", 60000 * 24), // Time limit for each hunt (in ms)
-    HuntedPingInterval: GetConvarInt("sth_pinginterval", 120000) // Amount of time between pinging the hunted player's location on the map (in ms)
+    TimeLimit: GetConvarInt("sth_timelimit", 60000 * 24) // Time limit for each hunt (in ms)
 };
 
 var currentObj = ""; // Objective displayed to the local player, based on the team.
@@ -28,7 +27,7 @@ var CarsToDespawn = [];
 var CarsToSpawn = [];
 
 const blipTimeLimit = GetConvarInt("sth_blipfadetime", 5000); // Amount of time it takes for the blip to fade completely (after blipLifespan runs out).
-const blipLifespan = GetConvarInt("sth_bliplifespan", 25000); // Time it takes for blip to start fading
+const blipLifespan = GetConvarInt("sth_bliplifespan", 40000); // Time it takes for blip to start fading
 
 const dockSpawn = { x: 851.379, y: -3140.005, z: 5.900808 }; // Spawn coordinates
 
@@ -248,10 +247,6 @@ function createBlipForPlayer(args) {
     const playerId = Number(args.pid);
 
     const playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
-    const zoneName = GetLabelText(GetNameOfZone(playerPos[0], playerPos[1], playerPos[2]));
-    BeginTextCommandThefeedPost("STRING");
-    AddTextComponentString(`${huntedName} is somewhere in ${zoneName} right now.`);
-    EndTextCommandThefeedPostTicker(true, true);
 
     /*
     TriggerEvent("chat:addMessage", {args: [`local id: ${PlayerId()}, server id: ${playerId}`]});
@@ -471,7 +466,21 @@ const Events = {
     huntStartedByServer: () => { resetTimer(); },
 
     // Ping the hunted player on the map.
-    showPingOnMap: (args) => { createBlipForPlayer(args); },
+    showPingOnMap: (args) => {
+        createBlipForPlayer(args);
+        if (huntedIdx === PlayerId()) {
+            const pos = GetEntityCoords(GetPlayerPed(huntedIdx));
+            emitNet("sth:broadcastHuntedZone", { pos });
+        }
+    },
+
+    // Show a notification about the hunted player's zone.
+    notifyAboutHuntedZone: ({ pos }) => {
+        const zoneName = GetLabelText(GetNameOfZone(pos[0], pos[1], pos[2]));
+        BeginTextCommandThefeedPost("STRING");
+        AddTextComponentString(`${huntedName} is somewhere in ${zoneName} right now.`);
+        EndTextCommandThefeedPostTicker(true, true);
+    },
 
     // Update the remaining time to sync with the server.
     tickTime: (time) => { currentTimeLeft = time; },
