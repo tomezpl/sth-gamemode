@@ -27,7 +27,7 @@ var CarsToDespawn = [];
 var CarsToSpawn = [];
 
 const blipTimeLimit = GetConvarInt("sth_blipfadetime", 5000); // Amount of time it takes for the blip to fade completely (after blipLifespan runs out).
-const blipLifespan = GetConvarInt("sth_bliplifespan", 25000); // Time it takes for blip to start fading
+const blipLifespan = GetConvarInt("sth_bliplifespan", 40000); // Time it takes for blip to start fading
 
 const dockSpawn = { x: 851.379, y: -3140.005, z: 5.900808 }; // Spawn coordinates
 
