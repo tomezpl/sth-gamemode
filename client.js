@@ -26,6 +26,8 @@ var SpawnedCars = [];
 var CarsToDespawn = [];
 var CarsToSpawn = [];
 
+var weaponsGiven = false;
+
 const blipTimeLimit = GetConvarInt("sth_blipfadetime", 5000); // Amount of time it takes for the blip to fade completely (after blipLifespan runs out).
 const blipLifespan = GetConvarInt("sth_bliplifespan", 40000); // Time it takes for blip to start fading
 
@@ -44,7 +46,7 @@ on('onClientGameTypeStart', () => {
         emitNet("sth:playerDied", { pid: GetPlayerServerId(PlayerId()) });
     });
 
-    setInterval(updateWeapons, 1000);
+    setInterval(updateWeapons, 200);
     setInterval(() => {
         PlayerBlips.forEach((playerBlip) => {
             RemoveBlip(playerBlip.blip);
@@ -54,8 +56,9 @@ on('onClientGameTypeStart', () => {
     }, 5000);
 
     on("playerSpawned", () => {
+        weaponsGiven = false;
+
         let playerPed = GetPlayerPed(PlayerId());
-        GiveWeaponToPed(playerPed, GetHashKey("WEAPON_APPISTOL"), 300, false, true);
         emitNet("sth:cleanClothes", { pid: PlayerId() });
 
         NetworkSetFriendlyFireOption(true);
@@ -335,11 +338,13 @@ function updatePlayerBlips() {
 
 function updateWeapons() {
     const takeWeaponsAway = () => {
+        weaponsGiven = false;
         RemoveAllPedWeapons(PlayerPedId(), false);
     };
 
     const giveWeaponsBack = () => {
-        if (team == Team.Hunted) {
+        if (team === Team.Hunted && huntStarted === true) {
+            weaponsGiven = true;
             GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_APPISTOL"), 9999, false, false);
             GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_CARBINERIFLE"), 9999, false, false);
             GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_STICKYBOMB"), 25, false, false);
@@ -347,14 +352,17 @@ function updateWeapons() {
             GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_ASSAULTSHOTGUN"), 25, false, false);
         }
         else {
+            weaponsGiven = true;
             GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_COMBATPISTOL"), 9999, false, false);
         }
     };
 
-    if (IsPedInAnyVehicle(PlayerPedId(), true) !== false) {
+    const isInCar = IsPedInAnyVehicle(PlayerPedId(), true);
+
+    if (weaponsGiven === true && isInCar !== false) {
         takeWeaponsAway();
     }
-    else {
+    else if (weaponsGiven === false && isInCar === false) {
         giveWeaponsBack();
     }
 }
