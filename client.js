@@ -5,8 +5,7 @@ const Team = { Hunters: 0, Hunted: 1 };
 
 // Constants to start the game
 const GameSettings = {
-    TimeLimit: GetConvarInt("sth_timelimit", 60000 * 24), // Time limit for each hunt (in ms)
-    HuntedPingInterval: GetConvarInt("sth_pinginterval", 120000) // Amount of time between pinging the hunted player's location on the map (in ms)
+    TimeLimit: GetConvarInt("sth_timelimit", 60000 * 24) // Time limit for each hunt (in ms)
 };
 
 var currentObj = ""; // Objective displayed to the local player, based on the team.
@@ -27,8 +26,10 @@ var SpawnedCars = [];
 var CarsToDespawn = [];
 var CarsToSpawn = [];
 
+var weaponsGiven = false;
+
 const blipTimeLimit = GetConvarInt("sth_blipfadetime", 5000); // Amount of time it takes for the blip to fade completely (after blipLifespan runs out).
-const blipLifespan = GetConvarInt("sth_bliplifespan", 25000); // Time it takes for blip to start fading
+const blipLifespan = GetConvarInt("sth_bliplifespan", 40000); // Time it takes for blip to start fading
 
 const dockSpawn = { x: 851.379, y: -3140.005, z: 5.900808 }; // Spawn coordinates
 
@@ -45,7 +46,7 @@ on('onClientGameTypeStart', () => {
         emitNet("sth:playerDied", { pid: GetPlayerServerId(PlayerId()) });
     });
 
-    setInterval(updateWeapons, 1000);
+    setInterval(updateWeapons, 200);
     setInterval(() => {
         PlayerBlips.forEach((playerBlip) => {
             RemoveBlip(playerBlip.blip);
@@ -55,8 +56,10 @@ on('onClientGameTypeStart', () => {
     }, 5000);
 
     on("playerSpawned", () => {
+        weaponsGiven = false;
+
         let playerPed = GetPlayerPed(PlayerId());
-        GiveWeaponToPed(playerPed, GetHashKey("WEAPON_APPISTOL"), 300, false, true);
+        emitNet("sth:cleanClothes", { pid: PlayerId() });
 
         NetworkSetFriendlyFireOption(true);
         SetCanAttackFriendly(playerPed, true, true);
@@ -202,6 +205,10 @@ on('onClientResourceStart', () => {
 function pingBlipOnMap(blip, duration) {
     SetBlipDisplay(blipId, 6);
     SetBlipAlpha(blip, 128);
+    SetBlipHiddenOnLegend(blip, false);
+    if (team === Team.Hunters) {
+        SetBlipRoute(blip, true);
+    }
     setTimeout(() => { fadeBlip(blip, 128, blipTimeLimit); }, duration);
 }
 
@@ -230,6 +237,8 @@ function fadeBlip(blip, initialOpacity, duration) {
     setTimeout(() => {
         if (blip) {
             SetBlipDisplay(blip, 0);
+            SetBlipRoute(blip, false);
+            SetBlipHiddenOnLegend(blip, true);
         }
     }, duration);
 }
@@ -240,13 +249,14 @@ function createBlipForPlayer(args) {
     const offsetY = Number(args.oy);
     const playerId = Number(args.pid);
 
+    const playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
+
     /*
     TriggerEvent("chat:addMessage", {args: [`local id: ${PlayerId()}, server id: ${playerId}`]});
     TriggerEvent("chat:addMessage", {args: [`radius: ${radius === 200}`]});
     TriggerEvent("chat:addMessage", {args: [`offsetX: ${offsetX}`]});
     */
 
-    let playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
     //TriggerEvent("chat:addMessage", {args: ["Test"]});
     if (blipId === null) {
         //TriggerEvent("chat:addMessage", {args: ["Creating blip"]});
@@ -260,7 +270,7 @@ function createBlipForPlayer(args) {
     SetBlipColour(blipId, 66);
     SetBlipAlpha(blipId, 128);
     SetBlipDisplay(blipId, 6);
-    SetBlipNameToPlayerName(blipId, GetPlayerName(GetPlayerFromServerId(playerId)));
+    SetBlipNameToPlayerName(blipId, GetPlayerFromServerId(playerId));
 
     pingBlipOnMap(blipId, blipLifespan);
 }
@@ -315,11 +325,11 @@ function updatePlayerBlips() {
     }
 
     PlayerBlips.forEach((playerBlip) => {
-        if ((GetPlayerName(playerBlip.id) === huntedName && !checkIfPedTooFar(GetPlayerPed(playerBlip.id))) || team === Team.Hunted) {
+        if ((GetPlayerPed(playerBlip.id) == PlayerPedId()) || (GetPlayerName(playerBlip.id) === huntedName && !checkIfPedTooFar(GetPlayerPed(playerBlip.id))) || team === Team.Hunted) {
             // Hide the blip
-            SetBlipDisplay(playerBlip.blip, 7);
+            SetBlipDisplay(playerBlip.blip, 0);
         }
-        else if ((playerBlip.id !== PlayerId()) || checkIfPedTooFar(GetPlayerPed(playerBlip.id))) {
+        else if (checkIfPedTooFar(GetPlayerPed(playerBlip.id))) {
             // Show the blip
             SetBlipDisplay(playerBlip.blip, 2);
         }
@@ -328,11 +338,13 @@ function updatePlayerBlips() {
 
 function updateWeapons() {
     const takeWeaponsAway = () => {
+        weaponsGiven = false;
         RemoveAllPedWeapons(PlayerPedId(), false);
     };
 
     const giveWeaponsBack = () => {
-        if (team == Team.Hunted) {
+        if (team === Team.Hunted && huntStarted === true) {
+            weaponsGiven = true;
             GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_APPISTOL"), 9999, false, false);
             GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_CARBINERIFLE"), 9999, false, false);
             GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_STICKYBOMB"), 25, false, false);
@@ -340,14 +352,18 @@ function updateWeapons() {
             GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_ASSAULTSHOTGUN"), 25, false, false);
         }
         else {
+            weaponsGiven = true;
             GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_COMBATPISTOL"), 9999, false, false);
+            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_PUMPSHOTGUN"), 9999, false, false);
         }
     };
 
-    if (IsPedInAnyVehicle(PlayerPedId(), true) !== false) {
+    const isInCar = IsPedInAnyVehicle(PlayerPedId(), true);
+
+    if (weaponsGiven === true && isInCar !== false) {
         takeWeaponsAway();
     }
-    else {
+    else if (weaponsGiven === false && isInCar === false) {
         giveWeaponsBack();
     }
 }
@@ -374,7 +390,26 @@ function updateCars() {
             RequestModel(hash);
             Wait(50);
             if (HasModelLoaded(hash)) {
-                SpawnedCars.push(CreateVehicle(hash, spawnPoint.xyz[0], spawnPoint.xyz[1], spawnPoint.xyz[2], spawnPoint.rot, true, false));
+                const index = SpawnedCars.push(CreateVehicle(hash, spawnPoint.xyz[0], spawnPoint.xyz[1], spawnPoint.xyz[2], spawnPoint.rot, true, false)) - 1;
+                const spawnedCar = SpawnedCars[index];
+                // Set all vehicle mods to maximum
+                for (let i = 0; i < 50; i++) {
+                    const nbMods = GetNumVehicleMods(spawnedCar, i);
+                    if (nbMods > 0) {
+                        SetVehicleModKit(spawnedCar, 0);
+                        SetVehicleMod(spawnedCar, i, nbMods - 1, false);
+                    }
+                }
+                // Add neons
+                for (let i = 0; i < 4; i++) {
+                    SetVehicleNeonLightEnabled(spawnedCar, i, Math.random() >= 0.5);
+                }
+                SetVehicleNeonLightsColour(spawnedCar, Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
+
+                SetVehicleXenonLightsColour(spawnedCar, Math.round(Math.random() * 12));
+
+                SetVehicleCustomPrimaryColour(spawnedCar, Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
+                SetVehicleCustomSecondaryColour(spawnedCar, Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255));
             }
         }
     });
@@ -438,7 +473,21 @@ const Events = {
     huntStartedByServer: () => { resetTimer(); },
 
     // Ping the hunted player on the map.
-    showPingOnMap: (args) => { createBlipForPlayer(args); },
+    showPingOnMap: (args) => {
+        createBlipForPlayer(args);
+        if (huntedIdx === PlayerId()) {
+            const pos = GetEntityCoords(GetPlayerPed(huntedIdx));
+            emitNet("sth:broadcastHuntedZone", { pos });
+        }
+    },
+
+    // Show a notification about the hunted player's zone.
+    notifyAboutHuntedZone: ({ pos }) => {
+        const zoneName = GetLabelText(GetNameOfZone(pos[0], pos[1], pos[2]));
+        BeginTextCommandThefeedPost("STRING");
+        AddTextComponentString(`${huntedName} is somewhere in ${zoneName} right now.`);
+        EndTextCommandThefeedPostTicker(true, true);
+    },
 
     // Update the remaining time to sync with the server.
     tickTime: (time) => { currentTimeLeft = time; },
@@ -475,6 +524,7 @@ const Events = {
     notifyHuntedPlayer: () => {
         huntStarted = true;
         huntedIdx = PlayerId();
+        huntedName = GetPlayerName(PlayerId());
 
         currentObj = "Survive";
         team = Team.Hunted;
@@ -486,6 +536,10 @@ const Events = {
 
     despawnCars: (spawnedCarHandles) => {
         CarsToDespawn = spawnedCarHandles;
+    },
+
+    cleanClothesForPlayer: ({ pid }) => {
+        ClearPedBloodDamage(GetPlayerPed(pid));
     }
 };
 

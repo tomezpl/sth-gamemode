@@ -66,13 +66,14 @@ var SpawnedCars = [];
 // Constants to start the game
 const GameSettings = {
     TimeLimit: GetConvarInt("sth_timelimit", 60000 * 24), // Time limit for each hunt (in ms)
-    HuntedPingInterval: GetConvarInt("sth_pinginterval", 120000) // Amount of time between pinging the hunted player's location on the map (in ms)
+    HuntedPingInterval: GetConvarInt("sth_pinginterval", 60000 * 1) // Amount of time between pinging the hunted player's location on the map (in ms)
 };
 
 function defaultGameState() {
     return {
         huntStarted: false, // is there an ongoing hunt?
         huntedPlayer: -1, // server ID of the currently hunted player. Default: -1 (nobody)
+        lastHuntedPlayer: -1, // INDEX of the last hunted player (used to make random pick more "unique")
         winningTeam: -1, // team winning the match. Default: -1 (neither)
         timeLeft: GameSettings.TimeLimit, // Time left on this hunt (in ms)
 
@@ -103,7 +104,9 @@ function endHunt() {
     clearTimers();
     gs.huntStarted = false;
     TriggerClientEvent("sth:notifyWinner", -1, gs.winningTeam);
+    const lastHuntedPlayer = gs.lastHuntedPlayer;
     gs = defaultGameState();
+    gs.lastHuntedPlayer = lastHuntedPlayer;
 }
 
 function beginGame(player) {
@@ -123,7 +126,7 @@ function Tick() {
 function TimeUpdate(firstTick = false) {
     if(gs.huntStarted) {
         gs.timeLeft -= firstTick ? 0 : 10000;
-        TriggerClientEvent("sth:tickTime", -1, gs.timeLeft);
+        emitNet("sth:tickTime", -1, gs.timeLeft);
     }
 }
 
@@ -171,8 +174,21 @@ const Events = {
     startHunt: () => {
         // Get number of players present.
         const playerCount = GetNumPlayerIndices();
+        console.log("Picking a random player from " + playerCount + " players.");
         // Choose a random player.
-        let randomPlayerIndex = Math.round(Math.random() * (playerCount - 1));
+        let randomFloat = 0;
+        let randomPlayerIndex = 0;
+        for (let i = 0; i < playerCount * playerCount; i++) {
+            randomFloat = Math.random();
+            randomPlayerIndex = Math.min(Math.round(randomFloat * playerCount), playerCount - 1);
+            if (randomPlayerIndex !== gs.lastHuntedPlayer) {
+                break;
+            }
+        }
+        console.log("Random float was " + randomFloat);
+        console.log("Picking player " + randomPlayerIndex);
+
+        gs.lastHuntedPlayer = randomPlayerIndex;
 
         // Notify the hunted player's game.
         TriggerClientEvent("sth:notifyHuntedPlayer", GetPlayerFromIndex(randomPlayerIndex));
@@ -182,7 +198,8 @@ const Events = {
             if(i != randomPlayerIndex) {
                 // TODO: Can't we rewrite this with issuing a request to -1 players (everyone) but just reject it on the hunted player's client?
                 TriggerClientEvent("sth:notifyHunters", GetPlayerFromIndex(i), {
-                    serverId: GetPlayerFromIndex(randomPlayerIndex), huntedPlayerName: GetPlayerName(GetPlayerFromIndex(randomPlayerIndex))
+                    serverId: GetPlayerFromIndex(randomPlayerIndex),
+                    huntedPlayerName: GetPlayerName(GetPlayerFromIndex(randomPlayerIndex))
                 });
             }
         }
@@ -245,6 +262,13 @@ const Events = {
     saveSpawnedCars: (carHandles) => {
         console.log("Saving " + carHandles.length + " cars.");
         SpawnedCars = carHandles;
+    },
+    cleanClothes: ({ pid }) => {
+        emitNet("sth:cleanClothesForPlayer", -1, { pid });
+    },
+    // TODO: need some RPC-like template for these server->client->server->broadcast events
+    broadcastHuntedZone: ({ pos }) => {
+        emitNet("sth:notifyAboutHuntedZone", -1, { pos });
     }
 };
 
