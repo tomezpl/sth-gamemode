@@ -354,6 +354,7 @@ function updateWeapons() {
         else {
             weaponsGiven = true;
             GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_COMBATPISTOL"), 9999, false, false);
+            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_PUMPSHOTGUN"), 9999, false, false);
         }
     };
 
