@@ -251,22 +251,13 @@ function createBlipForPlayer(args) {
 
     const playerPos = GetEntityCoords(GetPlayerPed(GetPlayerFromServerId(playerId)));
 
-    /*
-    TriggerEvent("chat:addMessage", {args: [`local id: ${PlayerId()}, server id: ${playerId}`]});
-    TriggerEvent("chat:addMessage", {args: [`radius: ${radius === 200}`]});
-    TriggerEvent("chat:addMessage", {args: [`offsetX: ${offsetX}`]});
-    */
-
-    //TriggerEvent("chat:addMessage", {args: ["Test"]});
     if (blipId === null) {
-        //TriggerEvent("chat:addMessage", {args: ["Creating blip"]});
         blipId = AddBlipForRadius(playerPos[0] + offsetX, playerPos[1], playerPos[2] + offsetY, radius);
     }
     else {
-        //TriggerEvent("chat:addMessage", {args: ["Updating blip"]});
         SetBlipCoords(blipId, playerPos[0] + offsetX, playerPos[1], playerPos[2] + offsetY);
     }
-    //TriggerEvent("chat:addMessage", {args: ["Test2"]});
+
     SetBlipColour(blipId, 66);
     SetBlipAlpha(blipId, 128);
     SetBlipDisplay(blipId, 6);
