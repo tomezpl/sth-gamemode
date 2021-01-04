@@ -306,19 +306,30 @@ function tickUpdate() {
 function updatePlayerBlips() {
     for (let i = 0; i < 32; i++) {
         if (NetworkIsPlayerActive(i) && !PlayerBlips.some((playerBlip) => playerBlip.id === i)) {
-            const index = PlayerBlips.push({ id: i, blip: AddBlipForEntity(GetPlayerPed(i)) }) - 1;
+            const index = PlayerBlips.push({
+                id: i,
+                blip: AddBlipForEntity(GetPlayerPed(i)),
+            }) - 1;
+            CreateMpGamerTagWithCrewColor(i, GetPlayerName(i), false, false, "", 0, 0, 0, 0)
             SetBlipNameToPlayerName(PlayerBlips[index].blip, i);
             SetBlipColour(PlayerBlips[index].blip, i + 10);
             SetBlipCategory(PlayerBlips[index].blip, 2);
             SetBlipShrink(PlayerBlips[index].blip, true);
             SetBlipScale(PlayerBlips[index].blip, 0.9);
+            SetMpGamerTagVisibility(i, 0, true);
+            //N_0x82cedc33687e1f50(true);
         }
     }
 
     PlayerBlips.forEach((playerBlip) => {
         if ((GetPlayerPed(playerBlip.id) == PlayerPedId()) || (GetPlayerName(playerBlip.id) === huntedName && !checkIfPedTooFar(GetPlayerPed(playerBlip.id))) || team === Team.Hunted) {
+            if (huntStarted === false && (GetPlayerPed(playerBlip.id) != PlayerPedId())) {
+                return;
+            }
+
             // Hide the blip
             SetBlipDisplay(playerBlip.blip, 0);
+            SetMpGamerTagVisibility(playerBlip.id, 0, false);
         }
         else if (checkIfPedTooFar(GetPlayerPed(playerBlip.id))) {
             // Show the blip
