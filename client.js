@@ -445,14 +445,14 @@ function drawPlayerLegend() {
         RequestStreamedTextureDict("timerbars");
         const height = 0.06 * 0.3 * 1.4;
         if (HasStreamedTextureDictLoaded("timerbars")) {
-            DrawSprite("timerbars", "all_black_bg", 0.92, 0.875 - (height * (index + 1)) - (0.003 * index), 0.1, height, 0.0, 255, 255, 255, 128);
+            DrawSprite("timerbars", "all_black_bg", 0.92, 0.86 - (height * (index + 1)) - (0.003 * index), 0.14, height, 0.0, 255, 255, 255, 128);
         }
 
         const col = GetHudColour(GetBlipHudColour(value.blip));
         SetTextColour(col[0], col[1], col[2], col[3]);
         BeginTextCommandDisplayText("STRING");
         AddTextComponentString(value.name);
-        EndTextCommandDisplayText(0.97 - (rectWidth), 0.86 - (height * (index + 1)) - (0.003 * index));
+        EndTextCommandDisplayText(0.99 - (rectWidth), 0.845 - (height * (index + 1)) - (0.003 * index));
         SetTextScale(0, 1.0);
 
     });
