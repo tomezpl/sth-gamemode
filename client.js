@@ -294,6 +294,7 @@ function tickUpdate() {
 
         updateCars();
         updatePlayerBlips();
+        drawPlayerLegend();
 
         // Show remaining time if hunt still going.
         if (currentTimeLeft >= 0) {
@@ -309,6 +310,7 @@ function updatePlayerBlips() {
             const index = PlayerBlips.push({
                 id: i,
                 blip: AddBlipForEntity(GetPlayerPed(i)),
+                name: GetPlayerName(i)
             }) - 1;
             CreateMpGamerTagWithCrewColor(i, GetPlayerName(i), false, false, "", 0, 0, 0, 0)
             SetBlipNameToPlayerName(PlayerBlips[index].blip, i);
@@ -431,6 +433,29 @@ function formatIntoMMSS(milliseconds) {
     let minutes = dateTime.getMinutes();
     minutes = (minutes < 10 ? `0${minutes}` : minutes);
     return `${minutes}:${seconds}`;
+}
+
+function drawPlayerLegend() {
+    PlayerBlips.forEach((value, index) => {
+        SetTextScale(0, 0.35);
+        BeginTextCommandWidth("STRING");
+        AddTextComponentString(value.name);
+        const rectWidth = EndTextCommandGetWidth(true);
+
+        RequestStreamedTextureDict("timerbars");
+        const height = 0.06 * 0.3 * 1.4;
+        if (HasStreamedTextureDictLoaded("timerbars")) {
+            DrawSprite("timerbars", "all_black_bg", 0.92, 0.875 - (height * (index + 1)) - (0.003 * index), 0.1, height, 0.0, 255, 255, 255, 128);
+        }
+
+        const col = GetHudColour(GetBlipHudColour(value.blip));
+        SetTextColour(col[0], col[1], col[2], col[3]);
+        BeginTextCommandDisplayText("STRING");
+        AddTextComponentString(value.name);
+        EndTextCommandDisplayText(0.97 - (rectWidth), 0.86 - (height * (index + 1)) - (0.003 * index));
+        SetTextScale(0, 1.0);
+
+    });
 }
 
 // Draws a timerbar with the remaining time in the bottom right corner of the screen.
