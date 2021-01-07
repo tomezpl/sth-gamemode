@@ -28,6 +28,11 @@ var CarsToSpawn = [];
 
 var weaponsGiven = false;
 
+// This will be a timeout handle when bigmap is set active, then cleared when it's disabled.
+// Use case for this is if a player activates the bigmap (which starts a 8s timeout), deactivates it after 6s,
+// immediately reactivates it then expects it to stay there for another 8s instead of timing out after 2s.
+var bigmapTimeout = null;
+
 const blipTimeLimit = GetConvarInt("sth_blipfadetime", 5000); // Amount of time it takes for the blip to fade completely (after blipLifespan runs out).
 const blipLifespan = GetConvarInt("sth_bliplifespan", 40000); // Time it takes for blip to start fading
 
@@ -293,7 +298,11 @@ function tickUpdate() {
         if (IsControlJustReleased(0, 20)) {
             SetBigmapActive(!IsBigmapActive(), false);
             if (IsBigmapActive()) {
-                setTimeout(() => { SetBigmapActive(false, false); }, 8000)
+                if (bigmapTimeout !== null) {
+                    clearTimeout(bigmapTimeout);
+                    bigmapTimeout = null;
+                }
+                bigmapTimeout = setTimeout(() => { SetBigmapActive(false, false); }, 8000);
             }
         }
 
