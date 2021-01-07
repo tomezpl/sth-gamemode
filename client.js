@@ -290,6 +290,13 @@ function tickUpdate() {
             EndTextCommandPrint(1, true);
         }
 
+        if (IsControlJustReleased(0, 20)) {
+            SetBigmapActive(!IsBigmapActive(), false);
+            if (IsBigmapActive()) {
+                setTimeout(() => { SetBigmapActive(false, false); }, 8000)
+            }
+        }
+
         ClearPlayerWantedLevel(PlayerId());
 
         updateCars();
@@ -315,11 +322,13 @@ function updatePlayerBlips() {
             CreateMpGamerTagWithCrewColor(i, GetPlayerName(i), false, false, "", 0, 0, 0, 0)
             SetBlipNameToPlayerName(PlayerBlips[index].blip, i);
             SetBlipColour(PlayerBlips[index].blip, i + 10);
-            SetBlipCategory(PlayerBlips[index].blip, 2);
+            SetBlipDisplay(PlayerBlips[index].blip, 6);
+            ShowHeadingIndicatorOnBlip(PlayerBlips[index].blip, true);
+            SetBlipCategory(PlayerBlips[index].blip, 7);
             SetBlipShrink(PlayerBlips[index].blip, true);
             SetBlipScale(PlayerBlips[index].blip, 0.9);
             SetMpGamerTagVisibility(i, 0, true);
-            //N_0x82cedc33687e1f50(true);
+            N_0x82cedc33687e1f50(true);
         }
     }
 
