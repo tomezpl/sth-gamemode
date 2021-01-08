@@ -295,9 +295,11 @@ function tickUpdate() {
             EndTextCommandPrint(1, true);
         }
 
+        // Expand the minimap after pressing Z/d-pad_down like in GTAO.
         if (IsControlJustReleased(0, 20)) {
             SetBigmapActive(!IsBigmapActive(), false);
             if (IsBigmapActive()) {
+                // Reset minimap to normal after 8s.
                 if (bigmapTimeout !== null) {
                     clearTimeout(bigmapTimeout);
                     bigmapTimeout = null;
@@ -310,6 +312,7 @@ function tickUpdate() {
 
         updateCars();
         updatePlayerBlips();
+
         drawPlayerLegend();
 
         // Show remaining time if hunt still going.
@@ -337,12 +340,14 @@ function updatePlayerBlips() {
             SetBlipShrink(PlayerBlips[index].blip, true);
             SetBlipScale(PlayerBlips[index].blip, 0.9);
             SetMpGamerTagVisibility(i, 0, true);
+            // Display player names on blips (in expanded map).
             N_0x82cedc33687e1f50(true);
         }
     }
 
     PlayerBlips.forEach((playerBlip) => {
         if ((GetPlayerPed(playerBlip.id) == PlayerPedId()) || (GetPlayerName(playerBlip.id) === huntedName && !checkIfPedTooFar(GetPlayerPed(playerBlip.id))) || team === Team.Hunted) {
+            // Don't hide the blip/playername if hunt is not started and belongs to someone else.
             if (huntStarted === false && (GetPlayerPed(playerBlip.id) != PlayerPedId())) {
                 return;
             }
@@ -453,9 +458,13 @@ function formatIntoMMSS(milliseconds) {
     return `${minutes}:${seconds}`;
 }
 
+// Draws a legend of player names on the right side of the screen using their blip colour as the text colour.
+// This is meant to make it easier to locate them on the minimap.
 function drawPlayerLegend() {
     PlayerBlips.forEach((value, index) => {
         SetTextScale(0, 0.35);
+
+        // Measure text width so that we know the required offset for a right-align.
         BeginTextCommandWidth("STRING");
         AddTextComponentString(value.name);
         const rectWidth = EndTextCommandGetWidth(true);
@@ -463,14 +472,20 @@ function drawPlayerLegend() {
         RequestStreamedTextureDict("timerbars");
         const height = 0.06 * 0.3 * 1.4;
         if (HasStreamedTextureDictLoaded("timerbars")) {
+            // Draw a background for the text. 0.003 padding is applied between each player name.
             DrawSprite("timerbars", "all_black_bg", 0.92, 0.86 - (height * (index + 1)) - (0.003 * index), 0.14, height, 0.0, 255, 255, 255, 128);
         }
 
+        // Get text colour from the blip.
         const col = GetHudColour(GetBlipHudColour(value.blip));
         SetTextColour(col[0], col[1], col[2], col[3]);
+
+        // Print the player name, correctly offset to right-align it, and padded by 0.003.
         BeginTextCommandDisplayText("STRING");
         AddTextComponentString(value.name);
         EndTextCommandDisplayText(0.99 - (rectWidth), 0.845 - (height * (index + 1)) - (0.003 * index));
+
+        // Reset text scale.
         SetTextScale(0, 1.0);
 
     });
