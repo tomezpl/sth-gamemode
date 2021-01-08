@@ -328,7 +328,7 @@ function updatePlayerBlips() {
                 blip: AddBlipForEntity(GetPlayerPed(i)),
                 name: GetPlayerName(i)
             }) - 1;
-            CreateMpGamerTagWithCrewColor(i, GetPlayerName(i), false, false, "", 0, 0, 0, 0)
+            CreateMpGamerTagWithCrewColor(i, GetPlayerName(i), false, false, "", 0, 0, 0, 0);
             SetBlipNameToPlayerName(PlayerBlips[index].blip, i);
             SetBlipColour(PlayerBlips[index].blip, i + 10);
             SetBlipDisplay(PlayerBlips[index].blip, 6);
