@@ -28,6 +28,11 @@ var CarsToSpawn = [];
 
 var weaponsGiven = false;
 
+// This will be a timeout handle when bigmap is set active, then cleared when it's disabled.
+// Use case for this is if a player activates the bigmap (which starts a 8s timeout), deactivates it after 6s,
+// immediately reactivates it then expects it to stay there for another 8s instead of timing out after 2s.
+var bigmapTimeout = null;
+
 const blipTimeLimit = GetConvarInt("sth_blipfadetime", 5000); // Amount of time it takes for the blip to fade completely (after blipLifespan runs out).
 const blipLifespan = GetConvarInt("sth_bliplifespan", 40000); // Time it takes for blip to start fading
 
@@ -290,10 +295,25 @@ function tickUpdate() {
             EndTextCommandPrint(1, true);
         }
 
+        // Expand the minimap after pressing Z/d-pad_down like in GTAO.
+        if (IsControlJustReleased(0, 20)) {
+            SetBigmapActive(!IsBigmapActive(), false);
+            if (IsBigmapActive()) {
+                // Reset minimap to normal after 8s.
+                if (bigmapTimeout !== null) {
+                    clearTimeout(bigmapTimeout);
+                    bigmapTimeout = null;
+                }
+                bigmapTimeout = setTimeout(() => { SetBigmapActive(false, false); }, 8000);
+            }
+        }
+
         ClearPlayerWantedLevel(PlayerId());
 
         updateCars();
         updatePlayerBlips();
+
+        drawPlayerLegend();
 
         // Show remaining time if hunt still going.
         if (currentTimeLeft >= 0) {
@@ -306,19 +326,35 @@ function tickUpdate() {
 function updatePlayerBlips() {
     for (let i = 0; i < 32; i++) {
         if (NetworkIsPlayerActive(i) && !PlayerBlips.some((playerBlip) => playerBlip.id === i)) {
-            const index = PlayerBlips.push({ id: i, blip: AddBlipForEntity(GetPlayerPed(i)) }) - 1;
+            const index = PlayerBlips.push({
+                id: i,
+                blip: AddBlipForEntity(GetPlayerPed(i)),
+                name: GetPlayerName(i)
+            }) - 1;
+            CreateMpGamerTagWithCrewColor(i, GetPlayerName(i), false, false, "", 0, 0, 0, 0);
             SetBlipNameToPlayerName(PlayerBlips[index].blip, i);
             SetBlipColour(PlayerBlips[index].blip, i + 10);
-            SetBlipCategory(PlayerBlips[index].blip, 2);
+            SetBlipDisplay(PlayerBlips[index].blip, 6);
+            ShowHeadingIndicatorOnBlip(PlayerBlips[index].blip, true);
+            SetBlipCategory(PlayerBlips[index].blip, 7);
             SetBlipShrink(PlayerBlips[index].blip, true);
             SetBlipScale(PlayerBlips[index].blip, 0.9);
+            SetMpGamerTagVisibility(i, 0, true);
+            // Display player names on blips (in expanded map).
+            N_0x82cedc33687e1f50(true);
         }
     }
 
     PlayerBlips.forEach((playerBlip) => {
         if ((GetPlayerPed(playerBlip.id) == PlayerPedId()) || (GetPlayerName(playerBlip.id) === huntedName && !checkIfPedTooFar(GetPlayerPed(playerBlip.id))) || team === Team.Hunted) {
+            // Don't hide the blip/playername if hunt is not started and belongs to someone else.
+            if (huntStarted === false && (GetPlayerPed(playerBlip.id) != PlayerPedId())) {
+                return;
+            }
+
             // Hide the blip
             SetBlipDisplay(playerBlip.blip, 0);
+            SetMpGamerTagVisibility(playerBlip.id, 0, false);
         }
         else if (checkIfPedTooFar(GetPlayerPed(playerBlip.id))) {
             // Show the blip
@@ -420,6 +456,39 @@ function formatIntoMMSS(milliseconds) {
     let minutes = dateTime.getMinutes();
     minutes = (minutes < 10 ? `0${minutes}` : minutes);
     return `${minutes}:${seconds}`;
+}
+
+// Draws a legend of player names on the right side of the screen using their blip colour as the text colour.
+// This is meant to make it easier to locate them on the minimap.
+function drawPlayerLegend() {
+    PlayerBlips.forEach((value, index) => {
+        SetTextScale(0, 0.35);
+
+        // Measure text width so that we know the required offset for a right-align.
+        BeginTextCommandWidth("STRING");
+        AddTextComponentString(value.name);
+        const rectWidth = EndTextCommandGetWidth(true);
+
+        RequestStreamedTextureDict("timerbars");
+        const height = 0.06 * 0.3 * 1.4;
+        if (HasStreamedTextureDictLoaded("timerbars")) {
+            // Draw a background for the text. 0.003 padding is applied between each player name.
+            DrawSprite("timerbars", "all_black_bg", 0.92, 0.86 - (height * (index + 1)) - (0.003 * index), 0.14, height, 0.0, 255, 255, 255, 128);
+        }
+
+        // Get text colour from the blip.
+        const col = GetHudColour(GetBlipHudColour(value.blip));
+        SetTextColour(col[0], col[1], col[2], col[3]);
+
+        // Print the player name, correctly offset to right-align it, and padded by 0.003.
+        BeginTextCommandDisplayText("STRING");
+        AddTextComponentString(value.name);
+        EndTextCommandDisplayText(0.99 - (rectWidth), 0.845 - (height * (index + 1)) - (0.003 * index));
+
+        // Reset text scale.
+        SetTextScale(0, 1.0);
+
+    });
 }
 
 // Draws a timerbar with the remaining time in the bottom right corner of the screen.
