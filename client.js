@@ -43,6 +43,8 @@ var CarsToSpawn = [];
 var weaponsGiven = false;
 var lastWeaponEquipped = null;
 
+var deathReported = false;
+
 // This will be a timeout handle when bigmap is set active, then cleared when it's disabled.
 // Use case for this is if a player activates the bigmap (which starts a 8s timeout), deactivates it after 6s,
 // immediately reactivates it then expects it to stay there for another 8s instead of timing out after 2s.
@@ -62,9 +64,6 @@ on('onClientGameTypeStart', () => {
     exports.spawnmanager.setAutoSpawnCallback(autoSpawnCallback);
     exports.spawnmanager.setAutoSpawn(true);
     exports.spawnmanager.forceRespawn();
-    on("baseevents:onPlayerKilled", () => {
-        emitNet("sth:playerDied", { pid: GetPlayerServerId(PlayerId()) });
-    });
 
     setInterval(updateWeapons, 50);
     setInterval(() => {
@@ -77,6 +76,8 @@ on('onClientGameTypeStart', () => {
 
     on("playerSpawned", () => {
         weaponsGiven = false;
+
+        deathReported = false;
 
         let playerPed = GetPlayerPed(PlayerId());
         emitNet("sth:cleanClothes", { pid: PlayerId() });
@@ -329,6 +330,11 @@ function tickUpdate() {
         updatePlayerBlips();
 
         drawPlayerLegend();
+
+        if (IsPlayerDead(PlayerId()) && deathReported === false) {
+            emitNet("sth:playerDied", { pid: GetPlayerServerId(PlayerId()) });
+            deathReported = true;
+        }
 
         // Show remaining time if hunt still going.
         if (currentTimeLeft >= 0) {
