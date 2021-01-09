@@ -8,6 +8,20 @@ const GameSettings = {
     TimeLimit: GetConvarInt("sth_timelimit", 60000 * 24) // Time limit for each hunt (in ms)
 };
 
+const WeaponSets = {
+    hunters: [
+        { hash: GetHashKey("WEAPON_COMBATPISTOL"), ammo: 9999 },
+        { hash: GetHashKey("WEAPON_PUMPSHOTGUN"), ammo: 9999 }
+    ],
+    hunted: [
+        { hash: GetHashKey("WEAPON_APPISTOL"), ammo: 9999 },
+        { hash: GetHashKey("WEAPON_CARBINERIFLE"), ammo: 9999 },
+        { hash: GetHashKey("WEAPON_STICKYBOMB"), ammo: 25 },
+        { hash: GetHashKey("WEAPON_RPG"), ammo: 25 },
+        { hash: GetHashKey("WEAPON_ASSAULTSHOTGUN"), ammo: 9999 }
+    ]
+};
+
 var currentObj = ""; // Objective displayed to the local player, based on the team.
 var team = 1; // Local player's team.
 var blipId = null; // ID of the hunted player's blip.
@@ -27,6 +41,7 @@ var CarsToDespawn = [];
 var CarsToSpawn = [];
 
 var weaponsGiven = false;
+var lastWeaponEquipped = null;
 
 // This will be a timeout handle when bigmap is set active, then cleared when it's disabled.
 // Use case for this is if a player activates the bigmap (which starts a 8s timeout), deactivates it after 6s,
@@ -51,7 +66,7 @@ on('onClientGameTypeStart', () => {
         emitNet("sth:playerDied", { pid: GetPlayerServerId(PlayerId()) });
     });
 
-    setInterval(updateWeapons, 200);
+    setInterval(updateWeapons, 50);
     setInterval(() => {
         PlayerBlips.forEach((playerBlip) => {
             RemoveBlip(playerBlip.blip);
@@ -375,16 +390,15 @@ function updateWeapons() {
     const giveWeaponsBack = () => {
         if (team === Team.Hunted && huntStarted === true) {
             weaponsGiven = true;
-            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_APPISTOL"), 9999, false, false);
-            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_CARBINERIFLE"), 9999, false, false);
-            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_STICKYBOMB"), 25, false, false);
-            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_RPG"), 25, false, false);
-            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_ASSAULTSHOTGUN"), 25, false, false);
+            WeaponSets.hunted.forEach((weapon) => {
+                GiveWeaponToPed(PlayerPedId(), weapon.hash, weapon.ammo, false, weapon.hash === lastWeaponEquipped);
+            });
         }
         else {
             weaponsGiven = true;
-            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_COMBATPISTOL"), 9999, false, false);
-            GiveWeaponToPed(PlayerPedId(), GetHashKey("WEAPON_PUMPSHOTGUN"), 9999, false, false);
+            WeaponSets.hunters.forEach((weapon) => {
+                GiveWeaponToPed(PlayerPedId(), weapon.hash, weapon.ammo, false, weapon.hash === lastWeaponEquipped);
+            });
         }
     };
 
@@ -392,6 +406,9 @@ function updateWeapons() {
 
     if (weaponsGiven === true && isInCar !== false) {
         takeWeaponsAway();
+    }
+    else if (weaponsGiven === true && isInCar === false) {
+        lastWeaponEquipped = GetSelectedPedWeapon(PlayerPedId());
     }
     else if (weaponsGiven === false && isInCar === false) {
         giveWeaponsBack();
