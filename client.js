@@ -334,10 +334,13 @@ function updatePlayerBlips() {
             CreateMpGamerTagWithCrewColor(i, GetPlayerName(i), false, false, "", 0, 0, 0, 0);
             SetBlipNameToPlayerName(PlayerBlips[index].blip, i);
             SetBlipColour(PlayerBlips[index].blip, i + 10);
+            if (i == PlayerId()) {
+                SetBlipColour(GetMainPlayerBlipId(), i + 10);
+            }
             SetBlipDisplay(PlayerBlips[index].blip, 6);
             ShowHeadingIndicatorOnBlip(PlayerBlips[index].blip, true);
             SetBlipCategory(PlayerBlips[index].blip, 7);
-            SetBlipShrink(PlayerBlips[index].blip, true);
+            SetBlipShrink(PlayerBlips[index].blip, GetConvar("sth_shrinkPlayerBlips", "false") === "false" ? false : true);
             SetBlipScale(PlayerBlips[index].blip, 0.9);
             SetMpGamerTagVisibility(i, 0, true);
             // Display player names on blips (in expanded map).
