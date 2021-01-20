@@ -32,9 +32,9 @@ var huntOver = false; // Has a hunt just finished? This is false if the hunt has
 var currentTimeLeft = -1; // Time left in the hunt.
 var timer = null; // Timer (interval) used to track time.
 var deleteTimerTimeout = null; // Timeout used to delete timer (interval) at the end of a hunt.
-var huntedMugshot = null;
-var huntedMugshotRefreshed = false;
-var huntedMugshotTimer = null;
+var huntedMugshot = null; // Mugshot texture object (holds handle and texture name)
+var huntedMugshotRefreshed = false; // Is the mugshot texture ready?
+var huntedMugshotTimer = null; // Timer for refreshing mugshots
 
 var PlayerBlips = [];
 
