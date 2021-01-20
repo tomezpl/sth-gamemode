@@ -32,6 +32,9 @@ var huntOver = false; // Has a hunt just finished? This is false if the hunt has
 var currentTimeLeft = -1; // Time left in the hunt.
 var timer = null; // Timer (interval) used to track time.
 var deleteTimerTimeout = null; // Timeout used to delete timer (interval) at the end of a hunt.
+var huntedMugshot = null;
+var huntedMugshotRefreshed = false;
+var huntedMugshotTimer = null;
 
 var PlayerBlips = [];
 
@@ -241,6 +244,16 @@ function endHunt() {
         clearInterval(timer);
         timer = null;
     }
+
+    if (huntedMugshotTimer !== null) {
+        clearInterval(huntedMugshotTimer);
+        huntedMugshotTimer = null;
+    }
+
+    UnregisterPedheadshot(huntedMugshot.id);
+    huntedMugshot = null;
+    huntedMugshotRefreshed = false;
+
     huntStarted = false;
     huntOver = false;
     huntedIdx = null;
@@ -330,6 +343,8 @@ function tickUpdate() {
         updatePlayerBlips();
 
         drawPlayerLegend();
+
+        drawPlayerMugshot();
 
         if (IsPlayerDead(PlayerId()) && deathReported === false) {
             emitNet("sth:playerDied", { pid: GetPlayerServerId(PlayerId()) });
@@ -517,6 +532,36 @@ function drawPlayerLegend() {
     });
 }
 
+// Draws a mugshot of the hunted player's ped.
+// This is meant to make it easier for the hunters to recognise the hunted player.
+function drawPlayerMugshot() {
+    if (huntedMugshot != null && huntedMugshotRefreshed == false && huntStarted == true) {
+        if (IsPedheadshotReady(huntedMugshot.id) && IsPedheadshotValid(huntedMugshot.id)) {
+            huntedMugshot = { ...huntedMugshot, name: GetPedheadshotTxdString(huntedMugshot.id) };
+            huntedMugshotRefreshed = true;
+        }
+    }
+
+    if (huntedMugshotRefreshed == true) {
+        const bigmapOffset = 0.25 * (IsBigmapActive() ? 1 : 0);
+        RequestStreamedTextureDict("timerbars");
+        if (HasStreamedTextureDictLoaded("timerbars")) {
+            // Draw a background for the text. 0.003 padding is applied between each player name.
+            DrawSprite("timerbars", "all_black_bg", 0.09, 0.75 - bigmapOffset, 0.15, 0.15 / 3, 180, 255, 255, 255, 128);
+            SetTextScale(0, 0.5);
+            BeginTextCommandDisplayText("STRING");
+            let displayedName = GetPlayerName(huntedIdx);
+            if (displayedName.length >= 15) {
+                displayedName = displayedName.substr(0, 12) + "...";
+            }
+            AddTextComponentString(`${displayedName}`);
+            EndTextCommandDisplayText(0.05, 0.733 - bigmapOffset);
+            SetTextScale(0, 1.0);
+        }
+        DrawSprite(huntedMugshot.name, huntedMugshot.name, 0.033, 0.75 - bigmapOffset, 0.085 / 3, 0.13 / 3, 0, 255, 255, 255, 255);
+    }
+}
+
 // Draws a timerbar with the remaining time in the bottom right corner of the screen.
 function drawRemainingTime(timeStr) {
     SetTextScale(0, 0.55);
@@ -596,11 +641,35 @@ const Events = {
     // Notify the hunters about their objective when the hunt starts.
     notifyHunters: ({ serverId, huntedPlayerName }) => {
         huntStarted = true;
+        // TODO: Correct this. It works for now, but we don't need this loop.
         huntedIdx = GetPlayerFromServerId(serverId);
+        for (let i = 0; i < 32; i++) {
+            if (huntedPlayerName == GetPlayerName(i)) {
+                huntedIdx = i;
+                break;
+            }
+        }
         TriggerEvent("chat:addMessage", {
             args: [`huntedPlayerName: ${huntedPlayerName}`]
         });
         huntedName = huntedPlayerName;
+
+        huntedMugshot = { id: RegisterPedheadshotTransparent(GetPlayerPed(huntedIdx)) };
+
+        // TODO: Get this mugshot-refresh code to work
+        /*const createMugshot = () => {
+        let oldMugshotId = null;
+        if (huntedMugshot !== null) {
+            oldMugshotId = huntedMugshot.id;
+        }
+        huntedMugshot = { id: RegisterPedheadshotTransparent(GetPlayerPed(huntedIdx)) };
+        huntedMugshotRefreshed = false;
+        if (oldMugshotId !== null) {
+            UnregisterPedheadshot(oldMugshotId);
+        }
+    };
+    createMugshot();
+    huntedMugshotTimer = setInterval(createMugshot, 30000);*/
 
         currentObj = " is the hunted! Track them down."
         team = Team.Hunters;
@@ -611,6 +680,8 @@ const Events = {
         huntStarted = true;
         huntedIdx = PlayerId();
         huntedName = GetPlayerName(PlayerId());
+
+        huntedMugshot = { id: RegisterPedheadshotTransparent(GetPlayerPed(huntedIdx)) };
 
         currentObj = "Survive";
         team = Team.Hunted;
