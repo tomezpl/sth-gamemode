@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using CitizenFX.Core;
@@ -99,7 +100,27 @@ namespace SurviveTheHuntClient
                 PlayerState.DeathReported = true;
             }
 
+            GameOverCheck();
+
             Wait(0);
+        }
+
+        protected void GameOverCheck()
+        {
+            if(!GameState.Hunt.IsEnding)
+            {
+                return;
+            }
+
+            if (GameState.Hunt.EndInMilliseconds > 0)
+            {
+                GameState.Hunt.EndInMilliseconds -= Convert.ToInt32(Math.Round(Game.LastFrameTime * 1000f));
+            }
+            else
+            {
+                GameState.Hunt.End();
+                GameState.CurrentObjective = "";
+            }
         }
 
         private void CreateEvents()
@@ -159,7 +180,7 @@ namespace SurviveTheHuntClient
                         {
                             GameState.CurrentObjective = "You've lost the hunt!";
                         }
-                        GameState.Hunt.End();
+                        GameState.Hunt.EndInMilliseconds = 5000;
                     })
                 },
                 {

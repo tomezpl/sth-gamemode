@@ -12,12 +12,16 @@ namespace SurviveTheHuntClient
             public bool IsStarted { get; set; } = false;
             public bool IsOver { get; set; } = false;
             public bool IsInProgress { get { return IsStarted && !IsOver; } }
+            public bool IsEnding { get { return !IsInProgress && IsOver; } }
             public Player HuntedPlayer { get; set; } = null;
+
+            public int EndInMilliseconds { get; set; } = -1;
 
             public void End()
             {
                 IsStarted = false;
                 IsOver = false;
+                EndInMilliseconds = -1;
             }
         }
 
