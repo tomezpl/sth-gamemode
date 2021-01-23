@@ -25,5 +25,7 @@ namespace SurviveTheHuntClient
         /// Last weapon the player had equipped.
         /// </summary>
         public Hash LastWeaponEquipped { get; set; } = new Hash();
+
+        public Teams.Team Team { get; set; } = Teams.Team.Hunted;
     }
 }

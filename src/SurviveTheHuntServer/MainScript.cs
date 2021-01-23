@@ -12,6 +12,12 @@ namespace SurviveTheHuntServer
     public class MainScript : BaseScript
     {
         private const string ResourceName = "sth-gamemode";
+        protected GameState GameState = new GameState();
+
+        /// <summary>
+        /// Gamemode-specific network-aware events triggerable from the client(s).
+        /// </summary>
+        protected Dictionary<string, Action<dynamic>> STHEvents;
 
         public MainScript()
         {
@@ -28,8 +34,56 @@ namespace SurviveTheHuntServer
             }
             else
             {
+                CreateEvents();
 
+                foreach(KeyValuePair<string, Action<dynamic>> ev in STHEvents)
+                {
+                    EventHandlers[$"sth:{ev.Key}"] += ev.Value;
+                }
             }
+        }
+
+        private void CreateEvents()
+        {
+            STHEvents = new Dictionary<string, Action<dynamic>>
+            {
+                {
+                    "cleanClothes", new Action<dynamic>(data =>
+                    {
+                        int playerId = data.PlayerId;
+
+                        TriggerClientEvent("sth:cleanClothesForPlayer", new { PlayerId = playerId });
+                    })
+                },
+                {
+                    "playerDied", new Action<dynamic>(data =>
+                    {
+                        int playerId = data.PlayerId;
+                        Console.WriteLine($"Player died: {GetPlayerName($"{playerId}")}");
+
+                        // Did the hunted player die?
+                        if(Hunt.CheckPlayerDeath(Players[GetPlayerName($"{playerId}")], ref GameState))
+                        {
+                            TriggerClientEvent("sth:notifyWinner", new { WinningTeam = (int)GameState.Hunt.WinningTeam });
+                        }
+                    })
+                },
+                {
+                    "startHunt", new Action<dynamic>(data =>
+                    {
+                        Player randomPlayer = Hunt.ChooseRandomPlayer(Players);
+
+                        GameState.Hunt.LastHuntedPlayer = randomPlayer;
+
+                        TriggerClientEvent(randomPlayer, "sth:notifyHuntedPlayer");
+                        TriggerClientEvent("sth:notifyHunters", new { HuntedPlayerName = randomPlayer.Name });
+
+                        GameState.Hunt.Begin(randomPlayer);
+
+                        TriggerClientEvent("sth:huntStartedByServer");
+                    })
+                }
+            };
         }
     }
 }

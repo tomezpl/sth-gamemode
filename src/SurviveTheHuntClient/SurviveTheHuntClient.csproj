@@ -45,10 +45,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants.cs" />
+    <Compile Include="GameState.cs" />
+    <Compile Include="HuntUI.cs" />
     <Compile Include="MainScript.cs" />
     <Compile Include="PlayerState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="HelperClasses.cs" />
+    <Compile Include="Teams.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
