@@ -35,6 +35,7 @@ var deleteTimerTimeout = null; // Timeout used to delete timer (interval) at the
 var huntedMugshot = null; // Mugshot texture object (holds handle and texture name)
 var huntedMugshotRefreshed = false; // Is the mugshot texture ready?
 var huntedMugshotTimer = null; // Timer for refreshing mugshots
+var gameStateSynced = false;
 
 var PlayerBlips = [];
 
@@ -87,10 +88,39 @@ on('onClientGameTypeStart', () => {
 
         NetworkSetFriendlyFireOption(true);
         SetCanAttackFriendly(playerPed, true, true);
+
+        if (gameStateSynced === false) {
+            checkGameState();
+            gameStateSynced = true;
+        }
     });
 
     setTick(tickUpdate);
 });
+
+// Checks game state as given by the server and performs sync if needed.
+function checkGameState() {
+    const gs = GetConvar("sth:state", null);
+    if (gs === null) {
+        console.log("STH: Couldn't get current game state from server!");
+    }
+    else {
+        console.log("STH: Received game state from server.");
+        console.log(gs);
+        const gsObj = JSON.parse(gs);
+        if (gsObj.huntStarted == true) {
+            console.log("STH: Hunt started");
+            if (gsObj.huntedPlayerName != GetPlayerName(PlayerId())) {
+                Events.notifyHunters({ huntedPlayerName: gsObj.huntedPlayerName });
+            }
+            else {
+                Events.notifyHuntedPlayer();
+                emitNet("sth:reassignHuntedPlayer", { playerServerId: GetPlayerServerId(PlayerId()) });
+            }
+            Events.huntStartedByServer(gsObj.currentTimeLeft);
+        }
+    }
+}
 
 // Called when spawn is triggered.
 function autoSpawnCallback() {
@@ -584,10 +614,16 @@ function drawRemainingTime(timeStr) {
     SetTextScale(0, 1.0);
 }
 
-function resetTimer() {
+function resetTimer(timeLimitOverride = null) {
     if (timer !== null) {
         clearInterval(timer);
         timer = null;
+    }
+
+    // Shorten the current time left if necessary (e.g. if player joined in progress).
+    if (timeLimitOverride !== null) {
+        console.log("STH: Overriding time left to " + timeLimitOverride + "ms.");
+        currentTimeLeft = timeLimitOverride;
     }
 
     timer = setInterval(() => { currentTimeLeft -= 1000; }, 1000);
@@ -595,7 +631,7 @@ function resetTimer() {
         clearTimeout(deleteTimerTimeout);
         deleteTimerTimeout = null;
     }
-    deleteTimerTimeout = setTimeout(() => { if (timer !== null) { clearInterval(timer); timer = null; deleteTimerTimeout = null; } }, GameSettings.TimeLimit);
+    deleteTimerTimeout = setTimeout(() => { if (timer !== null) { clearInterval(timer); timer = null; deleteTimerTimeout = null; } }, timeLimitOverride !== null ? timeLimitOverride : GameSettings.TimeLimit);
 }
 
 // Network-aware events.
@@ -642,7 +678,7 @@ const Events = {
     notifyHunters: ({ serverId, huntedPlayerName }) => {
         huntStarted = true;
         // TODO: Correct this. It works for now, but we don't need this loop.
-        huntedIdx = GetPlayerFromServerId(serverId);
+        //huntedIdx = GetPlayerFromServerId(serverId);
         for (let i = 0; i < 32; i++) {
             if (huntedPlayerName == GetPlayerName(i)) {
                 huntedIdx = i;

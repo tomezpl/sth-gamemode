@@ -73,6 +73,7 @@ function defaultGameState() {
     return {
         huntStarted: false, // is there an ongoing hunt?
         huntedPlayer: -1, // server ID of the currently hunted player. Default: -1 (nobody)
+        huntedPlayerName: "",
         lastHuntedPlayer: -1, // INDEX of the last hunted player (used to make random pick more "unique")
         winningTeam: -1, // team winning the match. Default: -1 (neither)
         timeLeft: GameSettings.TimeLimit, // Time left on this hunt (in ms)
@@ -88,6 +89,17 @@ function defaultGameState() {
 
 // Game state
 var gs = defaultGameState();
+
+// Builds the GameState convar to be replicated. This allows players to join games in progress.
+// Convar returned as a string ready to set.
+function buildGsConvar() {
+    return JSON.stringify({
+        huntStarted: gs.huntStarted,
+        huntedIdx: gs.huntedPlayer,
+        huntedPlayerName: gs.huntedPlayerName,
+        currentTimeLeft: gs.timeLeft
+    });
+}
 
 function clearTimers() {
     if (gs.gameTimer !== null) {
@@ -107,6 +119,8 @@ function endHunt() {
     const lastHuntedPlayer = gs.lastHuntedPlayer;
     gs = defaultGameState();
     gs.lastHuntedPlayer = lastHuntedPlayer;
+
+    SetConvarReplicated("sth:state", buildGsConvar());
 }
 
 function beginGame(player) {
@@ -114,6 +128,8 @@ function beginGame(player) {
     gs.huntedPlayer = player;
     gs.winningTeam = Team.Hunted; // Make the hunted player the winner by default, as this is only overriden if they die.
     gs.timeLeft = GameSettings.TimeLimit;
+
+    SetConvarReplicated("sth:state", buildGsConvar());
 }
 
 // Main tick (main loop?)
@@ -126,6 +142,7 @@ function Tick() {
 function TimeUpdate(firstTick = false) {
     if(gs.huntStarted) {
         gs.timeLeft -= firstTick ? 0 : 10000;
+        SetConvarReplicated("sth:state", buildGsConvar());
         emitNet("sth:tickTime", -1, gs.timeLeft);
     }
 }
@@ -141,6 +158,7 @@ function PingBlip() {
         const offsetX = ((Math.random() * 2) - 1) * playerLocationRadius;
         const offsetY = ((Math.random() * 2) - 1) * playerLocationRadius;
 
+        // TODO: This needs fixing. huntedPlayer will be invalid after the hunted player rejoins
         TriggerClientEvent("sth:showPingOnMap", -1, { pid: gs.huntedPlayer, ox: offsetX, oy: offsetY, r: radius });
     }
 }
@@ -189,6 +207,7 @@ const Events = {
         console.log("Picking player " + randomPlayerIndex);
 
         gs.lastHuntedPlayer = randomPlayerIndex;
+        gs.huntedPlayerName = GetPlayerName(GetPlayerFromIndex(randomPlayerIndex));
 
         // Notify the hunted player's game.
         TriggerClientEvent("sth:notifyHuntedPlayer", GetPlayerFromIndex(randomPlayerIndex));
@@ -269,6 +288,11 @@ const Events = {
     // TODO: need some RPC-like template for these server->client->server->broadcast events
     broadcastHuntedZone: ({ pos }) => {
         emitNet("sth:notifyAboutHuntedZone", -1, { pos });
+    },
+    reassignHuntedPlayer: ({ playerServerId }) => {
+        gs.huntedPlayer = playerServerId;
+        gs.lastHuntedPlayer = gs.huntedPlayer;
+        console.log(`${GetPlayerName(gs.huntedPlayer)} is back as the hunted!`);
     }
 };
 
