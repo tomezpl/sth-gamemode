@@ -16,6 +16,7 @@ namespace SurviveTheHuntClient
             public Player HuntedPlayer { get; set; } = null;
 
             public int EndInMilliseconds { get; set; } = -1;
+            public DateTime EndTime { get; set; } = new DateTime();
 
             public void End()
             {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ namespace SurviveTheHuntServer
 
         public MainScript()
         {
-            if(GetCurrentResourceName() != ResourceName)
+            if (GetCurrentResourceName() != ResourceName)
             {
                 try
                 {
@@ -36,11 +37,30 @@ namespace SurviveTheHuntServer
             {
                 CreateEvents();
 
-                foreach(KeyValuePair<string, Action<dynamic>> ev in STHEvents)
+                foreach (KeyValuePair<string, Action<dynamic>> ev in STHEvents)
                 {
                     EventHandlers[$"sth:{ev.Key}"] += ev.Value;
                 }
+
+                Tick += UpdateLoop;
             }
+        }
+
+        private async Task UpdateLoop()
+        {
+            if (GameState.Hunt.IsStarted)
+            {
+                if (GameState.Hunt.EndTime <= DateTime.Now)
+                {
+                    GameState.Hunt.End(Teams.Team.Hunted);
+                    NotifyWinner();
+                }
+            }
+        }
+
+        private void NotifyWinner()
+        {
+            TriggerClientEvent("sth:notifyWinner", new { WinningTeam = (int)GameState.Hunt.WinningTeam });
         }
 
         private void CreateEvents()
@@ -64,7 +84,7 @@ namespace SurviveTheHuntServer
                         // Did the hunted player die?
                         if(Hunt.CheckPlayerDeath(Players[GetPlayerName($"{playerId}")], ref GameState))
                         {
-                            TriggerClientEvent("sth:notifyWinner", new { WinningTeam = (int)GameState.Hunt.WinningTeam });
+                            NotifyWinner();
                         }
                     })
                 },
@@ -80,7 +100,7 @@ namespace SurviveTheHuntServer
 
                         GameState.Hunt.Begin(randomPlayer);
 
-                        TriggerClientEvent("sth:huntStartedByServer");
+                        TriggerClientEvent("sth:huntStartedByServer", new { EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture) });
                     })
                 }
             };

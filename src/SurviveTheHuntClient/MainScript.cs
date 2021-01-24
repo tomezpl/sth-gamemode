@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -90,6 +91,7 @@ namespace SurviveTheHuntClient
 
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
             HuntUI.SetBigmap(ref PlayerState);
+            HuntUI.DrawRemainingTime(ref GameState);
 
             // Make sure the player can't get cops.
             ClearPlayerWantedLevel(PlayerId());
@@ -187,7 +189,9 @@ namespace SurviveTheHuntClient
                 {
                     "huntStartedByServer", new Action<dynamic>(data =>
                     {
-                        // TODO
+                        string endTimeStr = data.EndTime;
+                        DateTime endTime = DateTime.ParseExact(endTimeStr, "F", CultureInfo.InvariantCulture);
+                        GameState.Hunt.EndTime = endTime;
                     })
                 }
             };
