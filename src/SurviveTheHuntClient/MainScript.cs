@@ -89,6 +89,7 @@ namespace SurviveTheHuntClient
             }
 
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+            HuntUI.SetBigmap(ref PlayerState);
 
             // Make sure the player can't get cops.
             ClearPlayerWantedLevel(PlayerId());

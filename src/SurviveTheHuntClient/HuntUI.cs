@@ -28,5 +28,23 @@ namespace SurviveTheHuntClient
                 EndTextCommandPrint(1, true);
             }
         }
+
+        public static void SetBigmap(ref PlayerState playerState)
+        {
+            playerState.Bigmap.UpdateTime(GetFrameTime());
+
+            // Is the map-expand control active?
+            bool buttonPressed = IsControlJustReleased(0, 20);
+            bool bigmapActive = IsBigmapActive();
+
+            if (playerState.Bigmap.TimeSinceActivated >= 8000 || (buttonPressed && bigmapActive))
+            {
+                playerState.Bigmap.Hide();
+            }
+            else if (buttonPressed && !bigmapActive)
+            {
+                playerState.Bigmap.Show();
+            }
+        }
     }
 }
