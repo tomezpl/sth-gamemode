@@ -18,12 +18,15 @@ namespace SurviveTheHuntServer
             public DateTime StartTime { get; set; } = DateTime.Now;
             public DateTime EndTime { get { return StartTime + Constants.HuntDuration; } }
 
+            public DateTime LastPingTime { get; set; } = DateTime.Now;
+
             public void Begin(Player huntedPlayer)
             {
                 IsStarted = true;
                 HuntedPlayer = huntedPlayer;
                 WinningTeam = Teams.Team.Hunted;
                 StartTime = DateTime.Now;
+                LastPingTime = DateTime.Now;
             }
 
             public void End(Teams.Team winningTeam)

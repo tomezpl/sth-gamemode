@@ -92,6 +92,7 @@ namespace SurviveTheHuntClient
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
             HuntUI.SetBigmap(ref PlayerState);
             HuntUI.DrawRemainingTime(ref GameState);
+            HuntUI.FadeBlips();
 
             // Make sure the player can't get cops.
             ClearPlayerWantedLevel(PlayerId());
@@ -192,6 +193,25 @@ namespace SurviveTheHuntClient
                         string endTimeStr = data.EndTime;
                         DateTime endTime = DateTime.ParseExact(endTimeStr, "F", CultureInfo.InvariantCulture);
                         GameState.Hunt.EndTime = endTime;
+                    })
+                },
+                {
+                    "showPingOnMap", new Action<dynamic>(data =>
+                    {
+                        string playerName = data.PlayerName;
+                        HuntUI.CreateBlipForPlayer(Players[playerName], data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
+                        if(playerName == Game.Player.Name)
+                        {
+                            Vector3 position = GetEntityCoords(PlayerPedId(), false);
+                            TriggerServerEvent("sth:broadcastHuntedZone", new { Position = position });
+                        }
+                    })
+                },
+                {
+                    "notifyAboutHuntedZone", new Action<dynamic>(data =>
+                    {
+                        string playerName = data.PlayerName;
+                        HuntUI.NotifyAboutHuntedZone(Players[playerName], data.Position);
                     })
                 }
             };

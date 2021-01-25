@@ -1,4 +1,6 @@
-﻿using System;
+﻿using CitizenFX.Core;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using static CitizenFX.Core.Native.API;
 using static SurviveTheHuntClient.Teams;
@@ -7,6 +9,52 @@ namespace SurviveTheHuntClient
 {
     public static class HuntUI
     {
+        private static Blip RadiusBlip = null;
+
+        private class FadingBlip
+        {
+            public Blip Blip { get; set; } = null;
+            public DateTime FadeOutStart = default, FadeOutEnd = default;
+
+            public FadingBlip(Blip blip, DateTime fadeOutStart, DateTime fadeOutEnd)
+            {
+                Blip = blip;
+                FadeOutStart = fadeOutStart;
+                FadeOutEnd = fadeOutEnd;
+            }
+
+            public float Alpha
+            {
+                get
+                {
+                    if (FadeOutStart == default || FadeOutEnd == default)
+                    {
+                        return 0f;
+                    }
+                    else
+                    {
+                        if(DateTime.Now <= FadeOutStart)
+                        {
+                            return 1f;
+                        }
+                        
+                        float magnitude = (float)(FadeOutEnd - FadeOutStart).TotalSeconds;
+                        float t = (float)(DateTime.Now - FadeOutStart).TotalSeconds;
+
+                        if(t >= magnitude)
+                        {
+                            return 0f;
+                        }
+
+                        // InvLerp
+                        return t / magnitude;
+                    }
+                }
+            }
+        }
+
+        private static List<FadingBlip> FadingBlips = new List<FadingBlip>();
+
         public static void DisplayObjective(ref GameState gameState, ref PlayerState playerState)
         {
             if (!string.IsNullOrWhiteSpace(gameState.CurrentObjective))
@@ -96,6 +144,68 @@ namespace SurviveTheHuntClient
             AddTextComponentString("TIME LEFT");
             EndTextCommandDisplayText(0.94f - timebarWidth / 2.35f, 0.865f);
             SetTextScale(0, 1f);
+        }
+
+        public static void CreateBlipForPlayer(Player player, float radius, float offsetX, float offsetY, DateTime creationTime, ref PlayerState playerState)
+        {
+            Vector3 position = GetEntityCoords(player.Character.Handle, false);
+
+            if (RadiusBlip == null)
+            {
+                RadiusBlip = new Blip(AddBlipForRadius(position.X + offsetX, position.Y, position.Z + offsetY, radius));
+            }
+            else
+            {
+                SetBlipCoords(RadiusBlip.Handle, position.X + offsetX, position.Y, position.Z + offsetY);
+            }
+
+            // Set blip to be yellow (main objective).
+            SetBlipColour(RadiusBlip.Handle, 66);
+            SetBlipAlpha(RadiusBlip.Handle, 128);
+            SetBlipDisplay(RadiusBlip.Handle, 6);
+            SetBlipNameToPlayerName(RadiusBlip.Handle, player.Handle);
+            SetBlipHiddenOnLegend(RadiusBlip.Handle, false);
+            if (playerState.Team == Team.Hunters)
+            {
+                SetBlipRoute(RadiusBlip.Handle, true);
+            }
+
+            PingBlipOnMap(ref RadiusBlip, creationTime, TimeSpan.FromSeconds(Constants.HuntedBlipLifespan), TimeSpan.FromSeconds(Constants.HuntedBlipFadeoutTime));
+        }
+
+        public static void FadeBlips()
+        {
+            List<FadingBlip> blipsToDelete = new List<FadingBlip>();
+            foreach(FadingBlip blip in FadingBlips)
+            {
+                SetBlipAlpha(blip.Blip.Handle, Convert.ToInt32(blip.Alpha * 128f));
+                if(blip.Alpha == 0f)
+                {
+                    blipsToDelete.Add(blip);
+                }
+            }
+
+            // Disable blip if fully transparent.
+            foreach(FadingBlip blip in blipsToDelete)
+            {
+                SetBlipDisplay(blip.Blip.Handle, 0);
+                SetBlipRoute(blip.Blip.Handle, false);
+                SetBlipHiddenOnLegend(blip.Blip.Handle, true);
+                FadingBlips.Remove(blip);
+            }
+        }
+
+        public static void PingBlipOnMap(ref Blip blip, DateTime creationTime, TimeSpan lifespan, TimeSpan fadeOutTime)
+        {
+            FadingBlips.Add(new FadingBlip(blip, creationTime + lifespan, creationTime + fadeOutTime));
+        }
+
+        public static void NotifyAboutHuntedZone(Player player, Vector3 position)
+        {
+            string zoneName = GetLabelText(GetNameOfZone(position.X, position.Y, position.Z));
+            BeginTextCommandThefeedPost("STRING");
+            AddTextComponentString($"{player.Name} is somewhere in {zoneName} right now.");
+            EndTextCommandThefeedPostTicker(true, true);
         }
     }
 }

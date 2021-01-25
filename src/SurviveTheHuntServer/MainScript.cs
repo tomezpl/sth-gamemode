@@ -14,6 +14,7 @@ namespace SurviveTheHuntServer
     {
         private const string ResourceName = "sth-gamemode";
         protected GameState GameState = new GameState();
+        private readonly Random RNG = new Random();
 
         /// <summary>
         /// Gamemode-specific network-aware events triggerable from the client(s).
@@ -54,6 +55,24 @@ namespace SurviveTheHuntServer
                 {
                     GameState.Hunt.End(Teams.Team.Hunted);
                     NotifyWinner();
+                }
+
+                if(DateTime.Now - GameState.Hunt.LastPingTime >= Constants.HuntedPingInterval)
+                {
+                    GameState.Hunt.LastPingTime = DateTime.Now;
+                    float radius = 200f;
+                    float playerLocationRadius = radius * 0.875f;
+                    float offsetX = (((float)RNG.NextDouble() * 2f) - 1f) * playerLocationRadius;
+                    float offsetY = (((float)RNG.NextDouble() * 2f) - 1f) * playerLocationRadius;
+
+                    TriggerClientEvent("sth:showPingOnMap", new
+                    {
+                        CreationDate = GameState.Hunt.LastPingTime.ToString("F", CultureInfo.InvariantCulture),
+                        PlayerName = GameState.Hunt.HuntedPlayer.Name,
+                        Radius = radius,
+                        OffsetX = offsetX,
+                        OffsetY = offsetY
+                    });
                 }
             }
         }
@@ -101,6 +120,13 @@ namespace SurviveTheHuntServer
                         GameState.Hunt.Begin(randomPlayer);
 
                         TriggerClientEvent("sth:huntStartedByServer", new { EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture) });
+                    })
+                },
+                {
+                    "broadcastHuntedZone", new Action<dynamic>(data =>
+                    {
+                        Vector3 pos = data.Position;
+                        TriggerClientEvent("sth:notifyAboutHuntedZone", new { PlayerName = GameState.Hunt.HuntedPlayer.Name, Position = pos });
                     })
                 }
             };
