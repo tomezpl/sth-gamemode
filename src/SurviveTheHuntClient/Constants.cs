@@ -16,6 +16,8 @@ namespace SurviveTheHuntClient
         public static readonly float HuntedBlipLifespan = 50f;
         public static readonly float HuntedBlipFadeoutTime = 5f;
 
+        public static readonly float ZLimit = 1130f;
+
         public static readonly Dictionary<Teams.Team, KeyValuePair<WeaponAsset, int>[]> WeaponLoadouts = new Dictionary<Teams.Team, KeyValuePair<WeaponAsset, int>[]>
         {
             {

@@ -10,6 +10,8 @@ namespace SurviveTheHuntClient
     public static class HuntUI
     {
         private static Blip RadiusBlip = null;
+        // TODO: Change this to a hashset?
+        private static Dictionary<int, dynamic> PlayerBlips = new Dictionary<int, dynamic>();
 
         private class FadingBlip
         {
@@ -206,6 +208,82 @@ namespace SurviveTheHuntClient
             BeginTextCommandThefeedPost("STRING");
             AddTextComponentString($"{player.Name} is somewhere in {zoneName} right now.");
             EndTextCommandThefeedPostTicker(true, true);
+        }
+
+        public static void UpdateTeammateBlips(PlayerList players, ref GameState gameState, ref PlayerState playerState)
+        {
+            // TODO: The heavy use of collections in this method seems to increase the tick time by a considerable amount.
+            // Need to only invoke the blip update when a player connects, disconnects or dies; Otherwise only update the visibility of existing blips.
+
+            int counter = 0;
+            List<int> activePeds = new List<int>();
+            foreach(Player player in players)
+            {
+                if(player == Game.Player)
+                {
+                    SetBlipColour(GetMainPlayerBlipId(), player.Handle + 10);
+                    continue;
+                }
+
+                if(!PlayerBlips.ContainsKey(player.Character.Handle))
+                {
+                    Blip blip = new Blip(AddBlipForEntity(player.Character.Handle));
+                    blip.Name = player.Name;
+                    SetBlipColour(blip.Handle, player.Handle + 10);
+                    SetBlipDisplay(blip.Handle, 6);
+                    ShowHeadingIndicatorOnBlip(blip.Handle, true);
+                    SetBlipCategory(blip.Handle, 7);
+                    SetBlipShrink(blip.Handle, GetConvar("sth_shrinkPlayerBlips", "false") != "false");
+                    SetBlipScale(blip.Handle, 0.9f);
+                    CreateMpGamerTagWithCrewColor(player.Handle, player.Name, false, false, "", 0, 0, 0, 0);
+                    SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(blip.Handle));
+                    SetMpGamerTagVisibility(player.Handle, 0, true);
+                    PlayerBlips.Add(player.Character.Handle, new { blip, id = player.Handle });
+
+                    counter++;
+                }
+
+                activePeds.Add(player.Character.Handle);
+            }
+
+            // Display player names on blips (in bigmap).
+            N_0x82cedc33687e1f50(true);
+
+            List<int> pedsToDelete = new List<int>();
+
+            foreach(int ped in PlayerBlips.Keys)
+            {
+                // Delete check
+                if (!activePeds.Contains(ped))
+                {
+                    pedsToDelete.Add(ped);
+                    continue;
+                }
+
+                if(gameState.Hunt.IsStarted && (playerState.Team == Team.Hunted || ped == gameState.Hunt.HuntedPlayer.Character.Handle) && !GameState.IsPedTooFar(new Ped(ped)))
+                {
+                    // Hide the blip
+                    Blip blip = PlayerBlips[ped].blip;
+                    SetBlipDisplay(blip.Handle, 0);
+                    int id = PlayerBlips[ped].id;
+                    SetMpGamerTagVisibility(id, 0, false);
+                }
+                else
+                {
+                    // Show the blip
+                    Blip blip = PlayerBlips[ped].blip;
+                    SetBlipDisplay(blip.Handle, 6);
+                    int id = PlayerBlips[ped].id;
+                    SetMpGamerTagVisibility(id, 0, true);
+                }
+            }
+            foreach(int ped in pedsToDelete)
+            {
+                Blip blip = PlayerBlips[ped].blip;
+                blip.Delete();
+                PlayerBlips.Remove(ped);
+            }
+
         }
     }
 }

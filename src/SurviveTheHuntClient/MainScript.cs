@@ -94,6 +94,7 @@ namespace SurviveTheHuntClient
             HuntUI.SetBigmap(ref PlayerState);
             HuntUI.DrawRemainingTime(ref GameState);
             HuntUI.FadeBlips();
+            HuntUI.UpdateTeammateBlips(Players, ref GameState, ref PlayerState);
 
             PlayerState.UpdateWeapons(Game.PlayerPed);
 

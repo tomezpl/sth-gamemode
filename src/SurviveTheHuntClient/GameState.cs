@@ -27,5 +27,10 @@ namespace SurviveTheHuntClient
         }
 
         public HuntDetails Hunt { get; set; } = new HuntDetails();
+
+        public static bool IsPedTooFar(Ped ped)
+        {
+            return ped.Position.Y >= Constants.ZLimit;
+        }
     }
 }
