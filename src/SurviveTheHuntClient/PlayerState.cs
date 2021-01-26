@@ -1,4 +1,5 @@
-﻿using CitizenFX.Core.Native;
+﻿using CitizenFX.Core;
+using CitizenFX.Core.Native;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,7 +27,7 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Last weapon the player had equipped.
         /// </summary>
-        public Hash LastWeaponEquipped { get; set; } = new Hash();
+        public int LastWeaponEquipped { get; set; } = default;
 
         public Teams.Team Team { get; set; } = Teams.Team.Hunted;
 
@@ -57,5 +58,46 @@ namespace SurviveTheHuntClient
         }
 
         public BigmapState Bigmap { get; set; } = new BigmapState();
+
+        private void GiveWeapons(ref Ped playerPed)
+        {
+            KeyValuePair<WeaponAsset, int>[] weapons = Constants.WeaponLoadouts[Team];
+
+            foreach(KeyValuePair<WeaponAsset, int> weapon in weapons)
+            {
+                bool equip = weapon.Key.Hash == LastWeaponEquipped;
+                GiveWeaponToPed(playerPed.Handle, (uint)weapon.Key.Hash, weapon.Value, false, equip);
+            }
+
+            WeaponsGiven = true;
+        }
+
+        private void TakeAwayWeapons(ref Ped playerPed)
+        {
+            KeyValuePair<WeaponAsset, int>[] weapons = Constants.WeaponLoadouts[Team];
+
+            LastWeaponEquipped = GetSelectedPedWeapon(playerPed.Handle);
+
+            foreach (KeyValuePair<WeaponAsset, int> weapon in weapons)
+            {
+                RemoveWeaponFromPed(playerPed.Handle, (uint)weapon.Key.Hash);
+            }
+
+            WeaponsGiven = false;
+        }
+
+        public void UpdateWeapons(Ped playerPed)
+        {
+            bool weaponsAllowed = !playerPed.IsGettingIntoAVehicle && !playerPed.IsInVehicle();
+
+            if(weaponsAllowed && !WeaponsGiven)
+            {
+                GiveWeapons(ref playerPed);
+            }
+            else if(!weaponsAllowed && WeaponsGiven)
+            {
+                TakeAwayWeapons(ref playerPed);
+            }
+        }
     }
 }

@@ -74,6 +74,7 @@ namespace SurviveTheHuntClient
 
             // Indicate that weapons need to be given to the player again.
             PlayerState.WeaponsGiven = false;
+            PlayerState.LastWeaponEquipped = new WeaponAsset(WeaponHash.Unarmed).Hash;
 
             TriggerServerEvent("sth:clientClothes", new { PlayerId = PlayerId() });
 
@@ -93,6 +94,8 @@ namespace SurviveTheHuntClient
             HuntUI.SetBigmap(ref PlayerState);
             HuntUI.DrawRemainingTime(ref GameState);
             HuntUI.FadeBlips();
+
+            PlayerState.UpdateWeapons(Game.PlayerPed);
 
             // Make sure the player can't get cops.
             ClearPlayerWantedLevel(PlayerId());
