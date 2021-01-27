@@ -49,7 +49,7 @@ namespace SurviveTheHuntClient
                         }
 
                         // InvLerp
-                        return t / magnitude;
+                        return 1f - t / magnitude;
                     }
                 }
             }
@@ -105,8 +105,6 @@ namespace SurviveTheHuntClient
             {
                 return;
             }
-
-            Exception ex = null;
 
             string timeStr = "";
             try
@@ -199,7 +197,7 @@ namespace SurviveTheHuntClient
 
         public static void PingBlipOnMap(ref Blip blip, DateTime creationTime, TimeSpan lifespan, TimeSpan fadeOutTime)
         {
-            FadingBlips.Add(new FadingBlip(blip, creationTime + lifespan, creationTime + fadeOutTime));
+            FadingBlips.Add(new FadingBlip(blip, creationTime + lifespan, creationTime + lifespan + fadeOutTime));
         }
 
         public static void NotifyAboutHuntedZone(Player player, Vector3 position)
