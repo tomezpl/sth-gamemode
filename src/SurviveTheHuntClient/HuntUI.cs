@@ -133,16 +133,16 @@ namespace SurviveTheHuntClient
             RequestStreamedTextureDict("timerbars", true);
             if (HasStreamedTextureDictLoaded("timerbars"))
             {
-                DrawSprite("timerbars", "all_black_bg", 0.92f, 0.875f, timebarWidth, 0.06f * 0.5f * 1.4f, 0f, 255, 255, 255, 128);
+                DrawSprite("timerbars", "all_black_bg", 0.92f, 0.855f, timebarWidth, 0.06f * 0.5f * 1.4f, 0f, 255, 255, 255, 128);
             }
 
             BeginTextCommandDisplayText("STRING");
             AddTextComponentString(timeStr);
-            EndTextCommandDisplayText(0.94f, 0.855f);
+            EndTextCommandDisplayText(0.94f, 0.835f);
             SetTextScale(0, 0.35f);
             BeginTextCommandDisplayText("STRING");
             AddTextComponentString("TIME LEFT");
-            EndTextCommandDisplayText(0.94f - timebarWidth / 2.35f, 0.865f);
+            EndTextCommandDisplayText(0.94f - timebarWidth / 2.35f, 0.845f);
             SetTextScale(0, 1f);
         }
 
