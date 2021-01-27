@@ -81,6 +81,11 @@ namespace SurviveTheHuntClient
             // Enable friendly fire.
             NetworkSetFriendlyFireOption(true);
             SetCanAttackFriendly(PlayerPedId(), true, true);
+
+            if(GameState.Hunt.IsEnding)
+            {
+                HuntUI.DisplayObjective(ref GameState, ref PlayerState, true);
+            }
         }
 
         protected async Task UpdateLoop()
@@ -91,7 +96,6 @@ namespace SurviveTheHuntClient
             }
 
             GameState.Hunt.UpdateHuntedMugshot();
-            HuntUI.DisplayObjective(ref GameState, ref PlayerState);
             HuntUI.SetBigmap(ref PlayerState);
             HuntUI.DrawRemainingTime(ref GameState);
             HuntUI.FadeBlips();
@@ -188,6 +192,7 @@ namespace SurviveTheHuntClient
                             GameState.CurrentObjective = "You've lost the hunt!";
                         }
                         GameState.Hunt.EndInMilliseconds = 5000;
+                        HuntUI.DisplayObjective(ref GameState, ref PlayerState, true);
                     })
                 },
                 {
@@ -196,6 +201,7 @@ namespace SurviveTheHuntClient
                         string endTimeStr = data.EndTime;
                         DateTime endTime = DateTime.ParseExact(endTimeStr, "F", CultureInfo.InvariantCulture);
                         GameState.Hunt.EndTime = endTime;
+                        HuntUI.DisplayObjective(ref GameState, ref PlayerState);
                     })
                 },
                 {

@@ -57,7 +57,7 @@ namespace SurviveTheHuntClient
 
         private static List<FadingBlip> FadingBlips = new List<FadingBlip>();
 
-        public static void DisplayObjective(ref GameState gameState, ref PlayerState playerState)
+        public static void DisplayObjective(ref GameState gameState, ref PlayerState playerState, bool ended = false)
         {
             if (!string.IsNullOrWhiteSpace(gameState.CurrentObjective))
             {
@@ -77,7 +77,7 @@ namespace SurviveTheHuntClient
                 // Switch back to default (white) text colour.
                 SetColourOfNextTextComponent(0);
                 AddTextComponentString(gameState.CurrentObjective);
-                EndTextCommandPrint(1, true);
+                EndTextCommandPrint(ended ? gameState.Hunt.EndInMilliseconds : Convert.ToInt32((gameState.Hunt.EndTime - DateTime.Now).TotalMilliseconds), true);
             }
         }
 
