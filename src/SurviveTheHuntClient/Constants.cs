@@ -16,7 +16,12 @@ namespace SurviveTheHuntClient
         public static readonly float HuntedBlipLifespan = 50f;
         public static readonly float HuntedBlipFadeoutTime = 5f;
 
+        // R* constant
+        public static readonly float FeedPostMessageDuration = 15f;
+
         public static readonly float ZLimit = 1130f;
+
+        public static readonly TimeSpan MugshotGenerationInterval = TimeSpan.FromSeconds(30);
 
         public static readonly Dictionary<Teams.Team, KeyValuePair<WeaponAsset, int>[]> WeaponLoadouts = new Dictionary<Teams.Team, KeyValuePair<WeaponAsset, int>[]>
         {

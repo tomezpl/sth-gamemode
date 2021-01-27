@@ -90,6 +90,7 @@ namespace SurviveTheHuntClient
                 ResetPlayerStamina(PlayerId());
             }
 
+            GameState.Hunt.UpdateHuntedMugshot();
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
             HuntUI.SetBigmap(ref PlayerState);
             HuntUI.DrawRemainingTime(ref GameState);
@@ -157,11 +158,9 @@ namespace SurviveTheHuntClient
                 {
                     "notifyHunters", new Action<dynamic>(data =>
                     {
-                        //Console.WriteLine("notifyHunters");
                         string huntedPlayerName = data.HuntedPlayerName;
 
-                        //Console.WriteLine($"Hunted player's name: {huntedPlayerName}");
-
+                        // Since the event is sent out to everyone, make sure it is discarded by the hunted player.
                         if(huntedPlayerName == Game.Player.Name)
                         {
                             return;
@@ -215,7 +214,7 @@ namespace SurviveTheHuntClient
                     "notifyAboutHuntedZone", new Action<dynamic>(data =>
                     {
                         string playerName = data.PlayerName;
-                        HuntUI.NotifyAboutHuntedZone(Players[playerName], data.Position);
+                        HuntUI.NotifyAboutHuntedZone(Players[playerName], data.Position, ref GameState);
                     })
                 }
             };

@@ -200,11 +200,21 @@ namespace SurviveTheHuntClient
             FadingBlips.Add(new FadingBlip(blip, creationTime + lifespan, creationTime + lifespan + fadeOutTime));
         }
 
-        public static void NotifyAboutHuntedZone(Player player, Vector3 position)
+        public static void NotifyAboutHuntedZone(Player player, Vector3 position, ref GameState gameState)
         {
             string zoneName = GetLabelText(GetNameOfZone(position.X, position.Y, position.Z));
+            string message = $"{player.Name} is somewhere in {zoneName} right now.";
             BeginTextCommandThefeedPost("STRING");
-            AddTextComponentString($"{player.Name} is somewhere in {zoneName} right now.");
+            if (gameState.Hunt.HuntedPlayerMugshot.IsValid)
+            {
+                AddTextComponentSubstringPlayerName(message);
+                string txd = gameState.Hunt.HuntedPlayerMugshot.Name;
+                EndTextCommandThefeedPostMessagetextTu(txd, txd, true, 0, player.Name, "Hunted Suspect", (Constants.HuntedBlipLifespan + Constants.HuntedBlipFadeoutTime) / Constants.FeedPostMessageDuration);
+            }
+            else
+            {
+                AddTextComponentString(message);
+            }
             EndTextCommandThefeedPostTicker(true, true);
         }
 
