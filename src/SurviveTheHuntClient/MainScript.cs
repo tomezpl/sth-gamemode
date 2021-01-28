@@ -82,9 +82,9 @@ namespace SurviveTheHuntClient
             NetworkSetFriendlyFireOption(true);
             SetCanAttackFriendly(PlayerPedId(), true, true);
 
-            if(GameState.Hunt.IsEnding)
+            if(GameState.Hunt.IsInProgress || GameState.Hunt.IsEnding)
             {
-                HuntUI.DisplayObjective(ref GameState, ref PlayerState, true);
+                HuntUI.DisplayObjective(ref GameState, ref PlayerState, GameState.Hunt.IsEnding);
             }
         }
 
