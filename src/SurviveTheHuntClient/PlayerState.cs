@@ -72,7 +72,7 @@ namespace SurviveTheHuntClient
             WeaponsGiven = true;
         }
 
-        private void TakeAwayWeapons(ref Ped playerPed)
+        public void TakeAwayWeapons(ref Ped playerPed)
         {
             KeyValuePair<WeaponAsset, int>[] weapons = Constants.WeaponLoadouts[Team];
 

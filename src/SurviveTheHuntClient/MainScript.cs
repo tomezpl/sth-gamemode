@@ -170,6 +170,9 @@ namespace SurviveTheHuntClient
                             return;
                         }
 
+                        Ped playerPed = Game.PlayerPed;
+                        PlayerState.TakeAwayWeapons(ref playerPed);
+
                         GameState.Hunt.IsStarted = true;
                         GameState.Hunt.HuntedPlayer = Players[huntedPlayerName];
 
