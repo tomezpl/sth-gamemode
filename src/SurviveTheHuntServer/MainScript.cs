@@ -112,6 +112,7 @@ namespace SurviveTheHuntServer
                     "cleanClothes", new Action<dynamic>(data =>
                     {
                         int playerId = data.PlayerId;
+                        Console.WriteLine($"Cleaning clothes for {Players[playerId].Name}");
 
                         TriggerClientEvent("sth:cleanClothesForPlayer", new { PlayerId = playerId });
                     })

@@ -179,7 +179,7 @@ namespace SurviveTheHuntClient
             PlayerState.WeaponsGiven = false;
             PlayerState.LastWeaponEquipped = new WeaponAsset(WeaponHash.Unarmed).Hash;
 
-            TriggerServerEvent("sth:clientClothes", new { PlayerId = PlayerId() });
+            TriggerServerEvent("sth:cleanClothes", new { PlayerId = GetPlayerServerId(PlayerId()) });
 
             // Enable friendly fire.
             NetworkSetFriendlyFireOption(true);
@@ -248,7 +248,7 @@ namespace SurviveTheHuntClient
                     {
                         int playerId = data.PlayerId;
 
-                        ClearPedBloodDamage(GetPlayerPed(playerId));
+                        ClearPedBloodDamage(GetPlayerPed(GetPlayerFromServerId(playerId)));
                     })
                 },
                 {
