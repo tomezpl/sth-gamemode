@@ -16,12 +16,16 @@ namespace SurviveTheHuntClient
         protected PlayerState PlayerState = new PlayerState();
         protected Dictionary<string, Action<dynamic>> STHEvents;
         protected GameState GameState = new GameState();
+        protected readonly Random RNG = new Random();
+
+        // TODO: Move this to server-side so any player can spawn vehicles with the previous batch deleting properly?
+        protected List<Vehicle> SpawnedVehicles = new List<Vehicle>();
 
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
             EventHandlers["onClientResourceStart"] += new Action(OnClientResourceStart);
-            EventHandlers["onClientResourceStop"] += new Action<string>(OnClientResourceStop);
+            EventHandlers["onResourceStopping"] += new Action<string>(OnResourceStopping);
 
             CreateEvents();
             foreach(KeyValuePair<string, Action<dynamic>> ev in STHEvents)
@@ -30,12 +34,17 @@ namespace SurviveTheHuntClient
             }
         }
 
-        protected void OnClientResourceStop(string resourceName)
+        protected void OnResourceStopping(string resourceName)
         {
             if(GetCurrentResourceName() != resourceName)
             {
                 return;
             }
+            foreach (Vehicle vehicleToDelete in SpawnedVehicles)
+            {
+                vehicleToDelete.Delete();
+            }
+            SpawnedVehicles.Clear();
 
             Console.WriteLine("Checking hunted player mugshot...");
             if(GameState.Hunt.HuntedPlayerMugshot != null)
@@ -75,6 +84,83 @@ namespace SurviveTheHuntClient
             {
                 TriggerServerEvent("sth:startHunt");
             }), false);
+
+            RegisterCommand("spawncars", new Action(() =>
+            {
+                SpawnCars();
+            }), false);
+
+            Vec3 spawn = Constants.DockSpawn;
+            ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
+        }
+
+        protected void SpawnCars()
+        {
+            List<VehicleHash> carsToSpawn = new List<VehicleHash>(Constants.CarSpawnPoints.Length);
+
+            List<VehicleHash> spawnableCars = Constants.Vehicles.ToList();
+
+            for(int i = 0; i < carsToSpawn.Capacity; i++)
+            {
+                int randomIndex = RNG.Next(0, spawnableCars.Count);
+                VehicleHash randomVehicle = spawnableCars[randomIndex];
+                carsToSpawn.Add(randomVehicle);
+
+                spawnableCars.RemoveAt(randomIndex);
+            }
+
+            foreach(Vehicle vehicleToDelete in SpawnedVehicles)
+            {
+                vehicleToDelete.Delete();
+            }
+            SpawnedVehicles.Clear();
+
+            int counter = 0;
+            foreach(VehicleHash vehicle in carsToSpawn)
+            {
+                if(!IsModelInCdimage((uint)vehicle) || !IsModelAVehicle((uint)vehicle))
+                {
+                    continue;
+                }
+                RequestModel((uint)vehicle);
+                Wait(50);
+
+                Coord spawnPoint = Constants.CarSpawnPoints[counter];
+                Vector3 spawnPos = spawnPoint.Position;
+
+                Vehicle spawnedVehicle = new Vehicle(CreateVehicle((uint)vehicle, spawnPos.X, spawnPos.Y, spawnPos.Z, spawnPoint.Heading, true, false));
+                SpawnedVehicles.Add(spawnedVehicle);
+
+                // Set all vehicle mods to maximum.
+                for (int i = 0; i < 50; i++)
+                {
+                    int nbMods = GetNumVehicleMods(spawnedVehicle.Handle, i);
+                    if(nbMods > 0)
+                    {
+                        SetVehicleModKit(spawnedVehicle.Handle, i);
+                        SetVehicleMod(spawnedVehicle.Handle, i, nbMods - 1, false);
+                    }
+                }
+                // Add neons.
+                for(int i = 0; i < 4; i++)
+                {
+                    SetVehicleNeonLightEnabled(spawnedVehicle.Handle, i, RNG.NextDouble() >= 0.5);
+                }
+                SetVehicleNeonLightsColour(spawnedVehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
+                SetVehicleXenonLightsColour(spawnedVehicle.Handle, RNG.Next(0, 12));
+
+                SetVehicleCustomPrimaryColour(spawnedVehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
+                SetVehicleCustomSecondaryColour(spawnedVehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
+
+                // lol
+                if(vehicle == VehicleHash.Bmx)
+                {
+                    spawnedVehicle.EnginePowerMultiplier = 100f;
+                    spawnedVehicle.EngineTorqueMultiplier = 100f;
+                }
+
+                counter++;
+            }
         }
 
         protected void AutoSpawnCallback()
