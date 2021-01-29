@@ -21,11 +21,28 @@ namespace SurviveTheHuntClient
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
             EventHandlers["onClientResourceStart"] += new Action(OnClientResourceStart);
+            EventHandlers["onClientResourceStop"] += new Action<string>(OnClientResourceStop);
 
             CreateEvents();
             foreach(KeyValuePair<string, Action<dynamic>> ev in STHEvents)
             {
                 EventHandlers[$"sth:{ev.Key}"] += ev.Value;
+            }
+        }
+
+        protected void OnClientResourceStop(string resourceName)
+        {
+            if(GetCurrentResourceName() != resourceName)
+            {
+                return;
+            }
+
+            Console.WriteLine("Checking hunted player mugshot...");
+            if(GameState.Hunt.HuntedPlayerMugshot != null)
+            {
+                Console.WriteLine("Hunted player mugshot not null, deleting.");
+                UnregisterPedheadshot(GameState.Hunt.HuntedPlayerMugshot.Id);
+                GameState.Hunt.HuntedPlayerMugshot = null;
             }
         }
 
@@ -48,8 +65,6 @@ namespace SurviveTheHuntClient
 
         private void OnClientResourceStart()
         {
-            TriggerServerEvent("sth:requestTimeSync", new { PlayerName = Game.Player.Name });
-
             RegisterCommand("suicide", new Action(() => 
             {
                 Game.PlayerPed.HealthFloat = 0f;

@@ -43,7 +43,22 @@ namespace SurviveTheHuntServer
                     EventHandlers[$"sth:{ev.Key}"] += ev.Value;
                 }
 
+                EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
+
                 Tick += UpdateLoop;
+            }
+        }
+
+        protected void PlayerJoining([FromSource] Player player, string oldId)
+        {
+            if(string.IsNullOrWhiteSpace(player?.Name))
+            {
+                Console.WriteLine("Joining player name was null");
+            }
+            else
+            {
+                Console.WriteLine($"{player.Name} is joining; syncing time offset now.");
+                TriggerClientEvent(player, "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
             }
         }
 
@@ -110,7 +125,7 @@ namespace SurviveTheHuntServer
                 {
                     "startHunt", new Action<dynamic>(data =>
                     {
-                        Player randomPlayer = Hunt.ChooseRandomPlayer(Players);
+                        Player randomPlayer = Hunt.ChooseRandomPlayer(Players, ref GameState);
 
                         GameState.Hunt.LastHuntedPlayer = randomPlayer;
 
@@ -127,13 +142,6 @@ namespace SurviveTheHuntServer
                     {
                         Vector3 pos = data.Position;
                         TriggerClientEvent("sth:notifyAboutHuntedZone", new { PlayerName = GameState.Hunt.HuntedPlayer.Name, Position = pos });
-                    })
-                },
-                {
-                    "requestTimeSync", new Action<dynamic>(data =>
-                    {
-                        string playerName = data.PlayerName;
-                        TriggerClientEvent(Players[playerName], "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
                     })
                 }
             };
