@@ -48,6 +48,8 @@ namespace SurviveTheHuntClient
 
         private void OnClientResourceStart()
         {
+            TriggerServerEvent("sth:requestTimeSync", new { PlayerName = Game.Player.Name });
+
             RegisterCommand("suicide", new Action(() => 
             {
                 Game.PlayerPed.HealthFloat = 0f;
@@ -224,6 +226,14 @@ namespace SurviveTheHuntClient
                     {
                         string playerName = data.PlayerName;
                         HuntUI.NotifyAboutHuntedZone(Players[playerName], data.Position, ref GameState);
+                    })
+                },
+                {
+                    "receiveTimeSync", new Action<dynamic>(data =>
+                    {
+                        string currentServerTimeStr = data.CurrentServerTime;
+                        DateTime currentServerTime = DateTime.ParseExact(currentServerTimeStr, "F", CultureInfo.InvariantCulture);
+                        Utility.ServerTimeOffset = currentServerTime - DateTime.UtcNow;
                     })
                 }
             };

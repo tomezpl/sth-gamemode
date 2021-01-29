@@ -20,7 +20,7 @@ namespace SurviveTheHuntClient
 
             public Texture HuntedPlayerMugshot { get; set; } = null;
 
-            public DateTime LastHuntedMugshotGeneration { get; set; } = DateTime.Now;
+            public DateTime LastHuntedMugshotGeneration { get; set; } = Utility.CurrentTime;
 
             public int EndInMilliseconds { get; set; } = -1;
             public DateTime EndTime { get; set; } = new DateTime();
@@ -46,7 +46,7 @@ namespace SurviveTheHuntClient
                     return;
                 }
 
-                if(HuntedPlayerMugshot != null && DateTime.Now - LastHuntedMugshotGeneration >= Constants.MugshotGenerationInterval)
+                if(HuntedPlayerMugshot != null && Utility.CurrentTime - LastHuntedMugshotGeneration >= Constants.MugshotGenerationInterval)
                 {
                     UnregisterPedheadshot(HuntedPlayerMugshot.Id);
                     HuntedPlayerMugshot = null;
@@ -55,7 +55,7 @@ namespace SurviveTheHuntClient
                 if (HuntedPlayerMugshot == null)
                 {
                     HuntedPlayerMugshot = new Texture() { Id = RegisterPedheadshotTransparent(HuntedPlayer.Character.Handle) };
-                    LastHuntedMugshotGeneration = DateTime.Now;
+                    LastHuntedMugshotGeneration = Utility.CurrentTime;
                 }
 
                 if (!HuntedPlayerMugshot.IsValid)

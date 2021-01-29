@@ -35,13 +35,13 @@ namespace SurviveTheHuntClient
                     }
                     else
                     {
-                        if(DateTime.Now <= FadeOutStart)
+                        if(Utility.CurrentTime <= FadeOutStart)
                         {
                             return 1f;
                         }
                         
                         float magnitude = (float)(FadeOutEnd - FadeOutStart).TotalSeconds;
-                        float t = (float)(DateTime.Now - FadeOutStart).TotalSeconds;
+                        float t = (float)(Utility.CurrentTime - FadeOutStart).TotalSeconds;
 
                         if(t >= magnitude)
                         {
@@ -77,7 +77,7 @@ namespace SurviveTheHuntClient
                 // Switch back to default (white) text colour.
                 SetColourOfNextTextComponent(0);
                 AddTextComponentString(gameState.CurrentObjective);
-                EndTextCommandPrint(ended ? gameState.Hunt.EndInMilliseconds : Convert.ToInt32((gameState.Hunt.EndTime - DateTime.Now).TotalMilliseconds), true);
+                EndTextCommandPrint(ended ? gameState.Hunt.EndInMilliseconds : Convert.ToInt32((gameState.Hunt.EndTime - Utility.CurrentTime).TotalMilliseconds), true);
             }
         }
 
@@ -109,13 +109,13 @@ namespace SurviveTheHuntClient
             string timeStr = "";
             try
             {
-                if (gameState.Hunt.EndTime <= DateTime.Now)
+                if (gameState.Hunt.EndTime <= Utility.CurrentTime)
                 {
                     timeStr = "00:00";
                 }
                 else
                 {
-                    TimeSpan remainingTime = gameState.Hunt.EndTime - DateTime.Now;
+                    TimeSpan remainingTime = gameState.Hunt.EndTime - Utility.CurrentTime;
                     timeStr = $"{remainingTime.Minutes.ToString("00", CultureInfo.InvariantCulture)}:{remainingTime.Seconds.ToString("00", CultureInfo.InvariantCulture)}";
                 }
             }

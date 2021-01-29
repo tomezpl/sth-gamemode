@@ -51,15 +51,15 @@ namespace SurviveTheHuntServer
         {
             if (GameState.Hunt.IsStarted)
             {
-                if (GameState.Hunt.EndTime <= DateTime.Now)
+                if (GameState.Hunt.EndTime <= DateTime.UtcNow)
                 {
                     GameState.Hunt.End(Teams.Team.Hunted);
                     NotifyWinner();
                 }
 
-                if(DateTime.Now - GameState.Hunt.LastPingTime >= Constants.HuntedPingInterval)
+                if(DateTime.UtcNow - GameState.Hunt.LastPingTime >= Constants.HuntedPingInterval)
                 {
-                    GameState.Hunt.LastPingTime = DateTime.Now;
+                    GameState.Hunt.LastPingTime = DateTime.UtcNow;
                     float radius = 200f;
                     float playerLocationRadius = radius * 0.875f;
                     float offsetX = (((float)RNG.NextDouble() * 2f) - 1f) * playerLocationRadius;
@@ -127,6 +127,13 @@ namespace SurviveTheHuntServer
                     {
                         Vector3 pos = data.Position;
                         TriggerClientEvent("sth:notifyAboutHuntedZone", new { PlayerName = GameState.Hunt.HuntedPlayer.Name, Position = pos });
+                    })
+                },
+                {
+                    "requestTimeSync", new Action<dynamic>(data =>
+                    {
+                        string playerName = data.PlayerName;
+                        TriggerClientEvent(Players[playerName], "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
                     })
                 }
             };
