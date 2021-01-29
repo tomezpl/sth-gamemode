@@ -15,6 +15,7 @@ namespace SurviveTheHuntServer
         private const string ResourceName = "sth-gamemode";
         protected GameState GameState = new GameState();
         private readonly Random RNG = new Random();
+        private DateTime LastTimeSync = DateTime.UtcNow;
 
         /// <summary>
         /// Gamemode-specific network-aware events triggerable from the client(s).
@@ -64,6 +65,12 @@ namespace SurviveTheHuntServer
 
         private async Task UpdateLoop()
         {
+            if(DateTime.UtcNow >= LastTimeSync + Constants.TimeSyncInterval)
+            {
+                TriggerClientEvent("sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
+                LastTimeSync = DateTime.UtcNow;
+            }
+
             if (GameState.Hunt.IsStarted)
             {
                 if (GameState.Hunt.EndTime <= DateTime.UtcNow)

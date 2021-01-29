@@ -11,5 +11,6 @@ namespace SurviveTheHuntServer
         // TODO: These need to be overrideable through convars!
         public static readonly TimeSpan HuntDuration = TimeSpan.FromMinutes(24);
         public static readonly TimeSpan HuntedPingInterval = TimeSpan.FromMinutes(1);
+        public static readonly TimeSpan TimeSyncInterval = TimeSpan.FromSeconds(20);
     }
 }
