@@ -13,6 +13,13 @@ namespace SurviveTheHuntServer
 
         public static Player ChooseRandomPlayer(PlayerList players, ref GameState gameState)
         {
+            string huntedOverride = GetConvar("sth_huntedOverride", "");
+            if (!string.IsNullOrWhiteSpace(huntedOverride))
+            {
+                Debug.WriteLine($"Choosing {huntedOverride} as the hunted due to override. Set sth_huntedOverride to empty if you want to revert to random pick.");
+                return players[huntedOverride];
+            }
+
             int playerCount = GetNumPlayerIndices();
             List<string> playerNames = new List<string>();
 

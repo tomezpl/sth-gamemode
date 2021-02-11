@@ -22,15 +22,20 @@ namespace SurviveTheHuntClient
 
             public DateTime LastHuntedMugshotGeneration { get; set; } = Utility.CurrentTime;
 
-            public int EndInMilliseconds { get; set; } = -1;
-            public DateTime EndTime { get; set; } = new DateTime();
+            // Time when hunt is meant to end & state be reset 
+            // This includes the delay for displaying the win/loss text.
+            public DateTime ActualEndTime { get; set; } = new DateTime();
+            
+            // End time as planned (set at start of the hunt)
+            public DateTime InitialEndTime { get; set; } = new DateTime();
 
             public void End()
             {
+                Debug.WriteLine("Ending hunt");
                 IsStarted = false;
                 IsOver = false;
 
-                EndInMilliseconds = -1;
+                ActualEndTime = new DateTime();
 
                 if(HuntedPlayerMugshot != null)
                 {

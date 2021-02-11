@@ -33,6 +33,7 @@ namespace SurviveTheHuntServer
             {
                 WinningTeam = winningTeam;
                 IsStarted = false;
+                HuntedPlayer = null;
             }
         }
 

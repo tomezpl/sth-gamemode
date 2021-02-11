@@ -77,7 +77,16 @@ namespace SurviveTheHuntClient
                 // Switch back to default (white) text colour.
                 SetColourOfNextTextComponent(0);
                 AddTextComponentString(gameState.CurrentObjective);
-                EndTextCommandPrint(ended ? gameState.Hunt.EndInMilliseconds : Convert.ToInt32((gameState.Hunt.EndTime - Utility.CurrentTime).TotalMilliseconds), true);
+                int objectiveTextDuration = 0;
+                if (ended && gameState.Hunt.ActualEndTime > Utility.CurrentTime)
+                {
+                    objectiveTextDuration = Convert.ToInt32((gameState.Hunt.ActualEndTime - Utility.CurrentTime).TotalMilliseconds);
+                }
+                else
+                {
+                    objectiveTextDuration = Convert.ToInt32((gameState.Hunt.InitialEndTime - Utility.CurrentTime).TotalMilliseconds);
+                }
+                EndTextCommandPrint(objectiveTextDuration, true);
             }
         }
 
@@ -109,13 +118,13 @@ namespace SurviveTheHuntClient
             string timeStr = "";
             try
             {
-                if (gameState.Hunt.EndTime <= Utility.CurrentTime)
+                if (gameState.Hunt.InitialEndTime <= Utility.CurrentTime)
                 {
                     timeStr = "00:00";
                 }
                 else
                 {
-                    TimeSpan remainingTime = gameState.Hunt.EndTime - Utility.CurrentTime;
+                    TimeSpan remainingTime = gameState.Hunt.InitialEndTime - Utility.CurrentTime;
                     timeStr = $"{remainingTime.Minutes.ToString("00", CultureInfo.InvariantCulture)}:{remainingTime.Seconds.ToString("00", CultureInfo.InvariantCulture)}";
                 }
             }

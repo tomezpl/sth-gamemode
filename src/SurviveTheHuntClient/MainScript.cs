@@ -187,6 +187,7 @@ namespace SurviveTheHuntClient
 
             if(GameState.Hunt.IsInProgress || GameState.Hunt.IsEnding)
             {
+                Debug.WriteLine($"GameState: Hunt.IsInProgress: {GameState.Hunt.IsInProgress}, Hunt.IsEnding: {GameState.Hunt.IsEnding}");
                 HuntUI.DisplayObjective(ref GameState, ref PlayerState, GameState.Hunt.IsEnding);
             }
         }
@@ -228,11 +229,7 @@ namespace SurviveTheHuntClient
                 return;
             }
 
-            if (GameState.Hunt.EndInMilliseconds > 0)
-            {
-                GameState.Hunt.EndInMilliseconds -= Convert.ToInt32(Math.Round(Game.LastFrameTime * 1000f));
-            }
-            else
+            if (GameState.Hunt.ActualEndTime <= Utility.CurrentTime)
             {
                 GameState.Hunt.End();
                 GameState.CurrentObjective = "";
@@ -297,7 +294,7 @@ namespace SurviveTheHuntClient
                         {
                             GameState.CurrentObjective = "You've lost the hunt!";
                         }
-                        GameState.Hunt.EndInMilliseconds = 5000;
+                        GameState.Hunt.ActualEndTime = Utility.CurrentTime + TimeSpan.FromSeconds(5);
                         HuntUI.DisplayObjective(ref GameState, ref PlayerState, true);
                     })
                 },
@@ -306,7 +303,7 @@ namespace SurviveTheHuntClient
                     {
                         string endTimeStr = data.EndTime;
                         DateTime endTime = DateTime.ParseExact(endTimeStr, "F", CultureInfo.InvariantCulture);
-                        GameState.Hunt.EndTime = endTime;
+                        GameState.Hunt.InitialEndTime = endTime;
                         HuntUI.DisplayObjective(ref GameState, ref PlayerState);
                     })
                 },
