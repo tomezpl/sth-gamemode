@@ -29,7 +29,7 @@ namespace SurviveTheHuntClient
         /// </summary>
         public int LastWeaponEquipped { get; set; } = default;
 
-        public Teams.Team Team { get; set; } = Teams.Team.Hunted;
+        public Teams.Team Team { get; set; } = Teams.Team.Hunters;
 
         public class BigmapState
         {
@@ -72,15 +72,22 @@ namespace SurviveTheHuntClient
             WeaponsGiven = true;
         }
 
-        public void TakeAwayWeapons(ref Ped playerPed)
+        public void TakeAwayWeapons(ref Ped playerPed, bool takeAll = false)
         {
-            KeyValuePair<WeaponAsset, int>[] weapons = Constants.WeaponLoadouts[Team];
-
-            LastWeaponEquipped = GetSelectedPedWeapon(playerPed.Handle);
-
-            foreach (KeyValuePair<WeaponAsset, int> weapon in weapons)
+            if (takeAll)
             {
-                RemoveWeaponFromPed(playerPed.Handle, (uint)weapon.Key.Hash);
+                RemoveAllPedWeapons(playerPed.Handle, true);
+            }
+            else
+            {
+                KeyValuePair<WeaponAsset, int>[] weapons = Constants.WeaponLoadouts[Team];
+
+                LastWeaponEquipped = GetSelectedPedWeapon(playerPed.Handle);
+
+                foreach (KeyValuePair<WeaponAsset, int> weapon in weapons)
+                {
+                    RemoveWeaponFromPed(playerPed.Handle, (uint)weapon.Key.Hash);
+                }
             }
 
             WeaponsGiven = false;

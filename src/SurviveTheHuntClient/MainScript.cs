@@ -46,10 +46,10 @@ namespace SurviveTheHuntClient
             }
             SpawnedVehicles.Clear();
 
-            Console.WriteLine("Checking hunted player mugshot...");
+            Debug.WriteLine("Checking hunted player mugshot...");
             if(GameState.Hunt.HuntedPlayerMugshot != null)
             {
-                Console.WriteLine("Hunted player mugshot not null, deleting.");
+                Debug.WriteLine("Hunted player mugshot not null, deleting.");
                 UnregisterPedheadshot(GameState.Hunt.HuntedPlayerMugshot.Id);
                 GameState.Hunt.HuntedPlayerMugshot = null;
             }
@@ -231,7 +231,7 @@ namespace SurviveTheHuntClient
 
             if (GameState.Hunt.ActualEndTime <= Utility.CurrentTime)
             {
-                GameState.Hunt.End();
+                GameState.Hunt.End(ref PlayerState);
                 GameState.CurrentObjective = "";
             }
         }
@@ -251,7 +251,7 @@ namespace SurviveTheHuntClient
                 {
                     "notifyHuntedPlayer", new Action<dynamic>(data =>
                     {
-                        //Console.WriteLine("I'm the hunted!");
+                        //Debug.WriteLine("I'm the hunted!");
                         GameState.Hunt.IsStarted = true;
                         GameState.Hunt.HuntedPlayer = Game.Player;
 
@@ -305,6 +305,8 @@ namespace SurviveTheHuntClient
                         DateTime endTime = DateTime.ParseExact(endTimeStr, "F", CultureInfo.InvariantCulture);
                         GameState.Hunt.InitialEndTime = endTime;
                         HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+                        Ped playerPed = Game.PlayerPed;
+                        PlayerState.TakeAwayWeapons(ref playerPed, true);
                     })
                 },
                 {

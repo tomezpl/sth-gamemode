@@ -29,7 +29,7 @@ namespace SurviveTheHuntClient
             // End time as planned (set at start of the hunt)
             public DateTime InitialEndTime { get; set; } = new DateTime();
 
-            public void End()
+            public void End(ref PlayerState playerState)
             {
                 Debug.WriteLine("Ending hunt");
                 IsStarted = false;
@@ -42,6 +42,10 @@ namespace SurviveTheHuntClient
                     UnregisterPedheadshot(HuntedPlayerMugshot.Id);
                 }
                 HuntedPlayerMugshot = null;
+
+                playerState.Team = Teams.Team.Hunters;
+                Ped playerPed = Game.PlayerPed;
+                playerState.TakeAwayWeapons(ref playerPed, true);
             }
 
             public void UpdateHuntedMugshot()
