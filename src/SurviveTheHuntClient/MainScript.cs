@@ -90,7 +90,7 @@ namespace SurviveTheHuntClient
                 SpawnCars();
             }), false);
 
-            Vec3 spawn = Constants.DockSpawn;
+            Vector3 spawn = Constants.DockSpawn;
             ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
         }
 
@@ -165,7 +165,7 @@ namespace SurviveTheHuntClient
 
         protected void AutoSpawnCallback()
         {
-            Vec3 spawnLoc = Constants.DockSpawn;
+            Vector3 spawnLoc = Constants.DockSpawn;
 
             Exports["spawnmanager"].spawnPlayer(new { x = spawnLoc.X, y = spawnLoc.Y, z = spawnLoc.Z, model = "a_m_m_skater_01" });
         }
