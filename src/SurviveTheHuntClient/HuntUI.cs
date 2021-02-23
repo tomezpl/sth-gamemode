@@ -12,6 +12,7 @@ namespace SurviveTheHuntClient
         private static Blip RadiusBlip = null;
         // TODO: Change this to a hashset?
         private static Dictionary<int, dynamic> PlayerBlips = new Dictionary<int, dynamic>();
+        private static List<int> ActivePeds = new List<int>();
 
         private class FadingBlip
         {
@@ -232,9 +233,7 @@ namespace SurviveTheHuntClient
             // TODO: The heavy use of collections in this method seems to increase the tick time by a considerable amount.
             // Need to only invoke the blip update when a player connects, disconnects or dies; Otherwise only update the visibility of existing blips.
 
-            int counter = 0;
-            List<int> activePeds = new List<int>();
-            foreach(Player player in players)
+            foreach (Player player in players)
             {
                 if(player == Game.Player)
                 {
@@ -242,7 +241,13 @@ namespace SurviveTheHuntClient
                     continue;
                 }
 
-                if(!PlayerBlips.ContainsKey(player.Character.Handle))
+                if (!IsMpGamerTagActive(player.Handle))
+                {
+                    Debug.WriteLine($"Creating GamerTag for {player.Name}");
+                    CreateMpGamerTagWithCrewColor(player.Handle, player.Name, false, false, "", 0, 0, 0, 0);
+                }
+
+                if (!PlayerBlips.ContainsKey(player.Character.Handle))
                 {
                     Blip blip = new Blip(AddBlipForEntity(player.Character.Handle));
                     blip.Name = player.Name;
@@ -252,15 +257,18 @@ namespace SurviveTheHuntClient
                     SetBlipCategory(blip.Handle, 7);
                     SetBlipShrink(blip.Handle, GetConvar("sth_shrinkPlayerBlips", "false") != "false");
                     SetBlipScale(blip.Handle, 0.9f);
-                    CreateMpGamerTagWithCrewColor(player.Handle, player.Name, false, false, "", 0, 0, 0, 0);
-                    SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(blip.Handle));
-                    SetMpGamerTagVisibility(player.Handle, 0, true);
                     PlayerBlips.Add(player.Character.Handle, new { blip, id = player.Handle });
-
-                    counter++;
+                }
+                else
+                {
+                    Blip blip = PlayerBlips[player.Character.Handle].blip;
+                    SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(blip.Handle));
                 }
 
-                activePeds.Add(player.Character.Handle);
+                if (player.Character.Exists() && player.Character.IsAlive && !ActivePeds.Contains(player.Character.Handle))
+                {
+                    ActivePeds.Add(player.Character.Handle);
+                }
             }
 
             // Display player names on blips (in bigmap).
@@ -271,7 +279,7 @@ namespace SurviveTheHuntClient
             foreach(int ped in PlayerBlips.Keys)
             {
                 // Delete check
-                if (!activePeds.Contains(ped))
+                if (!ActivePeds.Contains(ped))
                 {
                     pedsToDelete.Add(ped);
                     continue;
@@ -283,6 +291,7 @@ namespace SurviveTheHuntClient
                     Blip blip = PlayerBlips[ped].blip;
                     SetBlipDisplay(blip.Handle, 0);
                     int id = PlayerBlips[ped].id;
+                    Debug.WriteLine($"{new Player(id).Name}, {ped}: Switching gamertag visibility to FALSE");
                     SetMpGamerTagVisibility(id, 0, false);
                 }
                 else
@@ -291,6 +300,7 @@ namespace SurviveTheHuntClient
                     Blip blip = PlayerBlips[ped].blip;
                     SetBlipDisplay(blip.Handle, 6);
                     int id = PlayerBlips[ped].id;
+                    Debug.WriteLine($"{new Player(id).Name}, {ped}: Switching gamertag visibility to TRUE");
                     SetMpGamerTagVisibility(id, 0, true);
                 }
             }
@@ -298,9 +308,13 @@ namespace SurviveTheHuntClient
             {
                 Blip blip = PlayerBlips[ped].blip;
                 blip.Delete();
+                int id = PlayerBlips[ped].id;
+                Debug.WriteLine($"Removing GamerTag from {new Player(id).Name}");
+                RemoveMpGamerTag(id);
                 PlayerBlips.Remove(ped);
             }
 
+            ActivePeds.Clear();
         }
     }
 }
