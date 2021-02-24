@@ -219,6 +219,8 @@ namespace SurviveTheHuntClient
 
             GameOverCheck();
 
+            FixCarsInSpawn();
+
             Wait(0);
         }
 
@@ -233,6 +235,23 @@ namespace SurviveTheHuntClient
             {
                 GameState.Hunt.End(ref PlayerState);
                 GameState.CurrentObjective = "";
+            }
+        }
+
+        protected void FixCarsInSpawn()
+        {
+            foreach(Vehicle vehicle in World.GetAllVehicles())
+            {
+                bool closeToSpawn = 50f >= (Constants.DockSpawn - vehicle.Position).Length();
+                vehicle.IsInvincible = closeToSpawn;
+                if (closeToSpawn)
+                {
+                    if (vehicle.Health < vehicle.MaxHealth)
+                    {
+                        vehicle.Repair();
+                        vehicle.Health = vehicle.MaxHealth;
+                    }
+                }
             }
         }
 
