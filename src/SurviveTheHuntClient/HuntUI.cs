@@ -291,7 +291,7 @@ namespace SurviveTheHuntClient
                     Blip blip = PlayerBlips[ped].blip;
                     SetBlipDisplay(blip.Handle, 0);
                     int id = PlayerBlips[ped].id;
-                    Debug.WriteLine($"{new Player(id).Name}, {ped}: Switching gamertag visibility to FALSE");
+                    //Debug.WriteLine($"{new Player(id).Name}, {ped}: Switching gamertag visibility to FALSE");
                     SetMpGamerTagVisibility(id, 0, false);
                 }
                 else
@@ -300,7 +300,7 @@ namespace SurviveTheHuntClient
                     Blip blip = PlayerBlips[ped].blip;
                     SetBlipDisplay(blip.Handle, 6);
                     int id = PlayerBlips[ped].id;
-                    Debug.WriteLine($"{new Player(id).Name}, {ped}: Switching gamertag visibility to TRUE");
+                    //Debug.WriteLine($"{new Player(id).Name}, {ped}: Switching gamertag visibility to TRUE");
                     SetMpGamerTagVisibility(id, 0, true);
                 }
             }
