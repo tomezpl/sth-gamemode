@@ -13,8 +13,14 @@ namespace SurviveTheHuntServer
     public class MainScript : BaseScript
     {
         private const string ResourceName = "sth-gamemode";
+
         protected GameState GameState = new GameState();
+
         private readonly Random RNG = new Random();
+
+        /// <summary>
+        /// UTC time when time was last synced with the clients (to prevent client-side timers desyncing).
+        /// </summary>
         private DateTime LastTimeSync = DateTime.UtcNow;
 
         /// <summary>
@@ -99,11 +105,17 @@ namespace SurviveTheHuntServer
             }
         }
 
+        /// <summary>
+        /// Notify players from the winning team that they won the game.
+        /// </summary>
         private void NotifyWinner()
         {
             TriggerClientEvent("sth:notifyWinner", new { WinningTeam = (int)GameState.Hunt.WinningTeam });
         }
 
+        /// <summary>
+        /// Populates <see cref="STHEvents"/> with gamemode-specific event handlers.
+        /// </summary>
         private void CreateEvents()
         {
             STHEvents = new Dictionary<string, Action<dynamic>>

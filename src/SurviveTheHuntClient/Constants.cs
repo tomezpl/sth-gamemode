@@ -12,17 +12,42 @@ namespace SurviveTheHuntClient
     /// </summary>
     public static class Constants
     {
+        /// <summary>
+        /// Spawn location (Terminal, Port of Los Santos)
+        /// </summary>
         public static readonly Vector3 DockSpawn = new Vector3 { X = 851.379f, Y = -3140.005f, Z = 5.900808f };
+
+        /// <summary>
+        /// How long the hunted player's radius stays at max. opacity on the radar (in seconds).
+        /// </summary>
         public static readonly float HuntedBlipLifespan = 50f;
+
+        /// <summary>
+        /// How long it takes for the hunted player's radius to fade from max opacity to 0 (in seconds).
+        /// </summary>
         public static readonly float HuntedBlipFadeoutTime = 5f;
 
-        // R* constant
+        /// <summary>
+        /// How long each feed post message stays on the screen (in seconds) assuming the duration multiplier of 1.
+        /// </summary>
+        /// <remarks>
+        /// This was manually measured in gameplay.
+        /// </remarks>
         public static readonly float FeedPostMessageDuration = 15f;
 
-        public static readonly float ZLimit = 1130f;
+        /// <summary>
+        /// Y-axis out of bounds limit for the allowed hunt area.
+        /// </summary>
+        public static readonly float OutOfBoundsYLimit = 1130f;
 
+        /// <summary>
+        /// How often should the player mugshot textures be regenerated.
+        /// </summary>
         public static readonly TimeSpan MugshotGenerationInterval = TimeSpan.FromSeconds(30);
 
+        /// <summary>
+        /// Weapon loadouts for each team.
+        /// </summary>
         public static readonly Dictionary<Teams.Team, KeyValuePair<WeaponAsset, int>[]> WeaponLoadouts = new Dictionary<Teams.Team, KeyValuePair<WeaponAsset, int>[]>
         {
             {
@@ -44,6 +69,9 @@ namespace SurviveTheHuntClient
             }
         };
 
+        /// <summary>
+        /// Vehicles that can be spawned.
+        /// </summary>
         public static readonly VehicleHash[] Vehicles = new VehicleHash[]
         {
             VehicleHash.Adder,
@@ -100,6 +128,9 @@ namespace SurviveTheHuntClient
             VehicleHash.ZType
         };
 
+        /// <summary>
+        /// Locations for spawning cars in the spawn area.
+        /// </summary>
         public static readonly Coord[] CarSpawnPoints = new Coord[]
         {
             new Coord() { Position = new Vector3(818.21f, -3128.38f, 5.9f), Heading = 180f }, // 1

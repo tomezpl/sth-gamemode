@@ -13,12 +13,27 @@ namespace SurviveTheHuntClient
 {
     public class MainScript : ClientScript
     {
+        /// <summary>
+        /// Local player state maintained by the client script.
+        /// </summary>
         protected PlayerState PlayerState = new PlayerState();
-        protected Dictionary<string, Action<dynamic>> STHEvents;
+
+        /// <summary>
+        /// Game state synced from the server.
+        /// </summary>
         protected GameState GameState = new GameState();
+
+        /// <summary>
+        /// Event handlers specific to this implementation of the Survive the Hunt gamemode.
+        /// </summary>
+        protected Dictionary<string, Action<dynamic>> STHEvents;
+
         protected readonly Random RNG = new Random();
 
-        // TODO: Move this to server-side so any player can spawn vehicles with the previous batch deleting properly?
+        /// <summary>
+        /// Vehicles spawned by the gamemode at the spawn area. This is used to delete vehicles on the next <see cref="SpawnCars"/> call.
+        /// </summary>
+        /// <remarks>TODO: Move this to server-side so any player can spawn vehicles with the previous batch deleting properly?</remarks>
         protected List<Vehicle> SpawnedVehicles = new List<Vehicle>();
 
         public MainScript()
@@ -94,6 +109,9 @@ namespace SurviveTheHuntClient
             ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
         }
 
+        /// <summary>
+        /// Spawns random cars (picked from <see cref="Constants.Vehicles"/>) in the start area.
+        /// </summary>
         protected void SpawnCars()
         {
             List<VehicleHash> carsToSpawn = new List<VehicleHash>(Constants.CarSpawnPoints.Length);
@@ -224,6 +242,9 @@ namespace SurviveTheHuntClient
             Wait(0);
         }
 
+        /// <summary>
+        /// Checks if the game should end and calls the right <see cref="GameState"/> methods if so.
+        /// </summary>
         protected void GameOverCheck()
         {
             if(!GameState.Hunt.IsEnding)
@@ -238,6 +259,9 @@ namespace SurviveTheHuntClient
             }
         }
 
+        /// <summary>
+        /// Repairs cars spawned in the starting area.
+        /// </summary>
         protected void FixCarsInSpawn()
         {
             foreach(Vehicle vehicle in World.GetAllVehicles())
@@ -255,6 +279,9 @@ namespace SurviveTheHuntClient
             }
         }
 
+        /// <summary>
+        /// Populates <see cref="STHEvents"/> with gamemode-specific events used by the resource.
+        /// </summary>
         private void CreateEvents()
         {
             STHEvents = new Dictionary<string, Action<dynamic>>
@@ -332,7 +359,7 @@ namespace SurviveTheHuntClient
                     "showPingOnMap", new Action<dynamic>(data =>
                     {
                         string playerName = data.PlayerName;
-                        HuntUI.CreateBlipForPlayer(Players[playerName], data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
+                        HuntUI.CreateRadiusBlipForPlayer(Players[playerName], data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
                         if(playerName == Game.Player.Name)
                         {
                             Vector3 position = GetEntityCoords(PlayerPedId(), false);

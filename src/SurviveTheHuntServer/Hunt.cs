@@ -7,10 +7,19 @@ using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntServer
 {
+    /// <summary>
+    /// Helper methods for the Hunt gamemode/rules.
+    /// </summary>
     public static class Hunt
     {
         private static Random rng = new Random();
 
+        /// <summary>
+        /// Chooses a random player for the next hunt. Attempts to prevent the same player being chosen twice in a row.
+        /// </summary>
+        /// <param name="players">All players.</param>
+        /// <param name="gameState">Up-to-date game state.</param>
+        /// <returns>Handle for player to use as next hunted player.</returns>
         public static Player ChooseRandomPlayer(PlayerList players, ref GameState gameState)
         {
             string huntedOverride = GetConvar("sth_huntedOverride", "");
@@ -27,6 +36,8 @@ namespace SurviveTheHuntServer
             for (int i = 0; i < playerCount; i++)
             {
                 string playerName = GetPlayerName(GetPlayerFromIndex(i));
+
+                // Try to prevent LastHuntedPlayer being chosen again.
                 if(playerName != gameState.Hunt.LastHuntedPlayer?.Name || (playerNames.Count == 0 && i == playerCount - 1))
                 {
                     playerNames.Add(playerName);
