@@ -1,1 +1,0 @@
-node ./build.js ./client.js ./server.js

@@ -4,3 +4,7 @@ compiled/
 /yarn.lock
 /.yarn.installed
 /.vs
+/**/bin/
+/**/obj/
+/**/packages/
+/*.dll
