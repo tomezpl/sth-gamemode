@@ -38,15 +38,15 @@ The project uses CitizenFX NuGet packages. Some C# development knowledge should 
 4. Copy the extracted .zip file contents to the newly created folder, so that `fxmanifest.lua` ends up located at `server-data\resources\[gamemodes]\sth-gamemode\fxmanifest.lua`.
 5. Enable `sth-gamemode` in your `server.cfg` - you need to add the following lines:
    * ```
-setr vmenu_use_permissions false
-setr vmenu_enable_dynamic_weather false
-setr vmenu_enable_weather_sync true
-setr vmenu_enable_time_sync true
-```
+     setr vmenu_use_permissions false
+     setr vmenu_enable_dynamic_weather false
+     setr vmenu_enable_weather_sync true
+     setr vmenu_enable_time_sync true
+     ```
    * ```
-ensure vMenu
-ensure sth-gamemode
-```
+     ensure vMenu
+     ensure sth-gamemode
+     ```
 
 **IMPORTANT: Before you play, you WILL NEED vMenu - it is used to provide character customisation which is very important to enjoy this gamemode properly. 
 More specifically, you will need my specific fork of vMenu which cuts out some incompatible features. It's available [here](https://github.com/tomezpl/vMenu) but is created by Tom Grobbe - I only adapted it to use with my gamemode.**
