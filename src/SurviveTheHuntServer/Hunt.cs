@@ -47,7 +47,7 @@ namespace SurviveTheHuntServer
 
             Console.WriteLine($"Picking a random player from {playerNames.Count} players.");
 
-            int randomPlayerIndex = rng.Next(0, playerNames.Count - 1);
+            int randomPlayerIndex = rng.Next(0, playerNames.Count);
             string randomPlayerName = playerNames[randomPlayerIndex];
 
             Console.WriteLine($"Picked player {randomPlayerIndex + 1} as random player ({randomPlayerName})");
