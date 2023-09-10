@@ -25,13 +25,10 @@ jobs:
         name: Write new version number from tag
         run: |
             cd ${{github.workspace}}/src
-            $AssemblyInfo = cat .\Properties\AssemblyInfo.cs
-            $TagName = ${{github.ref_name}}
-            $NewVersion = $TagName.Substring(1)
-            $AssemblyInfo = $AssemblyInfo -replace '^\[assembly\: AssemblyVersion\(\"\d+\.\d+\.\d+\.\d+\"\)\]$', ('[assembly: AssemblyVersion("' + $NewVersion + '.0")]')
-            $AssemblyInfo = $AssemblyInfo -replace '^\[assembly\: AssemblyFileVersion\(\"\d+\.\d+\.\d+\.\d+\"\)\]$', ('[assembly: AssemblyFileVersion("' + $NewVersion + '.0")]')
-            Remove-Item .\Properties\AssemblyInfo.cs
-            Out-File -FilePath .\Properties\AssemblyInfo.cs -InputObject $AssemblyInfo
+            cd SurviveTheHuntClient 
+            ${{github.workspace}}/scripts/update-assembly-version.ps1 ${{github.ref_name}}
+            cd ../SurviveTheHuntServer
+            ${{github.workspace}}/scripts/update-assembly-version.ps1 ${{github.ref_name}}
         shell: pwsh
       - 
         name: Build
