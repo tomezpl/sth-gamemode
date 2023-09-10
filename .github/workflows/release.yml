@@ -6,6 +6,9 @@ on:
       - v1.*.*
 jobs:
   release:
+    permissions:
+      contents: write
+  
     env:
       sthArtifactName: sth-gamemode
     
@@ -38,7 +41,15 @@ jobs:
             mkdir artifacts
             msbuild.exe sth-gamemode.sln /p:platform="Any CPU" /p:configuration="Release" /p:OutputPath=..\..\artifacts
       -
-        uses: actions/upload-artifact@v3
+        name: Prepare artifacts
+        shell: pwsh
+        run: Compress-Archive -Path ${{github.workspace}}\artifacts\* -DestinationPath ${{github.workspace}}\${{env.sthArtifactName}}-${{github.ref_name}}.zip
+      -
+        uses: ncipollo/release-action@v1
         with:
-          name: ${{env.sthArtifactName}}-${{github.ref_name}}
-          path: ${{github.workspace}}/artifacts/**/*
+          artifacts: ${{github.workspace}}\${{env.sthArtifactName}}-${{github.ref_name}}.zip
+          allowUpdates: true
+          omitBodyDuringUpdate: true
+          omitDraftDuringUpdate: true
+          omitNameDuringUpdate: true
+          omitPrereleaseDuringUpdate: true
