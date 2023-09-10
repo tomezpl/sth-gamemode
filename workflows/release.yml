@@ -1,0 +1,47 @@
+name: release
+on:
+  push:
+    tags:
+      # Only trigger on fixes, features or major milestones.
+      - v1.*.*
+jobs:
+  release:
+    env:
+      sthArtifactName: sth-gamemode
+    
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: microsoft/setup-msbuild@v1.1
+      - uses: NuGet/setup-nuget@v1.2.0
+      - 
+        name: Open repo
+        run: cd ${{github.workspace}}
+      - 
+        name: Run NuGet restore
+        run: nuget restore sth-gamemode.sln
+      - 
+        name: Write new version number from tag
+        run: |
+            cd ${{github.workspace}}/src
+            $AssemblyInfo = cat .\Properties\AssemblyInfo.cs
+            $TagName = ${{github.ref_name}}
+            $NewVersion = $TagName.Substring(1)
+            $AssemblyInfo = $AssemblyInfo -replace '^\[assembly\: AssemblyVersion\(\"\d+\.\d+\.\d+\.\d+\"\)\]$', ('[assembly: AssemblyVersion("' + $NewVersion + '.0")]')
+            $AssemblyInfo = $AssemblyInfo -replace '^\[assembly\: AssemblyFileVersion\(\"\d+\.\d+\.\d+\.\d+\"\)\]$', ('[assembly: AssemblyFileVersion("' + $NewVersion + '.0")]')
+            Remove-Item .\Properties\AssemblyInfo.cs
+            Out-File -FilePath .\Properties\AssemblyInfo.cs -InputObject $AssemblyInfo
+        shell: pwsh
+      - 
+        name: Build
+        # Supposedly OutputPath is meant to be relative to the PROJECT file, not cwd or even solution file. https://stackoverflow.com/a/4965607
+        run: |
+            cd ${{github.workspace}}
+            mkdir artifacts
+            msbuild.exe sth-gamemode.sln /p:platform="Any CPU" /p:configuration="Release" /p:OutputPath=..\artifacts
+      -
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{env.sthArtifactName}}-${{github.ref_name}}
+          path: ${{github.workspace}}/artifacts/**/*
