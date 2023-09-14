@@ -1,7 +1,9 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntServer.Helpers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.Linq;
 using static CitizenFX.Core.Native.API;
 
@@ -12,7 +14,14 @@ namespace SurviveTheHuntServer
     /// </summary>
     public static class Hunt
     {
-        private static Random rng = new Random();
+        private static HuntedQueue HuntedPlayerQueue = new HuntedQueue(Enumerable.Empty<Player>());
+
+        public static HuntedQueue InitHuntedQueue(IEnumerable<Player> playerHandles)
+        {
+            HuntedPlayerQueue.Init(playerHandles);
+
+            return HuntedPlayerQueue;
+        }
 
         /// <summary>
         /// Chooses a random player for the next hunt. Attempts to prevent the same player being chosen twice in a row.
@@ -22,6 +31,12 @@ namespace SurviveTheHuntServer
         /// <returns>Handle for player to use as next hunted player.</returns>
         public static Player ChooseRandomPlayer(PlayerList players, ref GameState gameState)
         {
+            if(HuntedPlayerQueue.QueueSize == 0)
+            {
+                HuntedPlayerQueue.Init(players);
+                Debug.WriteLine($"Reinitialising the hunted queue with ${players.Count()} players!");
+            }
+
             string huntedOverride = GetConvar("sth_huntedOverride", "");
             if (!string.IsNullOrWhiteSpace(huntedOverride))
             {
@@ -33,26 +48,19 @@ namespace SurviveTheHuntServer
             List<string> playerNames = new List<string>();
 
             Console.WriteLine("Picking from:");
-            for (int i = 0; i < playerCount; i++)
+            foreach(Player player in HuntedPlayerQueue)
             {
-                string playerName = GetPlayerName(GetPlayerFromIndex(i));
-
-                // Try to prevent LastHuntedPlayer being chosen again.
-                if(playerName != gameState.Hunt.LastHuntedPlayer?.Name || (playerNames.Count == 0 && i == playerCount - 1))
-                {
-                    playerNames.Add(playerName);
-                    Console.WriteLine($"\t{playerNames.Count}. {playerNames.Last()}");
-                }
+                playerNames.Add(player.Name);
+                Console.WriteLine($"\t{playerNames.Count}. {player.Name}");
             }
 
             Console.WriteLine($"Picking a random player from {playerNames.Count} players.");
 
-            int randomPlayerIndex = rng.Next(0, playerNames.Count);
-            string randomPlayerName = playerNames[randomPlayerIndex];
+            Player randomPlayer = HuntedPlayerQueue.PopNext();
 
-            Console.WriteLine($"Picked player {randomPlayerIndex + 1} as random player ({randomPlayerName})");
+            Console.WriteLine($"Picked as random player ({randomPlayer.Name})");
 
-            return players[randomPlayerName];
+            return randomPlayer;
         }
 
         /// <summary>
