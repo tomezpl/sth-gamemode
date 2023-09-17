@@ -24,8 +24,7 @@ jobs:
 
   create-build:
     uses: ./.github/workflows/shared-create-release.yml
-    needs:
-      - get-version-number
+    needs: get-version-number
     with:
       version_number: "v${{needs.get-version-number.outputs.versionNumber}}.${{github.run_number}}"
       prerelease: true
