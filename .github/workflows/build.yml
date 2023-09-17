@@ -13,6 +13,7 @@ jobs:
     outputs:
       versionNumber: ${{steps.readVersion.sthVersion}}
     steps:
+      - uses: actions/checkout@v3
       - id: readVersion
         shell: pwsh
         run: |
