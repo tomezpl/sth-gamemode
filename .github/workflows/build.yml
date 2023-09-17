@@ -8,18 +8,22 @@ on:
       - v*.*.*
 
 jobs:
-  get-revision-number:
-    runs-on: windows-latest
+  get-version-number:
     outputs:
-      revision-number: ${{steps.transformRunNumber.outputs.runNumber}}
+      versionNumber: ${{steps.readVersion.sthVersion}}
     steps:
-      - id: transformRunNumber
+      - id: readVersion
         shell: pwsh
-        run: echo ("runNumber=" + "${{github.run_number}}".Split(".")[1]) >> "$GITHUB_OUTPUT"
+        run: |
+          cd ./src/SurviveTheHuntClient
+          $AssemblyInfo = cat .\Properties\AssemblyInfo.cs
+          $AssemblyInfo -match '^\[assembly\: AssemblyVersion\(\"(?<version>\d+\.\d+\.\d+)\.\d+\"\)\]$'
+          echo ("sthVersion=" + $Matches.version) >> "$GITHUB_OUTPUT"
 
   create-build:
-    needs: get-revision-number
     uses: ./.github/workflows/shared-create-release.yml
+    needs:
+      - get-version-number
     with:
-      version_number: "${{github.ref_name}}.${{needs.get-revision-number.outputs.revision-number}}"
+      version_number: "${{needs.get-version-number.outputs.versionNumber}}.${{github.run_number}}"
       prerelease: true
