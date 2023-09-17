@@ -9,6 +9,7 @@ on:
 
 jobs:
   get-version-number:
+    runs-on: windows-latest
     outputs:
       versionNumber: ${{steps.readVersion.sthVersion}}
     steps:
