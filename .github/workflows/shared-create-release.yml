@@ -35,7 +35,6 @@ jobs:
         name: Build
         # Supposedly OutputPath is meant to be relative to the PROJECT file, not cwd or even solution file. https://stackoverflow.com/a/4965607
         run: |
-            cd ../../
             mkdir artifacts
             msbuild.exe sth-gamemode.sln /p:platform="Any CPU" /p:configuration="Release" /p:OutputPath=..\..\artifacts
       -
