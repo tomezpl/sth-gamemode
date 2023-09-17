@@ -8,8 +8,20 @@ on:
       - v*.*.*
 
 jobs:
+  get-revision-number:
+    runs-on: windows-latest
+    outputs:
+      revision-number: ${{steps.transformRunNumber.outputs.runNumber}}
+    steps:
+      - id: transformRunNumber
+        shell: pwsh
+        run: echo ("runNumber=" + "${{github.run_number}}".Split(".")[1]) >> "$GITHUB_OUTPUT"
+
   create-build:
+    needs: get-revision-number
     uses: ./.github/workflows/shared-create-release.yml
+    env:
+      REVISION_NUMBER: ${{needs.get-revision-number.outputs.revision-number}}
     with:
-      version_number: "${{github.ref_name}}.${{github.run_number}}"
+      version_number: "${{github.ref_name}}.$REVISION_NUMBER"
       prerelease: true
