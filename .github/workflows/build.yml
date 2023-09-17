@@ -11,7 +11,7 @@ jobs:
   get-version-number:
     runs-on: windows-latest
     outputs:
-      versionNumber: ${{steps.readVersion.sthVersion}}
+      versionNumber: ${{steps.readVersion.outputs.sthVersion}}
     steps:
       - uses: actions/checkout@v3
       - id: readVersion
