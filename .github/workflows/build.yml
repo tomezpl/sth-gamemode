@@ -12,4 +12,4 @@ jobs:
     uses: ./.github/workflows/shared-create-release.yml
     with:
       version_number: "${{github.ref_name}}.${{github.run_id}}"
-      prerelase: true
+      prerelease: true
