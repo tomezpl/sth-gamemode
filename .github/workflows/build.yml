@@ -16,7 +16,7 @@ jobs:
       - id: readVersion
         shell: pwsh
         run: |
-          cd ./src/SurviveTheHuntClient
+          cd "${{github.workspace}}/src/SurviveTheHuntClient"
           $AssemblyInfo = cat .\Properties\AssemblyInfo.cs
           $AssemblyInfo -match '^\[assembly\: AssemblyVersion\(\"(?<version>\d+\.\d+\.\d+)\.\d+\"\)\]$'
           echo ("sthVersion=" + $Matches.version) >> "$GITHUB_OUTPUT"
