@@ -27,5 +27,5 @@ jobs:
     needs:
       - get-version-number
     with:
-      version_number: "${{needs.get-version-number.outputs.versionNumber}}.${{github.run_number}}"
+      version_number: "v${{needs.get-version-number.outputs.versionNumber}}.${{github.run_number}}"
       prerelease: true
