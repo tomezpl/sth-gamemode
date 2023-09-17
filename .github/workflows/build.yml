@@ -21,6 +21,7 @@ jobs:
           $AssemblyInfo = cat .\Properties\AssemblyInfo.cs
           $AssemblyVersion = $AssemblyInfo -match '^\[assembly\: AssemblyVersion\(\"(?<version>\d+\.\d+\.\d+)\.\d+\"\)\]$'
           "${AssemblyVersion}" -match '^\[assembly\: AssemblyVersion\(\"(?<version>\d+\.\d+\.\d+)\.\d+\"\)\]$'
+          echo $Matches
           echo ("sthVersion=" + $Matches.version) >> "$GITHUB_OUTPUT"
 
   create-build:
