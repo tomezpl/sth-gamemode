@@ -1,0 +1,53 @@
+on:
+  workflow_call:
+    inputs:
+      version_number:
+        required: true
+        type: string
+
+jobs:
+  release:
+    permissions:
+      contents: write
+  
+    env:
+      sthArtifactName: sth-gamemode
+    
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: microsoft/setup-msbuild@v1.1
+      - uses: NuGet/setup-nuget@v1.2.0
+      - 
+        name: Run NuGet restore
+        run: nuget restore sth-gamemode.sln
+      - 
+        name: Write new version number from tag
+        run: |
+            cd ./src
+            cd SurviveTheHuntClient 
+            ../../scripts/update-assembly-version.ps1 ${{inputs.version_number}}
+            cd ../SurviveTheHuntServer
+            ../../scripts/update-assembly-version.ps1 ${{inputs.version_number}}
+        shell: pwsh
+      - 
+        name: Build
+        # Supposedly OutputPath is meant to be relative to the PROJECT file, not cwd or even solution file. https://stackoverflow.com/a/4965607
+        run: |
+            cd ../../
+            mkdir artifacts
+            msbuild.exe sth-gamemode.sln /p:platform="Any CPU" /p:configuration="Release" /p:OutputPath=..\..\artifacts
+      -
+        name: Prepare artifacts
+        shell: pwsh
+        run: Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
+      -
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
+          allowUpdates: true
+          omitBodyDuringUpdate: true
+          omitDraftDuringUpdate: true
+          omitNameDuringUpdate: true
+          omitPrereleaseDuringUpdate: true
