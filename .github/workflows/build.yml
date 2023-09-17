@@ -1,0 +1,13 @@
+name: build
+
+on:
+  push:
+    tags-ignore:
+      - v*.*.*
+
+jobs:
+  create-build:
+    uses: ./.github/workflows/shared-create-release.yml
+    with:
+      version_number: "${{github.ref_name}}.${{github.run_id}}"
+      prerelase: true

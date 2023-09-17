@@ -4,6 +4,10 @@ on:
       version_number:
         required: true
         type: string
+      prerelease:
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   release:
@@ -42,6 +46,8 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
       -
+        if: ${{inputs.prerelease == false}}
+        name: Upload build to release
         uses: ncipollo/release-action@v1
         with:
           artifacts: ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
@@ -50,3 +56,10 @@ jobs:
           omitDraftDuringUpdate: true
           omitNameDuringUpdate: true
           omitPrereleaseDuringUpdate: true
+      - 
+        if: ${{inputs.prerelease == true}}
+        name: Upload build to run artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{env.sthArtifactName}}-${{inputs.version_number}}
+          path: artifacts/**/*

@@ -3,7 +3,7 @@ on:
   push:
     tags:
       # Only trigger on fixes, features or major milestones.
-      - v1.*.*
+      - v*.*.*
 jobs:
   create-release:
     uses: ./.github/workflows/shared-create-release.yml
