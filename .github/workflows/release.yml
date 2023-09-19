@@ -8,4 +8,4 @@ jobs:
   create-release:
     uses: ./.github/workflows/shared-create-release.yml
     with:
-      version_number: "${{github.ref_name}}.0"
+      version_number_suffix: ".0"
