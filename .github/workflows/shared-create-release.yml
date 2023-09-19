@@ -33,7 +33,7 @@ jobs:
           {
             $STHVersion = "${{github.ref_name}}"
           }
-          echo ("sthVersion=" + $STHVersion + ${{inputs.version_number_suffix}}) >> "$GITHUB_OUTPUT"
+          echo ("sthVersion=" + $STHVersion + ${{inputs.version_number_suffix}}) >> $env:GITHUB_OUTPUT
 
   release:
     permissions:
