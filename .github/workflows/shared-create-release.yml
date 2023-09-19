@@ -27,7 +27,7 @@ jobs:
           {
             $AssemblyVersion = $AssemblyInfo -match '^\[assembly\: AssemblyVersion\(\"(?<version>\d+\.\d+\.\d+)\.\d+\"\)\]$'
             "${AssemblyVersion}" -match '^\[assembly\: AssemblyVersion\(\"(?<version>\d+\.\d+\.\d+)\.\d+\"\)\]$'
-            $STHVersion = "" + $Matches.version
+            $STHVersion = "v" + $Matches.version
           }
           else 
           {
