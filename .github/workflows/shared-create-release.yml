@@ -46,7 +46,7 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
       -
-        if: ${{inputs.prerelease == false}}
+        if: ${{!inputs.prerelease}}
         name: Upload build to release
         uses: ncipollo/release-action@v1
         with:
