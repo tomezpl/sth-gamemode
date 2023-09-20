@@ -9,3 +9,4 @@ jobs:
     uses: ./.github/workflows/shared-create-release.yml
     with:
       version_number: "${{github.ref_name}}.0"
+      prerelease: false
