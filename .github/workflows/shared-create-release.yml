@@ -1,7 +1,7 @@
 on:
   workflow_call:
     inputs:
-      version_number_suffix:
+      version_number:
         required: true
         type: string
       prerelease:
@@ -10,40 +10,12 @@ on:
         default: true
 
 jobs:
-  get-version-number:
-    runs-on: windows-latest
-    outputs:
-      versionNumber: ${{steps.readVersion.outputs.sthVersion}}
-    steps:
-      - uses: actions/checkout@v3
-      - name: Get assembly version
-        id: readVersion
-        shell: pwsh
-        run: |
-          cd "${{github.workspace}}/src/SurviveTheHuntClient"
-          $AssemblyInfo = cat .\Properties\AssemblyInfo.cs
-          $STHVersion = ""
-          if($${{inputs.prerelease == true}})
-          {
-            $AssemblyVersion = $AssemblyInfo -match '^\[assembly\: AssemblyVersion\(\"(?<version>\d+\.\d+\.\d+)\.\d+\"\)\]$'
-            "${AssemblyVersion}" -match '^\[assembly\: AssemblyVersion\(\"(?<version>\d+\.\d+\.\d+)\.\d+\"\)\]$'
-            $STHVersion = "v" + $Matches.version
-          }
-          else 
-          {
-            $STHVersion = "${{github.ref_name}}"
-          }
-          echo ("sthVersion=" + $STHVersion + "${{inputs.version_number_suffix}}") >> $env:GITHUB_OUTPUT
-
   release:
     permissions:
       contents: write
-
-    needs: get-version-number
   
     env:
       sthArtifactName: sth-gamemode
-      sthVersion: ${{needs.get-version-number.outputs.versionNumber}}
     
     runs-on: windows-latest
 
@@ -59,9 +31,9 @@ jobs:
         run: |
             cd ./src
             cd SurviveTheHuntClient 
-            ../../scripts/update-assembly-version.ps1 ${{env.sthVersion}}
+            ../../scripts/update-assembly-version.ps1 ${{inputs.version_number}}
             cd ../SurviveTheHuntServer
-            ../../scripts/update-assembly-version.ps1 ${{env.sthVersion}}
+            ../../scripts/update-assembly-version.ps1 ${{inputs.version_number}}
         shell: pwsh
       - 
         name: Build
@@ -72,13 +44,13 @@ jobs:
       -
         name: Prepare artifacts
         shell: pwsh
-        run: Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{env.sthVersion}}.zip
+        run: Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
       -
         if: ${{inputs.prerelease == false}}
         name: Upload build to release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: ${{env.sthArtifactName}}-${{env.sthVersion}}.zip
+          artifacts: ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
           allowUpdates: true
           omitBodyDuringUpdate: true
           omitDraftDuringUpdate: true
@@ -89,5 +61,5 @@ jobs:
         name: Upload build to run artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ${{env.sthArtifactName}}-${{env.sthVersion}}
+          name: ${{env.sthArtifactName}}-${{inputs.version_number}}
           path: artifacts/**/*

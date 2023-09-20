@@ -8,9 +8,24 @@ on:
       - v*.*.*
 
 jobs:
+  get-version-number:
+    runs-on: windows-latest
+    outputs:
+      versionNumber: ${{steps.readVersion.outputs.sthVersion}}
+    steps:
+      - uses: actions/checkout@v3
+      - id: readVersion
+        shell: pwsh
+        run: |
+          cd "${{github.workspace}}/src/SurviveTheHuntClient"
+          $AssemblyInfo = cat .\Properties\AssemblyInfo.cs
+          $AssemblyVersion = $AssemblyInfo -match '^\[assembly\: AssemblyVersion\(\"(?<version>\d+\.\d+\.\d+)\.\d+\"\)\]$'
+          "${AssemblyVersion}" -match '^\[assembly\: AssemblyVersion\(\"(?<version>\d+\.\d+\.\d+)\.\d+\"\)\]$'
+          echo ("sthVersion=" + $Matches.version) >> $env:GITHUB_OUTPUT
+
   create-build:
     uses: ./.github/workflows/shared-create-release.yml
+    needs: get-version-number
     with:
-      version_number_suffix: ".${{github.run_number}}"
+      version_number: "v${{needs.get-version-number.outputs.versionNumber}}.${{github.run_number}}"
       prerelease: true
-
