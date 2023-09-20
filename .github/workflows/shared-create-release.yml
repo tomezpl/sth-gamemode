@@ -41,6 +41,7 @@ jobs:
         run: |
             mkdir artifacts
             msbuild.exe sth-gamemode.sln /p:platform="Any CPU" /p:configuration="Release" /p:OutputPath=..\..\artifacts
+            copy fxmanifest.lua artifacts/fxmanifest.lua
       -
         name: Prepare artifacts
         shell: pwsh
