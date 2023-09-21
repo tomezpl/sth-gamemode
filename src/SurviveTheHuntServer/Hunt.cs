@@ -16,6 +16,11 @@ namespace SurviveTheHuntServer
     {
         private static HuntedQueue HuntedPlayerQueue = new HuntedQueue(Enumerable.Empty<Player>());
 
+        /// <summary>
+        /// Initialises a randomised hunted player queue using <paramref name="playerHandles"/> and provides a reference to the initialised queue.
+        /// </summary>
+        /// <param name="playerHandles">A list of players to consider, typically all players (<see cref="BaseScript.Players"/>).</param>
+        /// <returns>A reference to the <see cref="HuntedQueue"/> used to determine hunted player order.</returns>
         public static HuntedQueue InitHuntedQueue(IEnumerable<Player> playerHandles)
         {
             HuntedPlayerQueue.Init(playerHandles);
@@ -24,7 +29,7 @@ namespace SurviveTheHuntServer
         }
 
         /// <summary>
-        /// Chooses a random player for the next hunt. Attempts to prevent the same player being chosen twice in a row.
+        /// Chooses a random player for the next hunt. Attempts to allow every player to be the hunted once before the queue loops.
         /// </summary>
         /// <param name="players">All players.</param>
         /// <param name="gameState">Up-to-date game state.</param>
