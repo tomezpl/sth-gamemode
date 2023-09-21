@@ -1,0 +1,12 @@
+name: release
+on:
+  push:
+    tags:
+      # Only trigger on fixes, features or major milestones.
+      - v*.*.*
+jobs:
+  create-release:
+    uses: ./.github/workflows/shared-create-release.yml
+    with:
+      version_number: "${{github.ref_name}}.0"
+      prerelease: false
