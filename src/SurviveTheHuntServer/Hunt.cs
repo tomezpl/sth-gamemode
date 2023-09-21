@@ -1,9 +1,7 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntServer.Helpers;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Data.SqlTypes;
 using System.Linq;
 using static CitizenFX.Core.Native.API;
 
