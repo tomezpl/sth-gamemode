@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using CitizenFX.Core;
+using SurviveTheHuntServer.Helpers;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntServer
@@ -27,6 +28,8 @@ namespace SurviveTheHuntServer
         /// Gamemode-specific network-aware events triggerable from the client(s).
         /// </summary>
         protected Dictionary<string, Action<dynamic>> STHEvents;
+
+        private readonly HuntedQueue HuntedPlayerQueue = null;
 
         public MainScript()
         {
@@ -51,9 +54,17 @@ namespace SurviveTheHuntServer
                 }
 
                 EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
+                EventHandlers["playerDropped"] += new Action<Player, string>(PlayerDisconnected);
 
                 Tick += UpdateLoop;
+
+                HuntedPlayerQueue = Hunt.InitHuntedQueue(Players);
             }
+        }
+
+        protected void PlayerDisconnected([FromSource] Player player, string reason)
+        {
+            HuntedPlayerQueue.RemovePlayer(player);
         }
 
         protected void PlayerJoining([FromSource] Player player, string oldId)
@@ -66,6 +77,8 @@ namespace SurviveTheHuntServer
             {
                 Console.WriteLine($"{player.Name} is joining; syncing time offset now.");
                 TriggerClientEvent(player, "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
+                
+                HuntedPlayerQueue.AddPlayer(player);
             }
         }
 

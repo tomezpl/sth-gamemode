@@ -47,6 +47,7 @@
     <Compile Include="Constants.cs" />
     <Compile Include="Events.cs" />
     <Compile Include="GameState.cs" />
+    <Compile Include="Helpers\HuntedQueue.cs" />
     <Compile Include="Hunt.cs" />
     <Compile Include="MainScript.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
