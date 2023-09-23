@@ -36,6 +36,8 @@ namespace SurviveTheHuntClient
         /// <remarks>TODO: Move this to server-side so any player can spawn vehicles with the previous batch deleting properly?</remarks>
         protected List<Vehicle> SpawnedVehicles = new List<Vehicle>();
 
+        private Vector3 PlayerPos = Vector3.Zero;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -215,6 +217,7 @@ namespace SurviveTheHuntClient
             if (Game.PlayerPed != null)
             {
                 ResetPlayerStamina(PlayerId());
+                PlayerPos = Game.PlayerPed.Position;
             }
 
             GameState.Hunt.UpdateHuntedMugshot();
@@ -229,10 +232,9 @@ namespace SurviveTheHuntClient
             ClearPlayerWantedLevel(PlayerId());
 
             // Check and report player death to the server if needed.
-            if(Game.Player.IsDead && !PlayerState.DeathReported)
+            if(!Game.Player.IsAlive && !PlayerState.DeathReported)
             {
-                Vector3 playerPos = Game.PlayerPed.Position;
-                TriggerServerEvent("sth:playerDied", new { PlayerId = Game.Player.ServerId, PlayerPosX = playerPos.X, PlayerPosY = playerPos.Y, PlayerPosZ = playerPos.Z });
+                TriggerServerEvent("sth:playerDied", new { PlayerId = Game.Player.ServerId, PlayerPosX = PlayerPos.X, PlayerPosY = PlayerPos.Y, PlayerPosZ = PlayerPos.Z });
                 PlayerState.DeathReported = true;
             }
 
