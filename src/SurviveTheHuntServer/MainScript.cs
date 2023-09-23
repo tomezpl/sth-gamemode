@@ -60,7 +60,7 @@ namespace SurviveTheHuntServer
 
                 EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
                 EventHandlers["playerDropped"] += new Action<Player, string>(PlayerDisconnected);
-                EventHandlers["baseevents:onPlayerWasted"] += new Action<Vector3>(OnPlayerWasted);
+                EventHandlers["baseevents:onPlayerWasted"] += new Action(OnPlayerWasted);
 
                 Tick += UpdateLoop;
 
@@ -92,9 +92,10 @@ namespace SurviveTheHuntServer
         /// Marks a player's death position on the map
         /// </summary>
         /// <param name="position"></param>
-        protected void OnPlayerWasted(Vector3 position)
+        protected void OnPlayerWasted()
         {
-            DeathBlips.Add(position);
+            Debug.WriteLine("Player wasted");
+            DeathBlips.Add(Vector3.Zero);
         }
 
         private async Task UpdateLoop()
