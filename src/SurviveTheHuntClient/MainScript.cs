@@ -231,7 +231,8 @@ namespace SurviveTheHuntClient
             // Check and report player death to the server if needed.
             if(Game.Player.IsDead && !PlayerState.DeathReported)
             {
-                TriggerServerEvent("sth:playerDied", new { PlayerId = Game.Player.ServerId });
+                Vector3 playerPos = Game.PlayerPed.Position;
+                TriggerServerEvent("sth:playerDied", new { PlayerId = Game.Player.ServerId, PlayerPosX = playerPos.X, PlayerPosY = playerPos.Y, PlayerPosZ = playerPos.Z });
                 PlayerState.DeathReported = true;
             }
 

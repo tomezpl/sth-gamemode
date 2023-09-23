@@ -60,7 +60,6 @@ namespace SurviveTheHuntServer
 
                 EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
                 EventHandlers["playerDropped"] += new Action<Player, string>(PlayerDisconnected);
-                EventHandlers["baseevents:onPlayerWasted"] += new Action(OnPlayerWasted);
 
                 Tick += UpdateLoop;
 
@@ -86,16 +85,6 @@ namespace SurviveTheHuntServer
                 
                 HuntedPlayerQueue.AddPlayer(player);
             }
-        }
-
-        /// <summary>
-        /// Marks a player's death position on the map
-        /// </summary>
-        /// <param name="position"></param>
-        protected void OnPlayerWasted()
-        {
-            Debug.WriteLine("Player wasted");
-            DeathBlips.Add(Vector3.Zero);
         }
 
         private async Task UpdateLoop()
@@ -164,7 +153,12 @@ namespace SurviveTheHuntServer
                     "playerDied", new Action<dynamic>(data =>
                     {
                         int playerId = data.PlayerId;
+
                         Console.WriteLine($"Player died: {GetPlayerName($"{playerId}")}");
+
+                        Vector3 playerPos = new Vector3(data.PlayerPosX, data.PlayerPosY, data.PlayerPosZ);
+
+                        DeathBlips.Add(playerPos);
 
                         // Did the hunted player die?
                         if(Hunt.CheckPlayerDeath(Players[GetPlayerName($"{playerId}")], ref GameState))
