@@ -31,6 +31,11 @@ namespace SurviveTheHuntServer
 
         private readonly HuntedQueue HuntedPlayerQueue = null;
 
+        /// <summary>
+        /// Blips used to represent player deaths on the radar.
+        /// </summary>
+        protected DeathBlips DeathBlips = new DeathBlips();
+
         public MainScript()
         {
             if (GetCurrentResourceName() != ResourceName)
@@ -55,6 +60,7 @@ namespace SurviveTheHuntServer
 
                 EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
                 EventHandlers["playerDropped"] += new Action<Player, string>(PlayerDisconnected);
+                EventHandlers["baseevents:onPlayerWasted"] += new Action<Vector3>(OnPlayerWasted);
 
                 Tick += UpdateLoop;
 
@@ -80,6 +86,15 @@ namespace SurviveTheHuntServer
                 
                 HuntedPlayerQueue.AddPlayer(player);
             }
+        }
+
+        /// <summary>
+        /// Marks a player's death position on the map
+        /// </summary>
+        /// <param name="position"></param>
+        protected void OnPlayerWasted(Vector3 position)
+        {
+            DeathBlips.Add(position);
         }
 
         private async Task UpdateLoop()
@@ -116,6 +131,8 @@ namespace SurviveTheHuntServer
                     });
                 }
             }
+
+            DeathBlips.ClearExpiredBlips();
         }
 
         /// <summary>
