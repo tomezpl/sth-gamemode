@@ -393,15 +393,14 @@ namespace SurviveTheHuntClient
                         DateTime currentServerTime = DateTime.ParseExact(currentServerTimeStr, "F", CultureInfo.InvariantCulture);
                         Utility.ServerTimeOffset = currentServerTime - DateTime.UtcNow;
                     })
-                },
-                {
-                    "markPlayerDeath", new Action<dynamic>(data =>
-                    {
-                        Vector3 deathPos = new Vector3(data as float[]);
-                        DeathBlips.Add(deathPos);
-                    })
                 }
             };
+
+            EventHandlers["sth:markPlayerDeath"] += new Action<float[]>(data =>
+            {
+                Vector3 deathPos = new Vector3(data);
+                DeathBlips.Add(deathPos);
+            });
         }
     }
 }
