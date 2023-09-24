@@ -154,6 +154,9 @@ namespace SurviveTheHuntServer
                         {
                             NotifyWinner();
                         }
+
+                        // Mark the player's death location with a blip for everyone.
+                        TriggerClientEvent("sth:markPlayerDeath", data.PlayerPosX, data.PlayerPosY, data.PlayerPosZ);
                     })
                 },
                 {
