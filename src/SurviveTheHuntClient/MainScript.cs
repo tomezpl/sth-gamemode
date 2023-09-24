@@ -396,10 +396,9 @@ namespace SurviveTheHuntClient
                 }
             };
 
-            EventHandlers["sth:markPlayerDeath"] += new Action<float[]>(data =>
+            EventHandlers["sth:markPlayerDeath"] += new Action<float, float, float>((deathPosX, deathPosY, deathPosZ) =>
             {
-                Vector3 deathPos = new Vector3(data);
-                DeathBlips.Add(deathPos);
+                DeathBlips.Add(deathPosX, deathPosY, deathPosZ);
             });
         }
     }

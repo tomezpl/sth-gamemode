@@ -31,9 +31,9 @@ namespace SurviveTheHuntClient.Helpers
             _blipLifetime = blipLifetime;
         }
 
-        public void Add(Vector3 position)
+        public void Add(float positionX, float positionY, float positionZ)
         {
-            int blipHandle = AddBlipForCoord(position.X, position.Y, position.Z);
+            int blipHandle = AddBlipForCoord(positionX, positionY, positionZ);
             SetBlipSprite(blipHandle, 274);
             long creationTime = GetGameTimer();
 
