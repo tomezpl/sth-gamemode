@@ -46,6 +46,11 @@ namespace SurviveTheHuntClient
         public static readonly TimeSpan MugshotGenerationInterval = TimeSpan.FromSeconds(30);
 
         /// <summary>
+        /// Amount of time (in seconds) a player's death blip stays on the map.
+        /// </summary>
+        public const int DefaultDeathBlipLifespan = 5;
+
+        /// <summary>
         /// Weapon loadouts for each team.
         /// </summary>
         public static readonly Dictionary<Teams.Team, KeyValuePair<WeaponAsset, int>[]> WeaponLoadouts = new Dictionary<Teams.Team, KeyValuePair<WeaponAsset, int>[]>

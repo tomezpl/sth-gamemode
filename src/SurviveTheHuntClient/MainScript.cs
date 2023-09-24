@@ -42,7 +42,7 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Blips used to represent player deaths on the radar.
         /// </summary>
-        private readonly DeathBlips DeathBlips = new DeathBlips();
+        private readonly DeathBlips DeathBlips;
 
         public MainScript()
         {
@@ -55,6 +55,8 @@ namespace SurviveTheHuntClient
             {
                 EventHandlers[$"sth:{ev.Key}"] += ev.Value;
             }
+
+            DeathBlips = new DeathBlips(GetConvarInt("sth_deathbliplifespan", Constants.DefaultDeathBlipLifespan));
         }
 
         protected void OnResourceStopping(string resourceName)

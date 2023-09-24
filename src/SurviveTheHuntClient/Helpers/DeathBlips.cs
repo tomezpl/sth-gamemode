@@ -25,10 +25,10 @@ namespace SurviveTheHuntClient.Helpers
         /// <summary>
         /// Creates the death blip helper with the specified lifetime for each death blip.
         /// </summary>
-        /// <param name="blipLifetime">Lifetime of a death blip (in milliseconds)</param>
-        public DeathBlips(long blipLifetime = 5000)
+        /// <param name="blipLifetime">Lifetime of a death blip (in seconds)</param>
+        public DeathBlips(int blipLifetime = Constants.DefaultDeathBlipLifespan)
         {
-            _blipLifetime = blipLifetime;
+            _blipLifetime = (long)blipLifetime * 1000;
         }
 
         public void Add(float positionX, float positionY, float positionZ)
