@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 
-namespace SurviveTheHuntServer.Helpers
+namespace SurviveTheHuntClient.Helpers
 {
     public class DeathBlips
     {

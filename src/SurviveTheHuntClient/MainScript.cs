@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using CitizenFX.Core;
+using SurviveTheHuntClient.Helpers;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient
@@ -37,6 +38,11 @@ namespace SurviveTheHuntClient
         protected List<Vehicle> SpawnedVehicles = new List<Vehicle>();
 
         private Vector3 PlayerPos = Vector3.Zero;
+
+        /// <summary>
+        /// Blips used to represent player deaths on the radar.
+        /// </summary>
+        private readonly DeathBlips DeathBlips = new DeathBlips();
 
         public MainScript()
         {
@@ -234,13 +240,16 @@ namespace SurviveTheHuntClient
             // Check and report player death to the server if needed.
             if(!Game.Player.IsAlive && !PlayerState.DeathReported)
             {
-                TriggerServerEvent("sth:playerDied", new { PlayerId = Game.Player.ServerId, PlayerPosX = PlayerPos.X, PlayerPosY = PlayerPos.Y, PlayerPosZ = PlayerPos.Z });
+                TriggerEvent("sth:markPlayerDeath", PlayerPos.X, PlayerPos.Y, PlayerPos.Z);
+                TriggerServerEvent("sth:playerDied", new { PlayerId = Game.Player.ServerId });
                 PlayerState.DeathReported = true;
             }
 
             GameOverCheck();
 
             FixCarsInSpawn();
+
+            DeathBlips.ClearExpiredBlips();
 
             Wait(0);
         }
@@ -383,6 +392,13 @@ namespace SurviveTheHuntClient
                         string currentServerTimeStr = data.CurrentServerTime;
                         DateTime currentServerTime = DateTime.ParseExact(currentServerTimeStr, "F", CultureInfo.InvariantCulture);
                         Utility.ServerTimeOffset = currentServerTime - DateTime.UtcNow;
+                    })
+                },
+                {
+                    "markPlayerDeath", new Action<dynamic>(data =>
+                    {
+                        Vector3 deathPos = new Vector3(data as float[]);
+                        DeathBlips.Add(deathPos);
                     })
                 }
             };

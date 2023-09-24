@@ -31,11 +31,6 @@ namespace SurviveTheHuntServer
 
         private readonly HuntedQueue HuntedPlayerQueue = null;
 
-        /// <summary>
-        /// Blips used to represent player deaths on the radar.
-        /// </summary>
-        protected DeathBlips DeathBlips = new DeathBlips();
-
         public MainScript()
         {
             if (GetCurrentResourceName() != ResourceName)
@@ -121,8 +116,6 @@ namespace SurviveTheHuntServer
                     });
                 }
             }
-
-            DeathBlips.ClearExpiredBlips();
         }
 
         /// <summary>
@@ -155,10 +148,6 @@ namespace SurviveTheHuntServer
                         int playerId = data.PlayerId;
 
                         Console.WriteLine($"Player died: {GetPlayerName($"{playerId}")}");
-
-                        Vector3 playerPos = new Vector3(data.PlayerPosX, data.PlayerPosY, data.PlayerPosZ);
-
-                        DeathBlips.Add(playerPos);
 
                         // Did the hunted player die?
                         if(Hunt.CheckPlayerDeath(Players[GetPlayerName($"{playerId}")], ref GameState))
