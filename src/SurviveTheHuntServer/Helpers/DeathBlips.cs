@@ -44,13 +44,15 @@ namespace SurviveTheHuntServer.Helpers
         {
             long currentTime = GetGameTimer();
 
-            foreach(DeathBlip deathBlip in _deathBlips)
+            for(int i = _deathBlips.Count - 1; i >= 0; i--)
             {
+                DeathBlip deathBlip = _deathBlips[i];
+
                 if(currentTime - deathBlip.creationTime >= _blipLifetime)
                 {
                     int handle = deathBlip.handle;
                     RemoveBlip(ref handle);
-                    _deathBlips.Remove(deathBlip);
+                    _deathBlips.RemoveAt(i);
                 }
             }
         }
