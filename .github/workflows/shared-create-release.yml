@@ -51,8 +51,8 @@ jobs:
         shell: pwsh
         run: |
             copy fxmanifest.lua artifacts/fxmanifest.lua
-            copy build/$STH_CLIENT_SCRIPT artifacts/$STH_CLIENT_SCRIPT
-            copy build/$STH_SERVER_SCRIPT artifacts/$STH_SERVER_SCRIPT
+            copy build/${{env.STH_CLIENT_SCRIPT}} artifacts/${{env.STH_CLIENT_SCRIPT}}
+            copy build/${{env.STH_SERVER_SCRIPT}} artifacts/${{env.STH_SERVER_SCRIPT}}
             Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
       -
         if: ${{!inputs.prerelease}}
