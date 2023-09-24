@@ -1,3 +1,7 @@
+env:
+  STH_CLIENT_SCRIPT: SurviveTheHuntClient.net.dll
+  STH_SERVER_SCRIPT: SurviveTheHuntServer.net.dll
+
 on:
   workflow_call:
     inputs:
@@ -40,12 +44,16 @@ jobs:
         # Supposedly OutputPath is meant to be relative to the PROJECT file, not cwd or even solution file. https://stackoverflow.com/a/4965607
         run: |
             mkdir artifacts
-            msbuild.exe sth-gamemode.sln /p:platform="Any CPU" /p:configuration="Release" /p:OutputPath=..\..\artifacts
-            copy fxmanifest.lua artifacts/fxmanifest.lua
+            mkdir build
+            msbuild.exe sth-gamemode.sln /p:platform="Any CPU" /p:configuration="Release" /p:OutputPath=..\..\build
       -
         name: Prepare artifacts
         shell: pwsh
-        run: Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
+        run: |
+            copy fxmanifest.lua artifacts/fxmanifest.lua
+            copy build/$STH_CLIENT_SCRIPT artifacts/$STH_CLIENT_SCRIPT
+            copy build/$STH_SERVER_SCRIPT artifacts/$STH_SERVER_SCRIPT
+            Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
       -
         if: ${{!inputs.prerelease}}
         name: Upload build to release
