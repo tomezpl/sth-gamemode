@@ -4,6 +4,9 @@ using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Helpers
 {
+    /// <summary>
+    /// Helper class to create and clean up death markers on the radar.
+    /// </summary>
     public class DeathBlips
     {
         private struct DeathBlip
@@ -40,6 +43,9 @@ namespace SurviveTheHuntClient.Helpers
             _deathBlips.Add(new DeathBlip(blipHandle, creationTime));
         }
 
+        /// <summary>
+        /// Needs to be called every frame to check for expired death markers and remove them.
+        /// </summary>
         public void ClearExpiredBlips()
         {
             long currentTime = GetGameTimer();
