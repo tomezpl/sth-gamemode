@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using CitizenFX.Core;
+using SurviveTheHuntClient.Helpers;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient
@@ -36,6 +37,13 @@ namespace SurviveTheHuntClient
         /// <remarks>TODO: Move this to server-side so any player can spawn vehicles with the previous batch deleting properly?</remarks>
         protected List<Vehicle> SpawnedVehicles = new List<Vehicle>();
 
+        private Vector3 PlayerPos = Vector3.Zero;
+
+        /// <summary>
+        /// Blips used to represent player deaths on the radar.
+        /// </summary>
+        private readonly DeathBlips DeathBlips;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -47,6 +55,8 @@ namespace SurviveTheHuntClient
             {
                 EventHandlers[$"sth:{ev.Key}"] += ev.Value;
             }
+
+            DeathBlips = new DeathBlips(GetConvarInt("sth_deathbliplifespan", Constants.DefaultDeathBlipLifespan));
         }
 
         protected void OnResourceStopping(string resourceName)
@@ -215,6 +225,7 @@ namespace SurviveTheHuntClient
             if (Game.PlayerPed != null)
             {
                 ResetPlayerStamina(PlayerId());
+                PlayerPos = Game.PlayerPed.Position;
             }
 
             GameState.Hunt.UpdateHuntedMugshot();
@@ -229,15 +240,17 @@ namespace SurviveTheHuntClient
             ClearPlayerWantedLevel(PlayerId());
 
             // Check and report player death to the server if needed.
-            if(Game.Player.IsDead && !PlayerState.DeathReported)
+            if(!Game.Player.IsAlive && !PlayerState.DeathReported)
             {
-                TriggerServerEvent("sth:playerDied", new { PlayerId = Game.Player.ServerId });
+                TriggerServerEvent("sth:playerDied", new { PlayerId = Game.Player.ServerId, PlayerPosX = PlayerPos.X, PlayerPosY = PlayerPos.Y, PlayerPosZ = PlayerPos.Z });
                 PlayerState.DeathReported = true;
             }
 
             GameOverCheck();
 
             FixCarsInSpawn();
+
+            DeathBlips.ClearExpiredBlips();
 
             Wait(0);
         }
@@ -383,6 +396,11 @@ namespace SurviveTheHuntClient
                     })
                 }
             };
+
+            EventHandlers["sth:markPlayerDeath"] += new Action<float, float, float>((deathPosX, deathPosY, deathPosZ) =>
+            {
+                DeathBlips.Add(deathPosX, deathPosY, deathPosZ);
+            });
         }
     }
 }

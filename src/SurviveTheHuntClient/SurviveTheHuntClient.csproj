@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="GameState.cs" />
+    <Compile Include="Helpers\DeathBlips.cs" />
     <Compile Include="HuntUI.cs" />
     <Compile Include="MainScript.cs" />
     <Compile Include="PlayerState.cs" />
