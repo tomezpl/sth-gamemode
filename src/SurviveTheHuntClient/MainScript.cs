@@ -397,8 +397,10 @@ namespace SurviveTheHuntClient
                 }
             };
 
-            EventHandlers["sth:receiveConfig"] += new Action<ConfigPayload>((config) =>
+            EventHandlers["sth:receiveConfig"] += new Action<dynamic>((data) =>
             {
+                ConfigPayload config = new ConfigPayload() { WeaponsHunted = data.WeaponsHunted, WeaponsHunters = data.WeaponsHunters };
+
                 Weapons.WeaponAmmo[]
                     hunters = Weapons.UnpackLoadout(config.WeaponsHunters),
                     hunted = Weapons.UnpackLoadout(config.WeaponsHunted);

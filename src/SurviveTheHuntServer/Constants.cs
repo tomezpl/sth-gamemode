@@ -28,7 +28,7 @@ namespace SurviveTheHuntServer
         /// <summary>
         /// Path to the team weapon loadout config file, relative to the resource root.
         /// </summary>
-        public const string WeaponConfigPath = "config/team_loadouts.json";
+        public const string WeaponConfigPath = "configs/team_loadouts.json";
 
         /// <summary>
         /// GTA V Weapon hashes from <see href="https://wiki.rage.mp/index.php?title=Weapons"/>.
