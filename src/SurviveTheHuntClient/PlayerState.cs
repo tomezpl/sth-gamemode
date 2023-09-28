@@ -83,7 +83,7 @@ namespace SurviveTheHuntClient
         /// <param name="playerPed">The player ped to give the weapons to.</param>
         private void GiveWeapons(ref Ped playerPed)
         {
-            KeyValuePair<WeaponAsset, int>[] weapons = Constants.WeaponLoadouts[Team];
+            Dictionary<WeaponAsset, int> weapons = Constants.WeaponLoadouts[Team];
 
             foreach(KeyValuePair<WeaponAsset, int> weapon in weapons)
             {
@@ -107,7 +107,7 @@ namespace SurviveTheHuntClient
             }
             else
             {
-                KeyValuePair<WeaponAsset, int>[] weapons = Constants.WeaponLoadouts[Team];
+                Dictionary<WeaponAsset, int> weapons = Constants.WeaponLoadouts[Team];
 
                 LastWeaponEquipped = GetSelectedPedWeapon(playerPed.Handle);
 

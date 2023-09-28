@@ -1,6 +1,8 @@
 env:
   STH_CLIENT_SCRIPT: SurviveTheHuntClient.net.dll
   STH_SERVER_SCRIPT: SurviveTheHuntServer.net.dll
+  NEWTONSOFT_JSON_DLL: Newtonsoft.Json.dll
+  CONFIG_DIR: configs/
 
 on:
   workflow_call:
@@ -53,6 +55,8 @@ jobs:
             copy fxmanifest.lua artifacts/fxmanifest.lua
             copy build/${{env.STH_CLIENT_SCRIPT}} artifacts/${{env.STH_CLIENT_SCRIPT}}
             copy build/${{env.STH_SERVER_SCRIPT}} artifacts/${{env.STH_SERVER_SCRIPT}}
+            copy build/${{env.NEWTONSOFT_JSON_DLL}} artifacts/${{env.NEWTONSOFT_JSON_DLL}}
+            copy ${{env.CONFIG_DIR}} artifacts/
             Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
       -
         if: ${{!inputs.prerelease}}

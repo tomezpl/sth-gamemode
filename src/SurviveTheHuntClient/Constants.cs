@@ -53,23 +53,23 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Weapon loadouts for each team.
         /// </summary>
-        public static readonly Dictionary<Teams.Team, KeyValuePair<WeaponAsset, int>[]> WeaponLoadouts = new Dictionary<Teams.Team, KeyValuePair<WeaponAsset, int>[]>
+        public static Dictionary<Teams.Team, Dictionary<WeaponAsset, int>> WeaponLoadouts = new Dictionary<Teams.Team, Dictionary<WeaponAsset, int>>
         {
             {
-                Teams.Team.Hunters, new KeyValuePair<WeaponAsset, int>[]
+                Teams.Team.Hunters, new Dictionary<WeaponAsset, int>
                 {
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.PistolMk2), 9999),
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.PumpShotgunMk2), 9999)
+                    { new WeaponAsset(WeaponHash.PistolMk2), 9999 },
+                    { new WeaponAsset(WeaponHash.PumpShotgunMk2), 9999 }
                 }
             },
             {
-                Teams.Team.Hunted, new KeyValuePair<WeaponAsset, int>[]
+                Teams.Team.Hunted, new Dictionary<WeaponAsset, int>
                 {
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.APPistol), 9999),
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.CarbineRifleMk2), 9999),
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.StickyBomb), 25),
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.RPG), 25),
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.AssaultShotgun), 9999)
+                    {new WeaponAsset(WeaponHash.APPistol), 9999 },
+                    {new WeaponAsset(WeaponHash.CarbineRifleMk2), 9999 },
+                    {new WeaponAsset(WeaponHash.StickyBomb), 25 },
+                    {new WeaponAsset(WeaponHash.RPG), 25 },
+                    {new WeaponAsset(WeaponHash.AssaultShotgun), 9999 }
                 }
             }
         };

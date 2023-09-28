@@ -33,4 +33,37 @@
         /// </summary>
         public float Heading { get; set; } = 0f;
     }
+
+    public struct ConfigPayload
+    {
+        public uint[] WeaponsHunted;
+        public uint[] WeaponsHunters;
+    }
+
+    public class Weapons
+    {
+        public struct WeaponAmmo
+        {
+            public uint Hash;
+            public ushort Ammo;
+
+            public WeaponAmmo(uint hash, ushort ammo)
+            {
+                Hash = hash;
+                Ammo = ammo;
+            }
+        }
+
+        public static WeaponAmmo[] UnpackLoadout(uint[] serializedLoadout)
+        {
+            WeaponAmmo[] weapons = new WeaponAmmo[serializedLoadout.Length / 2];
+
+            for(ushort i = 0; i < serializedLoadout.Length; i += 2)
+            {
+                weapons[i / 2] = new WeaponAmmo(serializedLoadout[i], (ushort)serializedLoadout[i + 1]);
+            }
+
+            return weapons;
+        }
+    }
 }

@@ -397,6 +397,20 @@ namespace SurviveTheHuntClient
                 }
             };
 
+            EventHandlers["sth:receiveConfig"] += new Action<ConfigPayload>((config) =>
+            {
+                Weapons.WeaponAmmo[]
+                    hunters = Weapons.UnpackLoadout(config.WeaponsHunters),
+                    hunted = Weapons.UnpackLoadout(config.WeaponsHunted);
+
+                // TODO: this is incredibly gash, it'll need refactoring. Why do we store weapons in a dictionary anyway
+                Func<Weapons.WeaponAmmo, WeaponAsset> keySelector = new Func<Weapons.WeaponAmmo, WeaponAsset>((weapon) => new WeaponAsset(weapon.Hash));
+                Func<Weapons.WeaponAmmo, int> valueSelector = new Func<Weapons.WeaponAmmo, int>((weapon) => (int)weapon.Ammo);
+
+                Constants.WeaponLoadouts[Teams.Team.Hunters] = hunters.ToDictionary(keySelector, valueSelector);
+
+            });
+
             EventHandlers["sth:markPlayerDeath"] += new Action<float, float, float>((deathPosX, deathPosY, deathPosZ) =>
             {
                 DeathBlips.Add(deathPosX, deathPosY, deathPosZ);

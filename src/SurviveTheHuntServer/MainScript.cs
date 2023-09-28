@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using CitizenFX.Core;
 using SurviveTheHuntServer.Helpers;
+using SurviveTheHuntServer.Utils;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntServer
@@ -30,6 +31,8 @@ namespace SurviveTheHuntServer
         protected Dictionary<string, Action<dynamic>> STHEvents;
 
         private readonly HuntedQueue HuntedPlayerQueue = null;
+
+        private readonly Config Config = null;
 
         public MainScript()
         {
@@ -59,6 +62,10 @@ namespace SurviveTheHuntServer
                 Tick += UpdateLoop;
 
                 HuntedPlayerQueue = Hunt.InitHuntedQueue(Players);
+
+                Config = new Config();
+
+                TriggerClientEvent("sth:receiveConfig", Config.Serialize());
             }
         }
 
@@ -77,7 +84,8 @@ namespace SurviveTheHuntServer
             {
                 Console.WriteLine($"{player.Name} is joining; syncing time offset now.");
                 TriggerClientEvent(player, "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
-                
+                TriggerClientEvent(player, "sth:receiveConfig", Config.Serialize());
+
                 HuntedPlayerQueue.AddPlayer(player);
             }
         }
