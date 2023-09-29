@@ -399,6 +399,8 @@ namespace SurviveTheHuntClient
 
             EventHandlers["sth:receiveConfig"] += new Action<dynamic>((data) =>
             {
+                Debug.WriteLine("sth:receiveConfig received!");
+
                 ConfigPayload config = new ConfigPayload() { WeaponsHunted = data.WeaponsHunted, WeaponsHunters = data.WeaponsHunters };
 
                 Weapons.WeaponAmmo[]
