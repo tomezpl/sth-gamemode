@@ -90,11 +90,13 @@ namespace SurviveTheHuntServer {
     {
         public void BroadcastConfig(Utils.Config config)
         {
+            Debug.WriteLine("Sending serialized config to players");
             TriggerClientEvent(Utils.Config.ReceiveConfigEvent, config.Serialize().EventParams);
         }
 
         public void BroadcastConfig(Player player, Utils.Config config)
         {
+            Debug.WriteLine($"Sending serialized config to player {player.Name}");
             TriggerClientEvent(player, Utils.Config.ReceiveConfigEvent, config.Serialize().EventParams);
         }
     }

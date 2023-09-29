@@ -1,4 +1,5 @@
-﻿using SurviveTheHuntServer.Utils;
+﻿using CitizenFX.Core;
+using SurviveTheHuntServer.Utils;
 
 namespace SurviveTheHuntServer
 {
@@ -6,6 +7,8 @@ namespace SurviveTheHuntServer
     {
         public void OnServerResourceStart(string resourceName)
         {
+            Debug.WriteLine($"{resourceName} resource started!");
+
             if(resourceName == Constants.ResourceName)
             {
                 // Reload the config file every time the resource is started.
