@@ -85,7 +85,7 @@ namespace SurviveTheHuntServer
                 Console.WriteLine($"{player.Name} is joining; syncing time offset now.");
                 TriggerClientEvent(player, "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
                 Config.Serialized serializedConfig = Config.Serialize();
-                TriggerClientEvent(player, "sth:receiveConfig", serializedConfig.WeaponsHunters.ToList(), serializedConfig.WeaponsHunted.ToList());
+                TriggerClientEvent(player, "sth:receiveConfig", serializedConfig.WeaponsHunters, serializedConfig.WeaponsHunted);
 
                 HuntedPlayerQueue.AddPlayer(player);
             }

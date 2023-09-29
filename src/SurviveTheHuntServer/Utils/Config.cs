@@ -14,20 +14,23 @@ namespace SurviveTheHuntServer.Utils
             [JsonProperty("weaponAmmo")]
             public Dictionary<string, ushort> WeaponAmmo = new Dictionary<string, ushort>();
 
-            public uint[] Serialize()
+            public string Serialize()
             {
-                uint[] serialized = new uint[WeaponAmmo.Count * 2];
+                StringBuilder sb = new StringBuilder();
 
-                ushort counter = 0;
                 foreach(KeyValuePair<string, ushort> weapon in WeaponAmmo)
                 {
                     // Weapon hash is first
-                    serialized[counter++] = Constants.WeaponHashes[weapon.Key];
+                    sb.Append(Constants.WeaponHashes[weapon.Key]);
+                    sb.Append(":");
                     // Ammo count is second
-                    serialized[counter++] = weapon.Value;
+                    sb.Append(weapon.Value);
+                    sb.Append(";");
                 }
 
-                return serialized;
+                sb.Append("\b");
+
+                return sb.ToString();
             }
         }
 
@@ -44,8 +47,8 @@ namespace SurviveTheHuntServer.Utils
 
         public struct Serialized
         {
-            public uint[] WeaponsHunted;
-            public uint[] WeaponsHunters;
+            public string WeaponsHunted;
+            public string WeaponsHunters;
 
             public Serialized(TeamWeaponLoadouts.WeaponLoadout huntersLoadout, TeamWeaponLoadouts.WeaponLoadout huntedLoadout)
             {
