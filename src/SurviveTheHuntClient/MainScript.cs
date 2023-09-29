@@ -401,7 +401,11 @@ namespace SurviveTheHuntClient
             {
                 Debug.WriteLine("sth:receiveConfig received!");
 
-                ConfigPayload config = new ConfigPayload() { WeaponsHunted = data.WeaponsHunted, WeaponsHunters = data.WeaponsHunters };
+                ConfigPayload config = new ConfigPayload()
+                { 
+                    WeaponsHunted = (data.WeaponsHunted as List<object>).Cast<uint>().ToArray(), 
+                    WeaponsHunters = (data.WeaponsHunters as List<object>).Cast<uint>().ToArray()
+                };
 
                 Weapons.WeaponAmmo[]
                     hunters = Weapons.UnpackLoadout(config.WeaponsHunters),
