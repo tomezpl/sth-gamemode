@@ -429,7 +429,7 @@ namespace SurviveTheHuntClient
                 Func<Weapons.WeaponAmmo, int> valueSelector = new Func<Weapons.WeaponAmmo, int>((weapon) => (int)weapon.Ammo);
 
                 Constants.WeaponLoadouts[Teams.Team.Hunters] = hunters.ToDictionary(keySelector, valueSelector);
-
+                Constants.WeaponLoadouts[Teams.Team.Hunted] = hunted.ToDictionary(keySelector, valueSelector);
             });
 
             EventHandlers["sth:markPlayerDeath"] += new Action<float, float, float>((deathPosX, deathPosY, deathPosZ) =>
