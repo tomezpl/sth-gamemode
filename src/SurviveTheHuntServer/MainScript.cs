@@ -58,6 +58,8 @@ namespace SurviveTheHuntServer
                     EventHandlers[$"sth:{ev.Key}"] += ev.Value;
                 }
 
+                EventHandlers["sth:clientStarted"] += new Action<Player>(ClientStarted);
+
                 Tick += UpdateLoop;
 
                 HuntedPlayerQueue = Hunt.InitHuntedQueue(Players);

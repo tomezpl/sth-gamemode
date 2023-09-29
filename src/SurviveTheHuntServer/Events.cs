@@ -15,5 +15,10 @@ namespace SurviveTheHuntServer
                 BroadcastConfig(Config.Init());
             }
         }
+
+        public void ClientStarted([FromSource] Player player)
+        {
+            BroadcastConfig(player, Config);
+        }
     }
 }

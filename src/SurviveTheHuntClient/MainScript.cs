@@ -117,6 +117,9 @@ namespace SurviveTheHuntClient
 
             Vector3 spawn = Constants.DockSpawn;
             ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
+
+            // Notify the server this client has started so the config can be sent down. This is needed for resource restarts etc.
+            TriggerServerEvent("sth:clientStarted");
         }
 
         /// <summary>
