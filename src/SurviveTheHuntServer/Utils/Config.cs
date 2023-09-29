@@ -28,7 +28,8 @@ namespace SurviveTheHuntServer.Utils
                     sb.Append(";");
                 }
 
-                sb.Append("\b");
+                // Remove the trailing semicolon
+                sb.Length -= 1;
 
                 return sb.ToString();
             }

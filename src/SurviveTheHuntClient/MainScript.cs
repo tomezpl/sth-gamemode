@@ -401,9 +401,9 @@ namespace SurviveTheHuntClient
             {
                 Debug.WriteLine("sth:receiveConfig received!");
 
-                Debug.WriteLine($"hunters weapons: ${weaponsHunters}");
+                Debug.WriteLine($"hunters weapons: {weaponsHunters}");
 
-                Debug.WriteLine($"hunted weapons: ${weaponsHunted}");
+                Debug.WriteLine($"hunted weapons: {weaponsHunted}");
 
                 Func<string, uint[]> getUintTuple = (str) =>
                 {
