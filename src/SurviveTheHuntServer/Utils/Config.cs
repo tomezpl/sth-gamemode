@@ -18,7 +18,7 @@ namespace SurviveTheHuntServer.Utils
             {
                 StringBuilder sb = new StringBuilder();
 
-                foreach(KeyValuePair<string, ushort> weapon in WeaponAmmo)
+                foreach (KeyValuePair<string, ushort> weapon in WeaponAmmo)
                 {
                     // Weapon hash is first
                     sb.Append(Constants.WeaponHashes[weapon.Key]);
@@ -44,7 +44,10 @@ namespace SurviveTheHuntServer.Utils
 
     public class Config
     {
-        public readonly TeamWeaponLoadouts WeaponLoadouts;
+        private TeamWeaponLoadouts _weaponLoadouts = null;
+        public TeamWeaponLoadouts WeaponLoadouts { get => _weaponLoadouts; }
+
+        public const string ReceiveConfigEvent = "sth:receiveConfig";
 
         public struct Serialized
         {
@@ -56,19 +59,37 @@ namespace SurviveTheHuntServer.Utils
                 WeaponsHunters = huntersLoadout.Serialize();
                 WeaponsHunted = huntedLoadout.Serialize();
             }
+
+            public object[] EventParams { get => new object[] { WeaponsHunters, WeaponsHunted }; }
         }
 
         public Config(string weaponConfigPath = Constants.WeaponConfigPath)
         {
-            string loadoutsJson = CitizenFX.Core.Native.API.LoadResourceFile(CitizenFX.Core.Native.API.GetCurrentResourceName(), weaponConfigPath);
+            Init(weaponConfigPath);
+        }
 
-            WeaponLoadouts = JsonConvert.DeserializeObject<TeamWeaponLoadouts>(loadoutsJson);
+        public Config Init(string weaponConfigPath = Constants.WeaponConfigPath)
+        {
+            string loadoutsJson = CitizenFX.Core.Native.API.LoadResourceFile(CitizenFX.Core.Native.API.GetCurrentResourceName(), weaponConfigPath);
+            _weaponLoadouts = JsonConvert.DeserializeObject<TeamWeaponLoadouts>(loadoutsJson);
+
+            return this;
         }
 
         public Serialized Serialize()
         {
             // TODO: for now this will just choose the first loadout for each team
             return new Serialized(WeaponLoadouts.Hunters[0], WeaponLoadouts.Hunted[0]);
+        }
+    }
+}
+
+namespace SurviveTheHuntServer {
+    public partial class MainScript
+    {
+        public void BroadcastConfig(Utils.Config config)
+        {
+            TriggerClientEvent(Utils.Config.ReceiveConfigEvent, config.Serialize().EventParams);
         }
     }
 }

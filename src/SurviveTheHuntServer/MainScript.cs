@@ -12,10 +12,8 @@ using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntServer
 {
-    public class MainScript : BaseScript
+    public partial class MainScript : BaseScript
     {
-        private const string ResourceName = "sth-gamemode";
-
         protected GameState GameState = new GameState();
 
         private readonly Random RNG = new Random();
@@ -36,11 +34,11 @@ namespace SurviveTheHuntServer
 
         public MainScript()
         {
-            if (GetCurrentResourceName() != ResourceName)
+            if (GetCurrentResourceName() != Constants.ResourceName)
             {
                 try
                 {
-                    throw new Exception($"Survive the Hunt: Invalid resource name! Resource name should be {ResourceName}");
+                    throw new Exception($"Survive the Hunt: Invalid resource name! Resource name should be {Constants.ResourceName}");
                 }
                 catch (Exception e)
                 {
@@ -56,6 +54,7 @@ namespace SurviveTheHuntServer
                     EventHandlers[$"sth:{ev.Key}"] += ev.Value;
                 }
 
+                EventHandlers["onServerResourceStart"] += new Action<string>(OnServerResourceStart);
                 EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
                 EventHandlers["playerDropped"] += new Action<Player, string>(PlayerDisconnected);
 
@@ -84,8 +83,8 @@ namespace SurviveTheHuntServer
             {
                 Console.WriteLine($"{player.Name} is joining; syncing time offset now.");
                 TriggerClientEvent(player, "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
-                Config.Serialized serializedConfig = Config.Serialize();
-                TriggerClientEvent(player, "sth:receiveConfig", serializedConfig.WeaponsHunters, serializedConfig.WeaponsHunted);
+
+                BroadcastConfig(Config);
 
                 HuntedPlayerQueue.AddPlayer(player);
             }

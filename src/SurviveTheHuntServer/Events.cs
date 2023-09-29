@@ -1,15 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using CitizenFX.Core;
-using static CitizenFX.Core.Native.API;
+﻿using SurviveTheHuntServer.Utils;
 
 namespace SurviveTheHuntServer
 {
-    public static class Events
+    public partial class MainScript
     {
+        public void OnServerResourceStart(string resourceName)
+        {
+            if(resourceName == Constants.ResourceName)
+            {
+                // Reload the config file every time the resource is started.
+                BroadcastConfig(Config.Init());
+            }
+        }
     }
 }

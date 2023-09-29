@@ -11,6 +11,11 @@ namespace SurviveTheHuntServer
     public static class Constants
     {
         /// <summary>
+        /// Expected resource name for the gamemode on the server.
+        /// </summary>
+        public const string ResourceName = "sth-gamemode";
+
+        /// <summary>
         /// Amount of time the hunt should last for.
         /// </summary>
         public static readonly TimeSpan HuntDuration = TimeSpan.FromMinutes(24);
