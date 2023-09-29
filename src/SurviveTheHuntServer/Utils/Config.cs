@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using CitizenFX.Core;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -90,6 +91,11 @@ namespace SurviveTheHuntServer {
         public void BroadcastConfig(Utils.Config config)
         {
             TriggerClientEvent(Utils.Config.ReceiveConfigEvent, config.Serialize().EventParams);
+        }
+
+        public void BroadcastConfig(Player player, Utils.Config config)
+        {
+            TriggerClientEvent(player, Utils.Config.ReceiveConfigEvent, config.Serialize().EventParams);
         }
     }
 }

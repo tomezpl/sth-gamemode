@@ -47,6 +47,10 @@ namespace SurviveTheHuntServer
             }
             else
             {
+                EventHandlers["onServerResourceStart"] += new Action<string>(OnServerResourceStart);
+                EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
+                EventHandlers["playerDropped"] += new Action<Player, string>(PlayerDisconnected);
+
                 CreateEvents();
 
                 foreach (KeyValuePair<string, Action<dynamic>> ev in STHEvents)
@@ -54,17 +58,12 @@ namespace SurviveTheHuntServer
                     EventHandlers[$"sth:{ev.Key}"] += ev.Value;
                 }
 
-                EventHandlers["onServerResourceStart"] += new Action<string>(OnServerResourceStart);
-                EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
-                EventHandlers["playerDropped"] += new Action<Player, string>(PlayerDisconnected);
-
                 Tick += UpdateLoop;
 
                 HuntedPlayerQueue = Hunt.InitHuntedQueue(Players);
 
                 Config = new Config();
-                Config.Serialized serializedConfig = Config.Serialize();
-                TriggerClientEvent("sth:receiveConfig", serializedConfig.WeaponsHunters.ToList(), serializedConfig.WeaponsHunted.ToList());
+                BroadcastConfig(Config);
             }
         }
 
@@ -84,7 +83,7 @@ namespace SurviveTheHuntServer
                 Console.WriteLine($"{player.Name} is joining; syncing time offset now.");
                 TriggerClientEvent(player, "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
 
-                BroadcastConfig(Config);
+                BroadcastConfig(player, Config);
 
                 HuntedPlayerQueue.AddPlayer(player);
             }
