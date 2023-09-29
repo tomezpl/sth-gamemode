@@ -397,18 +397,18 @@ namespace SurviveTheHuntClient
                 }
             };
 
-            EventHandlers["sth:receiveConfig"] += new Action<uint[], uint[]>((weaponsHunters, weaponsHunted) =>
+            EventHandlers["sth:receiveConfig"] += new Action<List<uint>, List<uint>>((weaponsHunters, weaponsHunted) =>
             {
                 Debug.WriteLine("sth:receiveConfig received!");
 
-                Debug.WriteLine($"{weaponsHunters.Length} hunters weapons");
+                Debug.WriteLine($"{weaponsHunters.Count} hunters weapons");
 
-                Debug.WriteLine($"{weaponsHunted.Length} hunted weapons");
+                Debug.WriteLine($"{weaponsHunted.Count} hunted weapons");
 
                 ConfigPayload config = new ConfigPayload()
                 { 
-                    WeaponsHunted = weaponsHunted, 
-                    WeaponsHunters = weaponsHunters
+                    WeaponsHunted = weaponsHunted.ToArray(), 
+                    WeaponsHunters = weaponsHunters.ToArray()
                 };
 
                 Debug.WriteLine("got config!");
