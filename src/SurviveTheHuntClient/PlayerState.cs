@@ -18,6 +18,8 @@ namespace SurviveTheHuntClient
         /// </summary>
         public bool WeaponsGiven { get; set; } = false;
 
+        public bool ForcedUnarmed = false;
+
         /// <summary>
         /// <para>Was the player's death reported to the server yet?</para>
         /// <para>This is refreshed on each respawn.</para>
@@ -27,7 +29,7 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Last weapon the player had equipped.
         /// </summary>
-        public int LastWeaponEquipped { get; set; } = default;
+        public uint LastWeaponEquipped = (uint)WeaponHash.Unarmed;
 
         /// <summary>
         /// The team the local player is on.
@@ -78,11 +80,26 @@ namespace SurviveTheHuntClient
         public BigmapState Bigmap { get; set; } = new BigmapState();
 
         /// <summary>
+        /// Removes weapons from a player ped.
+        /// </summary>
+        /// <param name="playerPed">The player ped to remove weapons from.</param>
+        /// <param name="takeAll">Should all weapons be removed, or just the ones given to the player by the gamemode?</param>
+        public void TakeAwayWeapons(ref Ped playerPed)
+        {
+            RemoveAllPedWeapons(playerPed.Handle, true);
+
+            WeaponsGiven = false;
+        }
+
+        /// <summary>
         /// Gives the player the right weapon loadout based on their assigned team.
         /// </summary>
         /// <param name="playerPed">The player ped to give the weapons to.</param>
         private void GiveWeapons(ref Ped playerPed)
         {
+            // First remove the existing weapons.
+            RemoveAllPedWeapons(playerPed.Handle, false);
+
             Dictionary<WeaponAsset, int> weapons = Constants.WeaponLoadouts[Team];
 
             foreach(KeyValuePair<WeaponAsset, int> weapon in weapons)
@@ -95,46 +112,35 @@ namespace SurviveTheHuntClient
         }
 
         /// <summary>
-        /// Removes weapons from a player ped.
-        /// </summary>
-        /// <param name="playerPed">The player ped to remove weapons from.</param>
-        /// <param name="takeAll">Should all weapons be removed, or just the ones given to the player by the gamemode?</param>
-        public void TakeAwayWeapons(ref Ped playerPed, bool takeAll = false)
-        {
-            if (takeAll)
-            {
-                RemoveAllPedWeapons(playerPed.Handle, true);
-            }
-            else
-            {
-                Dictionary<WeaponAsset, int> weapons = Constants.WeaponLoadouts[Team];
-
-                LastWeaponEquipped = GetSelectedPedWeapon(playerPed.Handle);
-
-                foreach (KeyValuePair<WeaponAsset, int> weapon in weapons)
-                {
-                    RemoveWeaponFromPed(playerPed.Handle, (uint)weapon.Key.Hash);
-                }
-            }
-
-            WeaponsGiven = false;
-        }
-
-        /// <summary>
-        /// Manages the player's weapons - removes them while in vehicles (to prevent drive-by), reequips the last used weapon after getting out of a vehicle, etc.
+        /// Manages the player's weapons - forces unarmed while in vehicles (to prevent drive-by), reequips the last used weapon after getting out of a vehicle, etc.
         /// </summary>
         /// <param name="playerPed">The player ped whose weapons should be updated.</param>
         public void UpdateWeapons(Ped playerPed)
         {
-            bool weaponsAllowed = !playerPed.IsGettingIntoAVehicle && !playerPed.IsInVehicle();
-
-            if(weaponsAllowed && !WeaponsGiven)
+            if(!WeaponsGiven)
             {
                 GiveWeapons(ref playerPed);
             }
-            else if(!weaponsAllowed && WeaponsGiven)
+
+            bool weaponsAllowed = !playerPed.IsGettingIntoAVehicle && !playerPed.IsInVehicle();
+
+            if(weaponsAllowed && !ForcedUnarmed)
             {
-                TakeAwayWeapons(ref playerPed);
+                GetCurrentPedWeapon(playerPed.Handle, ref LastWeaponEquipped, true);
+            }
+
+            if (!weaponsAllowed && !ForcedUnarmed)
+            {
+                SetCurrentPedWeapon(playerPed.Handle, (uint)WeaponHash.Unarmed, true);
+                SetPedCanSwitchWeapon(playerPed.Handle, false);
+                ForcedUnarmed = true;
+            }
+
+            if(ForcedUnarmed && weaponsAllowed)
+            {
+                SetCurrentPedWeapon(playerPed.Handle, LastWeaponEquipped, true);
+                SetPedCanSwitchWeapon(playerPed.Handle, true);
+                ForcedUnarmed = false;
             }
         }
     }

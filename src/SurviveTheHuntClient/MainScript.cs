@@ -208,7 +208,7 @@ namespace SurviveTheHuntClient
 
             // Indicate that weapons need to be given to the player again.
             PlayerState.WeaponsGiven = false;
-            PlayerState.LastWeaponEquipped = new WeaponAsset(WeaponHash.Unarmed).Hash;
+            PlayerState.ForcedUnarmed = false;
 
             TriggerServerEvent("sth:cleanClothes", new { PlayerId = GetPlayerServerId(PlayerId()) });
 
@@ -333,7 +333,6 @@ namespace SurviveTheHuntClient
                         }
 
                         Ped playerPed = Game.PlayerPed;
-                        PlayerState.TakeAwayWeapons(ref playerPed);
 
                         GameState.Hunt.IsStarted = true;
                         GameState.Hunt.HuntedPlayer = Players[huntedPlayerName];
@@ -368,7 +367,6 @@ namespace SurviveTheHuntClient
                         GameState.Hunt.InitialEndTime = endTime;
                         HuntUI.DisplayObjective(ref GameState, ref PlayerState);
                         Ped playerPed = Game.PlayerPed;
-                        PlayerState.TakeAwayWeapons(ref playerPed, true);
                     })
                 },
                 {

@@ -97,7 +97,7 @@ namespace SurviveTheHuntClient
 
                 // Reset the player's weapons.
                 Ped playerPed = Game.PlayerPed;
-                playerState.TakeAwayWeapons(ref playerPed, true);
+                playerState.TakeAwayWeapons(ref playerPed);
             }
 
             /// <summary>
