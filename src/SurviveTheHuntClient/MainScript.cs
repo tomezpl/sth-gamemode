@@ -319,6 +319,9 @@ namespace SurviveTheHuntClient
 
                         GameState.CurrentObjective = "Survive";
                         PlayerState.Team = Teams.Team.Hunted;
+
+                        Ped playerPed = Game.PlayerPed;
+                        PlayerState.TakeAwayWeapons(ref playerPed);
                     })
                 },
                 {
@@ -340,6 +343,8 @@ namespace SurviveTheHuntClient
                         // TODO: Shouldn't current objective technically be player state?
                         GameState.CurrentObjective = " is the hunted! Track them down.";
                         PlayerState.Team = Teams.Team.Hunters;
+
+                        PlayerState.TakeAwayWeapons(ref playerPed);
                     })
                 },
                 {
