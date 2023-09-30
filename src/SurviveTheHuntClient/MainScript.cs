@@ -47,7 +47,7 @@ namespace SurviveTheHuntClient
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
-            EventHandlers["onClientResourceStart"] += new Action(OnClientResourceStart);
+            EventHandlers["onClientResourceStart"] += new Action<string>(OnClientResourceStart);
             EventHandlers["onResourceStopping"] += new Action<string>(OnResourceStopping);
 
             CreateEvents();
@@ -97,29 +97,32 @@ namespace SurviveTheHuntClient
             Tick += UpdateLoop;
         }
 
-        private void OnClientResourceStart()
+        private void OnClientResourceStart(string resource)
         {
-            RegisterCommand("suicide", new Action(() => 
+            if (resource == Constants.ResourceName)
             {
-                Game.PlayerPed.HealthFloat = 0f;
-                TriggerEvent("baseevents:onPlayerKilled");
-            }), false);
+                RegisterCommand("suicide", new Action(() =>
+                {
+                    Game.PlayerPed.HealthFloat = 0f;
+                    TriggerEvent("baseevents:onPlayerKilled");
+                }), false);
 
-            RegisterCommand("starthunt", new Action(() =>
-            {
-                TriggerServerEvent("sth:startHunt");
-            }), false);
+                RegisterCommand("starthunt", new Action(() =>
+                {
+                    TriggerServerEvent("sth:startHunt");
+                }), false);
 
-            RegisterCommand("spawncars", new Action(() =>
-            {
-                SpawnCars();
-            }), false);
+                RegisterCommand("spawncars", new Action(() =>
+                {
+                    SpawnCars();
+                }), false);
 
-            Vector3 spawn = Constants.DockSpawn;
-            ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
+                Vector3 spawn = Constants.DockSpawn;
+                ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
 
-            // Notify the server this client has started so the config can be sent down. This is needed for resource restarts etc.
-            TriggerServerEvent("sth:clientStarted");
+                // Notify the server this client has started so the config can be sent down. This is needed for resource restarts etc.
+                TriggerServerEvent("sth:clientStarted");
+            }
         }
 
         /// <summary>
