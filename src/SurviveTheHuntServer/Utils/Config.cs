@@ -48,6 +48,12 @@ namespace SurviveTheHuntServer.Utils
         private TeamWeaponLoadouts _weaponLoadouts = null;
         public TeamWeaponLoadouts WeaponLoadouts { get => _weaponLoadouts; }
 
+        /// <summary>
+        /// Speed at which config data should be sent. 
+        /// Not a scientific measurement but should be enough to broadcast the loadout config in its current form in under a second. Tweak as needed.
+        /// </summary>
+        public const int ConfigBroadcastBytesPerSec = 256;
+
         public const string ReceiveConfigEvent = "sth:receiveConfig";
 
         public struct Serialized
@@ -91,13 +97,13 @@ namespace SurviveTheHuntServer {
         public void BroadcastConfig(Utils.Config config)
         {
             Debug.WriteLine("Sending serialized config to players");
-            TriggerClientEvent(Utils.Config.ReceiveConfigEvent, config.Serialize().EventParams);
+            TriggerLatentClientEvent(Utils.Config.ReceiveConfigEvent, Utils.Config.ConfigBroadcastBytesPerSec, config.Serialize().EventParams);
         }
 
         public void BroadcastConfig(Player player, Utils.Config config)
         {
             Debug.WriteLine($"Sending serialized config to player {player.Name}");
-            TriggerClientEvent(player, Utils.Config.ReceiveConfigEvent, config.Serialize().EventParams);
+            TriggerLatentClientEvent(player, Utils.Config.ReceiveConfigEvent, Utils.Config.ConfigBroadcastBytesPerSec, config.Serialize().EventParams);
         }
     }
 }
