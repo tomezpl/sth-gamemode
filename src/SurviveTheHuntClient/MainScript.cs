@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -406,32 +407,35 @@ namespace SurviveTheHuntClient
                 }
             };
 
-            EventHandlers["sth:receiveConfig"] += new Action<string, string>((weaponsHunters, weaponsHunted) =>
+            EventHandlers["sth:receiveConfig"] += new Action<byte[], byte[]>((weaponsHunters, weaponsHunted) =>
             {
                 Debug.WriteLine("sth:receiveConfig received!");
 
-                Debug.WriteLine($"hunters weapons: {weaponsHunters}");
-
-                Debug.WriteLine($"hunted weapons: {weaponsHunted}");
-
-                Func<string, uint[]> getUintTuple = (str) =>
+                Func<byte[], Weapons.WeaponAmmo[]> getWeapons = (weapons) =>
                 {
-                    string[] split = str.Split(':');
+                    Weapons.WeaponAmmo[] output = new Weapons.WeaponAmmo[weapons.Length / (sizeof(uint) + sizeof(ushort))];
+                    byte[] buffer = new byte[sizeof(uint) + sizeof(ushort)];
+                    using (MemoryStream ms = new MemoryStream(weapons, false))
+                    {
+                        while (ms.Position < ms.Length)
+                        {
+                            Array.Clear(buffer, 0, buffer.Length);
+                            long index = ms.Position / (sizeof(uint) + sizeof(ushort));
+                            ms.Read(buffer, 0, sizeof(uint));
+                            ms.Read(buffer, sizeof(uint), sizeof(ushort));
 
-                    return new uint[] { Convert.ToUInt32(split[0]), Convert.ToUInt32(split[1]) };
+                            output[index] = new Weapons.WeaponAmmo(BitConverter.ToUInt32(buffer, 0), BitConverter.ToUInt16(buffer, sizeof(uint)));
+                        }
+                    }
+
+                    return output;
                 };
-
-                ConfigPayload config = new ConfigPayload()
-                { 
-                    WeaponsHunted = weaponsHunted.Split(';').SelectMany(getUintTuple).ToArray(),
-                    WeaponsHunters = weaponsHunters.Split(';').SelectMany(getUintTuple).ToArray()
-                };
-
-                Debug.WriteLine("got config!");
 
                 Weapons.WeaponAmmo[]
-                    hunters = Weapons.UnpackLoadout(config.WeaponsHunters),
-                    hunted = Weapons.UnpackLoadout(config.WeaponsHunted);
+                    hunters = getWeapons(weaponsHunters),
+                    hunted = getWeapons(weaponsHunted);
+
+                Debug.WriteLine("parsed weapons config!");
 
                 // TODO: this is incredibly gash, it'll need refactoring. Why do we store weapons in a dictionary anyway
                 Func<Weapons.WeaponAmmo, WeaponAsset> keySelector = new Func<Weapons.WeaponAmmo, WeaponAsset>((weapon) => new WeaponAsset(weapon.Hash));

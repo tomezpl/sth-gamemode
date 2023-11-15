@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,24 +16,28 @@ namespace SurviveTheHuntServer.Utils
             [JsonProperty("weaponAmmo")]
             public Dictionary<string, ushort> WeaponAmmo = new Dictionary<string, ushort>();
 
-            public string Serialize()
+            public byte[] Serialize()
             {
-                StringBuilder sb = new StringBuilder();
+                byte[] serialized = new byte[WeaponAmmo.Count * (sizeof(uint) + sizeof(ushort))];
 
-                foreach (KeyValuePair<string, ushort> weapon in WeaponAmmo)
+                using (MemoryStream ms = new MemoryStream(serialized, true))
                 {
-                    // Weapon hash is first
-                    sb.Append(Constants.WeaponHashes[weapon.Key]);
-                    sb.Append(":");
-                    // Ammo count is second
-                    sb.Append(weapon.Value);
-                    sb.Append(";");
+                    foreach (KeyValuePair<string, ushort> weapon in WeaponAmmo)
+                    {
+                        // Weapon hash is first
+                        ms.Write(BitConverter.GetBytes(Constants.WeaponHashes[weapon.Key]), 0, sizeof(uint));
+                        // Ammo count is second
+                        ms.Write(BitConverter.GetBytes(weapon.Value), 0, sizeof(ushort));
+
+                        Debug.WriteLine($"{Constants.WeaponHashes[weapon.Key]:X}: {weapon.Value:X}");
+                    }
+                    Debug.WriteLine($"Written ${ms.Position} bytes");
                 }
 
-                // Remove the trailing semicolon
-                sb.Length -= 1;
+                Debug.WriteLine($"Encoded: {Encoding.UTF8.GetString(serialized)}");
+                Debug.WriteLine($"{serialized.Length} bytes");
 
-                return sb.ToString();
+                return serialized;
             }
         }
 
@@ -58,8 +63,8 @@ namespace SurviveTheHuntServer.Utils
 
         public struct Serialized
         {
-            public string WeaponsHunted;
-            public string WeaponsHunters;
+            public byte[] WeaponsHunted;
+            public byte[] WeaponsHunters;
 
             public Serialized(TeamWeaponLoadouts.WeaponLoadout huntersLoadout, TeamWeaponLoadouts.WeaponLoadout huntedLoadout)
             {
