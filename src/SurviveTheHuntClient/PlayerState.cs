@@ -89,6 +89,7 @@ namespace SurviveTheHuntClient
             RemoveAllPedWeapons(playerPed.Handle, true);
 
             WeaponsGiven = false;
+            ForcedUnarmed = false;
         }
 
         /// <summary>
