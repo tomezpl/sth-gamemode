@@ -107,7 +107,7 @@ namespace SurviveTheHuntClient
             // We need to check that the resource name is sth-gamemode so we only perform init once!
             if (resource == Constants.ResourceName)
             {
-                RegisterCommand("suicide", new Action(() =>
+                RegisterCommand("respawn", new Action(() =>
                 {
                     Game.PlayerPed.HealthFloat = 0f;
                     TriggerEvent("baseevents:onPlayerKilled");
