@@ -62,10 +62,12 @@ namespace SurviveTheHuntClient
 
         protected void OnResourceStopping(string resourceName)
         {
+            // Only perform cleanup if the resource stopped was sth-gamemode.
             if(GetCurrentResourceName() != resourceName)
             {
                 return;
             }
+
             foreach (Vehicle vehicleToDelete in SpawnedVehicles)
             {
                 vehicleToDelete.Delete();
@@ -83,6 +85,7 @@ namespace SurviveTheHuntClient
 
         protected void OnClientGameTypeStart(string resourceName)
         {
+            // Since this event fires for several resources, not just the one from the current script, terminate early to avoid re-doing the init.
             if(GetCurrentResourceName() != resourceName)
             {
                 return;
@@ -100,6 +103,8 @@ namespace SurviveTheHuntClient
 
         private void OnClientResourceStart(string resource)
         {
+            // This event is fired for every client resource started.
+            // We need to check that the resource name is sth-gamemode so we only perform init once!
             if (resource == Constants.ResourceName)
             {
                 RegisterCommand("suicide", new Action(() =>
@@ -407,23 +412,34 @@ namespace SurviveTheHuntClient
                 }
             };
 
+            // Event handler for gamemode config being sent by the server.
             EventHandlers["sth:receiveConfig"] += new Action<byte[], byte[]>((weaponsHunters, weaponsHunted) =>
             {
                 Debug.WriteLine("sth:receiveConfig received!");
 
+                // The weapons are sent as byte arrays, and therefore need to be deserialized into WeaponAmmo objects
                 Func<byte[], Weapons.WeaponAmmo[]> getWeapons = (weapons) =>
                 {
                     Weapons.WeaponAmmo[] output = new Weapons.WeaponAmmo[weapons.Length / (sizeof(uint) + sizeof(ushort))];
+                 
+                    // Each weapon is uint hash followed by ushort ammo count.
                     byte[] buffer = new byte[sizeof(uint) + sizeof(ushort)];
                     using (MemoryStream ms = new MemoryStream(weapons, false))
                     {
                         while (ms.Position < ms.Length)
                         {
+                            // Zero the buffer.
                             Array.Clear(buffer, 0, buffer.Length);
+
+                            // Get the weapon index based on the position in the byte array.
                             long index = ms.Position / (sizeof(uint) + sizeof(ushort));
+
+                            // Read the weapon hash.
                             ms.Read(buffer, 0, sizeof(uint));
+                            // Read the ammo count.
                             ms.Read(buffer, sizeof(uint), sizeof(ushort));
 
+                            // Store the weapon hash and ammo count in a WeaponAmmo object.
                             output[index] = new Weapons.WeaponAmmo(BitConverter.ToUInt32(buffer, 0), BitConverter.ToUInt16(buffer, sizeof(uint)));
                         }
                     }
