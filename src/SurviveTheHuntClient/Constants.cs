@@ -53,24 +53,13 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Weapon loadouts for each team.
         /// </summary>
-        public static Dictionary<Teams.Team, Dictionary<WeaponAsset, int>> WeaponLoadouts = new Dictionary<Teams.Team, Dictionary<WeaponAsset, int>>
+        public static Dictionary<Teams.Team, Weapons.WeaponAmmo[]> WeaponLoadouts = new Dictionary<Teams.Team, Weapons.WeaponAmmo[]>
         {
             {
-                Teams.Team.Hunters, new Dictionary<WeaponAsset, int>
-                {
-                    { new WeaponAsset(WeaponHash.PistolMk2), 9999 },
-                    { new WeaponAsset(WeaponHash.PumpShotgunMk2), 9999 }
-                }
+                Teams.Team.Hunters, new Weapons.WeaponAmmo[0]
             },
             {
-                Teams.Team.Hunted, new Dictionary<WeaponAsset, int>
-                {
-                    {new WeaponAsset(WeaponHash.APPistol), 9999 },
-                    {new WeaponAsset(WeaponHash.CarbineRifleMk2), 9999 },
-                    {new WeaponAsset(WeaponHash.StickyBomb), 25 },
-                    {new WeaponAsset(WeaponHash.RPG), 25 },
-                    {new WeaponAsset(WeaponHash.AssaultShotgun), 9999 }
-                }
+                Teams.Team.Hunted, new Weapons.WeaponAmmo[0]
             }
         };
 

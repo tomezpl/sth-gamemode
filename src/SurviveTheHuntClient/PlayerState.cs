@@ -101,12 +101,10 @@ namespace SurviveTheHuntClient
             // First remove the existing weapons.
             RemoveAllPedWeapons(playerPed.Handle, false);
 
-            Dictionary<WeaponAsset, int> weapons = Constants.WeaponLoadouts[Team];
-
-            foreach(KeyValuePair<WeaponAsset, int> weapon in weapons)
+            foreach(Weapons.WeaponAmmo weapon in Constants.WeaponLoadouts[Team])
             {
-                bool equip = weapon.Key.Hash == LastWeaponEquipped;
-                GiveWeaponToPed(playerPed.Handle, (uint)weapon.Key.Hash, weapon.Value, false, equip);
+                bool equip = weapon.Hash == LastWeaponEquipped;
+                GiveWeaponToPed(playerPed.Handle, weapon.Hash, weapon.Ammo, false, equip);
             }
 
             WeaponsGiven = true;
