@@ -85,8 +85,6 @@ namespace SurviveTheHuntServer
                 Console.WriteLine($"{player.Name} is joining; syncing time offset now.");
                 TriggerClientEvent(player, "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
 
-                BroadcastConfig(player, Config);
-
                 HuntedPlayerQueue.AddPlayer(player);
             }
         }
