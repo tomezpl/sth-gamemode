@@ -53,24 +53,13 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Weapon loadouts for each team.
         /// </summary>
-        public static readonly Dictionary<Teams.Team, KeyValuePair<WeaponAsset, int>[]> WeaponLoadouts = new Dictionary<Teams.Team, KeyValuePair<WeaponAsset, int>[]>
+        public static Dictionary<Teams.Team, Weapons.WeaponAmmo[]> WeaponLoadouts = new Dictionary<Teams.Team, Weapons.WeaponAmmo[]>
         {
             {
-                Teams.Team.Hunters, new KeyValuePair<WeaponAsset, int>[]
-                {
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.PistolMk2), 9999),
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.PumpShotgunMk2), 9999)
-                }
+                Teams.Team.Hunters, new Weapons.WeaponAmmo[0]
             },
             {
-                Teams.Team.Hunted, new KeyValuePair<WeaponAsset, int>[]
-                {
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.APPistol), 9999),
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.CarbineRifleMk2), 9999),
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.StickyBomb), 25),
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.RPG), 25),
-                    new KeyValuePair<WeaponAsset, int>(new WeaponAsset(WeaponHash.AssaultShotgun), 9999)
-                }
+                Teams.Team.Hunted, new Weapons.WeaponAmmo[0]
             }
         };
 
@@ -165,5 +154,10 @@ namespace SurviveTheHuntClient
             new Coord() { Position = new Vector3(822.22f, -3143.73f, 5.9f), Heading = 0f }, // 25
             new Coord() { Position = new Vector3(818.22f, -3143.73f, 5.9f), Heading = 0f }  // 26
         };
+
+        /// <summary>
+        /// The expected resource name for this gamemode.
+        /// </summary>
+        public const string ResourceName = "sth-gamemode";
     }
 }

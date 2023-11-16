@@ -7,14 +7,13 @@ using System.Threading.Tasks;
 
 using CitizenFX.Core;
 using SurviveTheHuntServer.Helpers;
+using SurviveTheHuntServer.Utils;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntServer
 {
-    public class MainScript : BaseScript
+    public partial class MainScript : BaseScript
     {
-        private const string ResourceName = "sth-gamemode";
-
         protected GameState GameState = new GameState();
 
         private readonly Random RNG = new Random();
@@ -31,13 +30,15 @@ namespace SurviveTheHuntServer
 
         private readonly HuntedQueue HuntedPlayerQueue = null;
 
+        private readonly Config Config = null;
+
         public MainScript()
         {
-            if (GetCurrentResourceName() != ResourceName)
+            if (GetCurrentResourceName() != Constants.ResourceName)
             {
                 try
                 {
-                    throw new Exception($"Survive the Hunt: Invalid resource name! Resource name should be {ResourceName}");
+                    throw new Exception($"Survive the Hunt: Invalid resource name! Resource name should be {Constants.ResourceName}");
                 }
                 catch (Exception e)
                 {
@@ -46,6 +47,10 @@ namespace SurviveTheHuntServer
             }
             else
             {
+                EventHandlers["onServerResourceStart"] += new Action<string>(OnServerResourceStart);
+                EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
+                EventHandlers["playerDropped"] += new Action<Player, string>(PlayerDisconnected);
+
                 CreateEvents();
 
                 foreach (KeyValuePair<string, Action<dynamic>> ev in STHEvents)
@@ -53,12 +58,14 @@ namespace SurviveTheHuntServer
                     EventHandlers[$"sth:{ev.Key}"] += ev.Value;
                 }
 
-                EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
-                EventHandlers["playerDropped"] += new Action<Player, string>(PlayerDisconnected);
+                EventHandlers["sth:clientStarted"] += new Action<Player>(ClientStarted);
 
                 Tick += UpdateLoop;
 
                 HuntedPlayerQueue = Hunt.InitHuntedQueue(Players);
+
+                Config = new Config();
+                BroadcastConfig(Config);
             }
         }
 
@@ -77,7 +84,7 @@ namespace SurviveTheHuntServer
             {
                 Console.WriteLine($"{player.Name} is joining; syncing time offset now.");
                 TriggerClientEvent(player, "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
-                
+
                 HuntedPlayerQueue.AddPlayer(player);
             }
         }
