@@ -350,7 +350,7 @@ namespace SurviveTheHuntClient
                 // Creates overhead player name labels if need be.
                 if (!IsMpGamerTagActive(player.Handle))
                 {
-                    Debug.WriteLine($"Creating GamerTag for {player.Name}");
+                    //Debug.WriteLine($"Creating GamerTag for {player.Name}");
                     CreateMpGamerTagWithCrewColor(player.Handle, player.Name, false, false, "", 0, 0, 0, 0);
                 }
 
@@ -421,7 +421,7 @@ namespace SurviveTheHuntClient
                 Blip blip = PlayerBlips[ped].blip;
                 blip.Delete();
                 int id = PlayerBlips[ped].id;
-                Debug.WriteLine($"Removing GamerTag from {new Player(id).Name}");
+                //Debug.WriteLine($"Removing GamerTag from {new Player(id).Name}");
                 RemoveMpGamerTag(id);
                 PlayerBlips.Remove(ped);
             }

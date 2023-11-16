@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -47,7 +48,7 @@ namespace SurviveTheHuntClient
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
-            EventHandlers["onClientResourceStart"] += new Action(OnClientResourceStart);
+            EventHandlers["onClientResourceStart"] += new Action<string>(OnClientResourceStart);
             EventHandlers["onResourceStopping"] += new Action<string>(OnResourceStopping);
 
             CreateEvents();
@@ -61,10 +62,12 @@ namespace SurviveTheHuntClient
 
         protected void OnResourceStopping(string resourceName)
         {
+            // Only perform cleanup if the resource stopped was sth-gamemode.
             if(GetCurrentResourceName() != resourceName)
             {
                 return;
             }
+
             foreach (Vehicle vehicleToDelete in SpawnedVehicles)
             {
                 vehicleToDelete.Delete();
@@ -82,6 +85,7 @@ namespace SurviveTheHuntClient
 
         protected void OnClientGameTypeStart(string resourceName)
         {
+            // Since this event fires for several resources, not just the one from the current script, terminate early to avoid re-doing the init.
             if(GetCurrentResourceName() != resourceName)
             {
                 return;
@@ -97,26 +101,34 @@ namespace SurviveTheHuntClient
             Tick += UpdateLoop;
         }
 
-        private void OnClientResourceStart()
+        private void OnClientResourceStart(string resource)
         {
-            RegisterCommand("suicide", new Action(() => 
+            // This event is fired for every client resource started.
+            // We need to check that the resource name is sth-gamemode so we only perform init once!
+            if (resource == Constants.ResourceName)
             {
-                Game.PlayerPed.HealthFloat = 0f;
-                TriggerEvent("baseevents:onPlayerKilled");
-            }), false);
+                RegisterCommand("suicide", new Action(() =>
+                {
+                    Game.PlayerPed.HealthFloat = 0f;
+                    TriggerEvent("baseevents:onPlayerKilled");
+                }), false);
 
-            RegisterCommand("starthunt", new Action(() =>
-            {
-                TriggerServerEvent("sth:startHunt");
-            }), false);
+                RegisterCommand("starthunt", new Action(() =>
+                {
+                    TriggerServerEvent("sth:startHunt");
+                }), false);
 
-            RegisterCommand("spawncars", new Action(() =>
-            {
-                SpawnCars();
-            }), false);
+                RegisterCommand("spawncars", new Action(() =>
+                {
+                    SpawnCars();
+                }), false);
 
-            Vector3 spawn = Constants.DockSpawn;
-            ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
+                Vector3 spawn = Constants.DockSpawn;
+                ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
+
+                // Notify the server this client has started so the config can be sent down. This is needed for resource restarts etc.
+                TriggerServerEvent("sth:clientStarted");
+            }
         }
 
         /// <summary>
@@ -205,7 +217,7 @@ namespace SurviveTheHuntClient
 
             // Indicate that weapons need to be given to the player again.
             PlayerState.WeaponsGiven = false;
-            PlayerState.LastWeaponEquipped = new WeaponAsset(WeaponHash.Unarmed).Hash;
+            PlayerState.ForcedUnarmed = false;
 
             TriggerServerEvent("sth:cleanClothes", new { PlayerId = GetPlayerServerId(PlayerId()) });
 
@@ -316,6 +328,9 @@ namespace SurviveTheHuntClient
 
                         GameState.CurrentObjective = "Survive";
                         PlayerState.Team = Teams.Team.Hunted;
+
+                        Ped playerPed = Game.PlayerPed;
+                        PlayerState.TakeAwayWeapons(ref playerPed);
                     })
                 },
                 {
@@ -330,7 +345,6 @@ namespace SurviveTheHuntClient
                         }
 
                         Ped playerPed = Game.PlayerPed;
-                        PlayerState.TakeAwayWeapons(ref playerPed);
 
                         GameState.Hunt.IsStarted = true;
                         GameState.Hunt.HuntedPlayer = Players[huntedPlayerName];
@@ -338,6 +352,8 @@ namespace SurviveTheHuntClient
                         // TODO: Shouldn't current objective technically be player state?
                         GameState.CurrentObjective = " is the hunted! Track them down.";
                         PlayerState.Team = Teams.Team.Hunters;
+
+                        PlayerState.TakeAwayWeapons(ref playerPed);
                     })
                 },
                 {
@@ -365,7 +381,6 @@ namespace SurviveTheHuntClient
                         GameState.Hunt.InitialEndTime = endTime;
                         HuntUI.DisplayObjective(ref GameState, ref PlayerState);
                         Ped playerPed = Game.PlayerPed;
-                        PlayerState.TakeAwayWeapons(ref playerPed, true);
                     })
                 },
                 {
@@ -396,6 +411,51 @@ namespace SurviveTheHuntClient
                     })
                 }
             };
+
+            // Event handler for gamemode config being sent by the server.
+            EventHandlers["sth:receiveConfig"] += new Action<byte[], byte[]>((weaponsHunters, weaponsHunted) =>
+            {
+                Debug.WriteLine("sth:receiveConfig received!");
+
+                // The weapons are sent as byte arrays, and therefore need to be deserialized into WeaponAmmo objects
+                Func<byte[], Weapons.WeaponAmmo[]> getWeapons = (weapons) =>
+                {
+                    Weapons.WeaponAmmo[] output = new Weapons.WeaponAmmo[weapons.Length / (sizeof(uint) + sizeof(ushort))];
+                 
+                    // Each weapon is uint hash followed by ushort ammo count.
+                    byte[] buffer = new byte[sizeof(uint) + sizeof(ushort)];
+                    using (MemoryStream ms = new MemoryStream(weapons, false))
+                    {
+                        while (ms.Position < ms.Length)
+                        {
+                            // Zero the buffer.
+                            Array.Clear(buffer, 0, buffer.Length);
+
+                            // Get the weapon index based on the position in the byte array.
+                            long index = ms.Position / (sizeof(uint) + sizeof(ushort));
+
+                            // Read the weapon hash.
+                            ms.Read(buffer, 0, sizeof(uint));
+                            // Read the ammo count.
+                            ms.Read(buffer, sizeof(uint), sizeof(ushort));
+
+                            // Store the weapon hash and ammo count in a WeaponAmmo object.
+                            output[index] = new Weapons.WeaponAmmo(BitConverter.ToUInt32(buffer, 0), BitConverter.ToUInt16(buffer, sizeof(uint)));
+                        }
+                    }
+
+                    return output;
+                };
+
+                Weapons.WeaponAmmo[]
+                    hunters = getWeapons(weaponsHunters),
+                    hunted = getWeapons(weaponsHunted);
+
+                Debug.WriteLine("parsed weapons config!");
+
+                Constants.WeaponLoadouts[Teams.Team.Hunters] = hunters;
+                Constants.WeaponLoadouts[Teams.Team.Hunted] = hunted;
+            });
 
             EventHandlers["sth:markPlayerDeath"] += new Action<float, float, float>((deathPosX, deathPosY, deathPosZ) =>
             {
