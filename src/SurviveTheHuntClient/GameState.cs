@@ -120,7 +120,7 @@ namespace SurviveTheHuntClient
                 // If the mugshot texture has been unregistered, generate a new one.
                 if (HuntedPlayerMugshot == null)
                 {
-                    HuntedPlayerMugshot = new Texture() { Id = RegisterPedheadshotTransparent(HuntedPlayer.Character.Handle) };
+                    HuntedPlayerMugshot = new Texture() { Id = RegisterPedheadshot(HuntedPlayer.Character.Handle) };
                     LastHuntedMugshotGeneration = Utility.CurrentTime;
                 }
 
