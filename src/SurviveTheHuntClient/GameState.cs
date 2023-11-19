@@ -60,6 +60,11 @@ namespace SurviveTheHuntClient
             public DateTime LastHuntedMugshotGeneration { get; set; } = Utility.CurrentTime;
 
             /// <summary>
+            /// Expected time for the next ping.
+            /// </summary>
+            public DateTime NextMugshotTime { get; set; } = Utility.CurrentTime;
+
+            /// <summary>
             /// Time when hunt is meant to end & state be reset.
             /// This includes the delay for displaying the win/loss text.
             /// </summary>
@@ -111,16 +116,21 @@ namespace SurviveTheHuntClient
                 }
 
                 // If the mugshot texture requires regeneration, unregister it.
-                if(HuntedPlayerMugshot != null && Utility.CurrentTime - LastHuntedMugshotGeneration >= Constants.MugshotGenerationInterval)
+                if(HuntedPlayerMugshot != null && Utility.CurrentTime >= NextMugshotTime - Constants.MugshotGenerationTimeout)
                 {
                     UnregisterPedheadshot(HuntedPlayerMugshot.Id);
                     HuntedPlayerMugshot = null;
+
+                    // "Predict" the next mugshot time for now (the actual time will be sent down from the server in an event, but it's a fixed interval)
+                    // This is just to prevent the mugshot being re-registered on every tick (that would be bad...)
+                    NextMugshotTime = NextMugshotTime + (NextMugshotTime - LastHuntedMugshotGeneration);
                 }
 
                 // If the mugshot texture has been unregistered, generate a new one.
                 if (HuntedPlayerMugshot == null)
                 {
-                    HuntedPlayerMugshot = new Texture() { Id = RegisterPedheadshotTransparent(HuntedPlayer.Character.Handle) };
+                    Debug.WriteLine("Generating a mugshot!");
+                    HuntedPlayerMugshot = new Texture() { Id = RegisterPedheadshot(HuntedPlayer.Character.Handle) };
                     LastHuntedMugshotGeneration = Utility.CurrentTime;
                 }
 

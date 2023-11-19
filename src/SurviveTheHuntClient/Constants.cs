@@ -41,9 +41,9 @@ namespace SurviveTheHuntClient
         public static readonly float OutOfBoundsYLimit = 1130f;
 
         /// <summary>
-        /// How often should the player mugshot textures be regenerated.
+        /// How long before a ping should the mugshot be generated?
         /// </summary>
-        public static readonly TimeSpan MugshotGenerationInterval = TimeSpan.FromSeconds(30);
+        public static readonly TimeSpan MugshotGenerationTimeout = TimeSpan.FromSeconds(10);
 
         /// <summary>
         /// Amount of time (in seconds) a player's death blip stays on the map.
