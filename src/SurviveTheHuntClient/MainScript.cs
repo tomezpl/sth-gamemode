@@ -376,6 +376,9 @@ namespace SurviveTheHuntClient
                 {
                     "huntStartedByServer", new Action<dynamic>(data =>
                     {
+                        float secondsTillPing = data.NextNotification;
+                        GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(secondsTillPing);
+
                         string endTimeStr = data.EndTime;
                         DateTime endTime = DateTime.ParseExact(endTimeStr, "F", CultureInfo.InvariantCulture);
                         GameState.Hunt.InitialEndTime = endTime;
@@ -399,6 +402,8 @@ namespace SurviveTheHuntClient
                     "notifyAboutHuntedZone", new Action<dynamic>(data =>
                     {
                         string playerName = data.PlayerName;
+                        float nextNotificationTimeout = data.NextNotification;
+                        GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(nextNotificationTimeout);
                         HuntUI.NotifyAboutHuntedZone(Players[playerName], data.Position, ref GameState);
                     })
                 },
