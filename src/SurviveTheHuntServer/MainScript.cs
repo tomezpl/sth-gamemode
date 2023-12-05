@@ -6,14 +6,14 @@ using System.Text;
 using System.Threading.Tasks;
 
 using CitizenFX.Core;
+using SurviveTheHuntServer.Helpers;
+using SurviveTheHuntServer.Utils;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntServer
 {
-    public class MainScript : BaseScript
+    public partial class MainScript : BaseScript
     {
-        private const string ResourceName = "sth-gamemode";
-
         protected GameState GameState = new GameState();
 
         private readonly Random RNG = new Random();
@@ -28,13 +28,17 @@ namespace SurviveTheHuntServer
         /// </summary>
         protected Dictionary<string, Action<dynamic>> STHEvents;
 
+        private readonly HuntedQueue HuntedPlayerQueue = null;
+
+        private readonly Config Config = null;
+
         public MainScript()
         {
-            if (GetCurrentResourceName() != ResourceName)
+            if (GetCurrentResourceName() != Constants.ResourceName)
             {
                 try
                 {
-                    throw new Exception($"Survive the Hunt: Invalid resource name! Resource name should be {ResourceName}");
+                    throw new Exception($"Survive the Hunt: Invalid resource name! Resource name should be {Constants.ResourceName}");
                 }
                 catch (Exception e)
                 {
@@ -43,6 +47,10 @@ namespace SurviveTheHuntServer
             }
             else
             {
+                EventHandlers["onServerResourceStart"] += new Action<string>(OnServerResourceStart);
+                EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
+                EventHandlers["playerDropped"] += new Action<Player, string>(PlayerDisconnected);
+
                 CreateEvents();
 
                 foreach (KeyValuePair<string, Action<dynamic>> ev in STHEvents)
@@ -50,10 +58,20 @@ namespace SurviveTheHuntServer
                     EventHandlers[$"sth:{ev.Key}"] += ev.Value;
                 }
 
-                EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
+                EventHandlers["sth:clientStarted"] += new Action<Player>(ClientStarted);
 
                 Tick += UpdateLoop;
+
+                HuntedPlayerQueue = Hunt.InitHuntedQueue(Players);
+
+                Config = new Config();
+                BroadcastConfig(Config);
             }
+        }
+
+        protected void PlayerDisconnected([FromSource] Player player, string reason)
+        {
+            HuntedPlayerQueue.RemovePlayer(player);
         }
 
         protected void PlayerJoining([FromSource] Player player, string oldId)
@@ -66,6 +84,8 @@ namespace SurviveTheHuntServer
             {
                 Console.WriteLine($"{player.Name} is joining; syncing time offset now.");
                 TriggerClientEvent(player, "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
+
+                HuntedPlayerQueue.AddPlayer(player);
             }
         }
 
@@ -133,6 +153,7 @@ namespace SurviveTheHuntServer
                     "playerDied", new Action<dynamic>(data =>
                     {
                         int playerId = data.PlayerId;
+
                         Console.WriteLine($"Player died: {GetPlayerName($"{playerId}")}");
 
                         // Did the hunted player die?
@@ -140,6 +161,9 @@ namespace SurviveTheHuntServer
                         {
                             NotifyWinner();
                         }
+
+                        // Mark the player's death location with a blip for everyone.
+                        TriggerClientEvent("sth:markPlayerDeath", data.PlayerPosX, data.PlayerPosY, data.PlayerPosZ, data.PlayerTeam);
                     })
                 },
                 {
@@ -154,14 +178,14 @@ namespace SurviveTheHuntServer
 
                         GameState.Hunt.Begin(randomPlayer);
 
-                        TriggerClientEvent("sth:huntStartedByServer", new { EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture) });
+                        TriggerClientEvent("sth:huntStartedByServer", new { EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture), NextNotification = (float)Constants.HuntedPingInterval.TotalSeconds });
                     })
                 },
                 {
                     "broadcastHuntedZone", new Action<dynamic>(data =>
                     {
                         Vector3 pos = data.Position;
-                        TriggerClientEvent("sth:notifyAboutHuntedZone", new { PlayerName = GameState.Hunt.HuntedPlayer.Name, Position = pos });
+                        TriggerClientEvent("sth:notifyAboutHuntedZone", new { PlayerName = GameState.Hunt.HuntedPlayer.Name, Position = pos, NextNotification = (float)Constants.HuntedPingInterval.TotalSeconds });
                     })
                 }
             };

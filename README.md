@@ -22,7 +22,7 @@ Below are all commands made available by this script:
 * `/starthunt`
   * Entering this command will choose a random player and start a hunt session.
   * I recommend allowing the hunted player 1 minute from this point as a headstart.
-* `/suicide`
+* `/respawn`
   * Respawns the local player at the starting point.
 
 ### Setup
