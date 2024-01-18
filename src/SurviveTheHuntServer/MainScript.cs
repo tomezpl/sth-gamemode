@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using CitizenFX.Core;
+using CitizenFX.Core.Native;
 using SurviveTheHuntServer.Helpers;
 using SurviveTheHuntServer.Utils;
 using static CitizenFX.Core.Native.API;
@@ -14,9 +15,11 @@ namespace SurviveTheHuntServer
 {
     public partial class MainScript : BaseScript
     {
-        protected GameState GameState = new GameState();
+        private readonly Hunt Hunt;
 
-        private readonly Random RNG = new Random();
+        public readonly GameState GameState = new GameState();
+
+        public readonly Random RNG = new Random();
 
         /// <summary>
         /// UTC time when time was last synced with the clients (to prevent client-side timers desyncing).
@@ -31,6 +34,20 @@ namespace SurviveTheHuntServer
         private readonly HuntedQueue HuntedPlayerQueue = null;
 
         private readonly Config Config = null;
+
+        /// <summary>
+        /// Entities that are created by the server and should also be deleted via an RPC upon <see cref="Shutdown"/>.
+        /// </summary>
+        public readonly List<int> EntityHandles = new List<int>();
+
+        /// <summary>
+        /// Cars that have been spawned by the /spawncars command and need to be deleted the next time it's called.
+        /// </summary>
+        public readonly List<int> SpawnedVehicles = new List<int>();
+
+        private bool PendingDistanceCullRadiusReset = false;
+
+        private Player LastPlayerToSpawnCars = null;
 
         public MainScript()
         {
@@ -47,7 +64,10 @@ namespace SurviveTheHuntServer
             }
             else
             {
+                Hunt = new Hunt(Players);
+
                 EventHandlers["onServerResourceStart"] += new Action<string>(OnServerResourceStart);
+                EventHandlers["onServerResourceStop"] += new Action<string>(OnServerResourceStop);
                 EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
                 EventHandlers["playerDropped"] += new Action<Player, string>(PlayerDisconnected);
 
@@ -59,6 +79,8 @@ namespace SurviveTheHuntServer
                 }
 
                 EventHandlers["sth:clientStarted"] += new Action<Player>(ClientStarted);
+
+                EventHandlers["sth:spawnCars"] += new Action<Player>(SpawnCarsCommand);
 
                 Tick += UpdateLoop;
 
@@ -97,40 +119,118 @@ namespace SurviveTheHuntServer
                 LastTimeSync = DateTime.UtcNow;
             }
 
-            if (GameState.Hunt.IsStarted)
+            if(PendingDistanceCullRadiusReset)
             {
-                if (GameState.Hunt.EndTime <= DateTime.UtcNow)
+                Debug.WriteLine("SetEntityDistanceCullingRadius needs to be called again!");
+                foreach(int vehicle in SpawnedVehicles)
                 {
-                    GameState.Hunt.End(Teams.Team.Hunted);
-                    NotifyWinner();
+                    if(!DoesEntityExist(vehicle))
+                    {
+                        Debug.WriteLine($"Vehicle {vehicle} does not exist yet. Waiting up to 500ms...");
+                        for(int i = 0; i < 5 && !DoesEntityExist(vehicle); i++)
+                        {
+                            await Delay(100);
+                        }
+
+                        if(!DoesEntityExist(vehicle))
+                        {
+                            Debug.WriteLine($"After 500ms, {vehicle} still does not exist. This is bad!");
+                        }
+                    }
+
+                    if(DoesEntityExist(vehicle))
+                    {
+                        SetEntityDistanceCullingRadius(vehicle, float.MaxValue);
+                    }
                 }
 
-                if(DateTime.UtcNow - GameState.Hunt.LastPingTime >= Constants.HuntedPingInterval)
+                PendingDistanceCullRadiusReset = false;
+                
+                if (LastPlayerToSpawnCars != null)
                 {
-                    GameState.Hunt.LastPingTime = DateTime.UtcNow;
-                    float radius = 200f;
-                    float playerLocationRadius = radius * 0.875f;
-                    float offsetX = (((float)RNG.NextDouble() * 2f) - 1f) * playerLocationRadius;
-                    float offsetY = (((float)RNG.NextDouble() * 2f) - 1f) * playerLocationRadius;
-
-                    TriggerClientEvent("sth:showPingOnMap", new
-                    {
-                        CreationDate = GameState.Hunt.LastPingTime.ToString("F", CultureInfo.InvariantCulture),
-                        PlayerName = GameState.Hunt.HuntedPlayer.Name,
-                        Radius = radius,
-                        OffsetX = offsetX,
-                        OffsetY = offsetY
-                    });
+                    TriggerClientEvent(LastPlayerToSpawnCars, "sth:applyCarMods", SpawnedVehicles.Select(handle => NetworkGetNetworkIdFromEntity(handle)).ToArray());
                 }
             }
+
+            Hunt.Tick(this);
+        }
+
+        public void TriggerClientEventProxy(string eventName, params object[] args)
+        {
+            TriggerClientEvent(eventName, args);
+        }
+
+        public void TriggerClientEventProxy(Player player, string eventName, params object[] args)
+        {
+            TriggerClientEvent(player, eventName, args);
         }
 
         /// <summary>
         /// Notify players from the winning team that they won the game.
         /// </summary>
-        private void NotifyWinner()
+        public void NotifyWinner()
         {
             TriggerClientEvent("sth:notifyWinner", new { WinningTeam = (int)GameState.Hunt.WinningTeam });
+        }
+
+        private void SpawnCarsCommand([FromSource] Player source)
+        {
+            List<int> carsToSpawn = new List<int>(Constants.CarSpawnPoints.Length);
+
+            Debug.WriteLine("Getting hash keys");
+            List<int> spawnableCars = Constants.Vehicles.Select(vehName => GetHashKey(vehName)).ToList();
+
+            Debug.WriteLine("Picking random cars");
+            for (int i = 0; i < carsToSpawn.Capacity; i++)
+            {
+                int randomIndex = RNG.Next(0, spawnableCars.Count);
+                int randomVehicle = spawnableCars[randomIndex];
+                carsToSpawn.Add(randomVehicle);
+
+                spawnableCars.RemoveAt(randomIndex);
+            }
+
+            Debug.WriteLine("Removing already spawned vehicles.");
+            foreach (int vehicleToDelete in SpawnedVehicles)
+            {
+                if (DoesEntityExist(vehicleToDelete))
+                {
+                    DeleteEntity(vehicleToDelete);
+                }
+                EntityHandles.Remove(vehicleToDelete);
+            }
+            SpawnedVehicles.Clear();
+
+            int counter = 0;
+            //int[] spawnedEntities = new int[carsToSpawn.Count];
+            foreach (int vehicle in carsToSpawn)
+            {
+                Coord spawnPoint = Constants.CarSpawnPoints[counter];
+                Vector3 spawnPos = spawnPoint.Position;
+
+                Debug.WriteLine("Creating a vehicle");
+                int spawnedVehicle = CreateVehicle((uint)vehicle, spawnPos.X, spawnPos.Y, spawnPos.Z, spawnPoint.Heading, true, false);
+                SpawnedVehicles.Add(spawnedVehicle);
+                //spawnedEntities[counter] = Entity.FromNetworkId(spawnedVehicle).NetworkId;
+                Debug.WriteLine("Setting huge distance culling radius");
+                //SetEntityDistanceCullingRadius(spawnedVehicle, float.MaxValue);
+                
+                counter++;
+            }
+
+            LastPlayerToSpawnCars = source;
+
+            PendingDistanceCullRadiusReset = true;
+        }
+
+        private void Shutdown()
+        {
+            foreach(int entity in EntityHandles)
+            {
+                DeleteEntity(entity);
+            }
+
+            EntityHandles.Clear();
         }
 
         /// <summary>
@@ -157,7 +257,7 @@ namespace SurviveTheHuntServer
                         Console.WriteLine($"Player died: {GetPlayerName($"{playerId}")}");
 
                         // Did the hunted player die?
-                        if(Hunt.CheckPlayerDeath(Players[GetPlayerName($"{playerId}")], ref GameState))
+                        if(Hunt.CheckPlayerDeath(Players[GetPlayerName($"{playerId}")], GameState))
                         {
                             NotifyWinner();
                         }
@@ -169,7 +269,7 @@ namespace SurviveTheHuntServer
                 {
                     "startHunt", new Action<dynamic>(data =>
                     {
-                        Player randomPlayer = Hunt.ChooseRandomPlayer(Players, ref GameState);
+                        Player randomPlayer = Hunt.ChooseRandomPlayer(Players);
 
                         GameState.Hunt.LastHuntedPlayer = randomPlayer;
 

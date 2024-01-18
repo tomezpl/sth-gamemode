@@ -57,6 +57,8 @@ namespace SurviveTheHuntClient
                 EventHandlers[$"sth:{ev.Key}"] += ev.Value;
             }
 
+            EventHandlers["sth:applyCarMods"] += new Action<List<object>>(ApplyCarMods);
+
             DeathBlips = new DeathBlips(GetConvarInt("sth_deathbliplifespan", Constants.DefaultDeathBlipLifespan));
         }
 
@@ -120,7 +122,7 @@ namespace SurviveTheHuntClient
 
                 RegisterCommand("spawncars", new Action(() =>
                 {
-                    SpawnCars();
+                    TriggerServerEvent("sth:spawnCars");
                 }), false);
 
                 Vector3 spawn = Constants.DockSpawn;
@@ -132,71 +134,53 @@ namespace SurviveTheHuntClient
         }
 
         /// <summary>
-        /// Spawns random cars (picked from <see cref="Constants.Vehicles"/>) in the start area.
+        /// Applies random mods to cars spawned by the server in the start area after invoking the /spawncars command.
         /// </summary>
-        protected void SpawnCars()
+        protected void ApplyCarMods(List<object> cars)
         {
-            List<VehicleHash> carsToSpawn = new List<VehicleHash>(Constants.CarSpawnPoints.Length);
-
-            List<VehicleHash> spawnableCars = Constants.Vehicles.ToList();
-
-            for(int i = 0; i < carsToSpawn.Capacity; i++)
-            {
-                int randomIndex = RNG.Next(0, spawnableCars.Count);
-                VehicleHash randomVehicle = spawnableCars[randomIndex];
-                carsToSpawn.Add(randomVehicle);
-
-                spawnableCars.RemoveAt(randomIndex);
-            }
-
-            foreach(Vehicle vehicleToDelete in SpawnedVehicles)
-            {
-                vehicleToDelete.Delete();
-            }
-            SpawnedVehicles.Clear();
-
             int counter = 0;
-            foreach(VehicleHash vehicle in carsToSpawn)
+            Debug.WriteLine($"Spawned {cars.Count} cars");
+            foreach(int networkId in cars)
             {
-                if(!IsModelInCdimage((uint)vehicle) || !IsModelAVehicle((uint)vehicle))
+                Vehicle vehicle = new Vehicle(Entity.FromNetworkId(networkId).Handle);
+
+                if(!DoesEntityExist(vehicle.Handle))
                 {
-                    continue;
+                    Debug.WriteLine($"Vehicle {vehicle.Handle} does not exist yet!");
                 }
-                RequestModel((uint)vehicle);
-                Wait(50);
+                while (!DoesEntityExist(vehicle.Handle) && !HasVehicleAssetLoaded(vehicle.Model))
+                {
+                    RequestModel(vehicle.Model);
+                    Wait(50);
+                }
 
-                Coord spawnPoint = Constants.CarSpawnPoints[counter];
-                Vector3 spawnPos = spawnPoint.Position;
-
-                Vehicle spawnedVehicle = new Vehicle(CreateVehicle((uint)vehicle, spawnPos.X, spawnPos.Y, spawnPos.Z, spawnPoint.Heading, true, false));
-                SpawnedVehicles.Add(spawnedVehicle);
+                SetVehicleModKit(vehicle.Handle, 0);
 
                 // Set all vehicle mods to maximum.
                 for (int i = 0; i < 50; i++)
                 {
-                    int nbMods = GetNumVehicleMods(spawnedVehicle.Handle, i);
+                    int nbMods = GetNumVehicleMods(vehicle.Handle, i);
                     if(nbMods > 0)
                     {
-                        SetVehicleModKit(spawnedVehicle.Handle, i);
-                        SetVehicleMod(spawnedVehicle.Handle, i, nbMods - 1, false);
+                        SetVehicleMod(vehicle.Handle, i, nbMods - 1, false);
                     }
                 }
                 // Add neons.
                 for(int i = 0; i < 4; i++)
                 {
-                    SetVehicleNeonLightEnabled(spawnedVehicle.Handle, i, RNG.NextDouble() >= 0.5);
+                    SetVehicleNeonLightEnabled(vehicle.Handle, i, RNG.NextDouble() >= 0.5);
                 }
-                SetVehicleNeonLightsColour(spawnedVehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
-                SetVehicleXenonLightsColour(spawnedVehicle.Handle, RNG.Next(0, 12));
+                SetVehicleNeonLightsColour(vehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
+                SetVehicleXenonLightsColour(vehicle.Handle, RNG.Next(0, 12));
 
-                SetVehicleCustomPrimaryColour(spawnedVehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
-                SetVehicleCustomSecondaryColour(spawnedVehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
+                SetVehicleCustomPrimaryColour(vehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
+                SetVehicleCustomSecondaryColour(vehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
 
                 // lol
-                if(vehicle == VehicleHash.Bmx)
+                if(vehicle.Model.Hash == (uint)VehicleHash.Bmx)
                 {
-                    spawnedVehicle.EnginePowerMultiplier = 100f;
-                    spawnedVehicle.EngineTorqueMultiplier = 100f;
+                    vehicle.EnginePowerMultiplier = 100f;
+                    vehicle.EngineTorqueMultiplier = 100f;
                 }
 
                 counter++;

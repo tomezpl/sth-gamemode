@@ -1,4 +1,7 @@
-﻿using System;
+﻿using CitizenFX.Core;
+using CitizenFX.Core.Native;
+using SurviveTheHuntServer.Utils;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -151,6 +154,100 @@ namespace SurviveTheHuntServer
             {"weapon_fireextinguisher", 0x060EC506},
             {"weapon_hazardcan", 0xBA536372},
             {"weapon_fertilizercan", 0x184140A1}
+        };
+
+
+
+        /// <summary>
+        /// Vehicles that can be spawned.
+        /// </summary>
+        public static readonly string[] Vehicles = new string[]
+        {
+            "adder",
+            "banshee2",
+            "bati",
+            "bestiagts",
+            "bfinjection",
+            "bifta",
+            "blista",
+            "bmx",
+            "brawler",
+            "buffalo2",
+            "bullet",
+            "carbonizzare",
+            "casco",
+            "cheetah2",
+            "comet3",
+            "comet2",
+            "coquette3",
+            "dilettante",
+            "dubsta3",
+            "dukes2",
+            "elegy2",
+            "exemplar",
+            "entityxf",
+            "fugitive",
+            "furoregt",
+            "fusilade",
+            "gauntlet",
+            "hotknife",
+            "insurgent",
+            "khamelion",
+            "kuruma",
+            "massacro",
+            "mesa3",
+            "nightshade",
+            "ninef",
+            "panto",
+            "police",
+            "police2",
+            "rapidgt",
+            "riot",
+            "rocoto",
+            "sabregt2",
+            "seven70",
+            "sentinel2",
+            "shotaro",
+            "specter2",
+            "stingergt",
+            "sultanrs",
+            "t20",
+            "voltic2",
+            "zentorno",
+            "ztype"
+        };
+
+        /// <summary>
+        /// Locations for spawning cars in the spawn area.
+        /// </summary>
+        public static readonly Coord[] CarSpawnPoints = new Coord[]
+        {
+            new Coord() { Position = new Vector3(818.21f, -3128.38f, 5.9f), Heading = 180f }, // 1
+            new Coord() { Position = new Vector3(822.22f, -3129.37f, 5.9f), Heading = 180f }, // 2
+            new Coord() { Position = new Vector3(826.22f, -3129.37f, 5.9f), Heading = 180f }, // 3
+            new Coord() { Position = new Vector3(830.22f, -3129.37f, 5.9f), Heading = 180f }, // 4
+            new Coord() { Position = new Vector3(834.22f, -3129.37f, 5.9f), Heading = 180f }, // 5
+            new Coord() { Position = new Vector3(838.22f, -3129.37f, 5.9f), Heading = 180f }, // 6
+            new Coord() { Position = new Vector3(842.22f, -3129.37f, 5.9f), Heading = 180f }, // 7
+            new Coord() { Position = new Vector3(846.22f, -3129.37f, 5.9f), Heading = 180f }, // 8
+            new Coord() { Position = new Vector3(850.22f, -3129.37f, 5.9f), Heading = 180f }, // 9
+            new Coord() { Position = new Vector3(854.22f, -3129.37f, 5.9f), Heading = 180f }, // 10
+            new Coord() { Position = new Vector3(858.22f, -3129.37f, 5.9f), Heading = 180f }, // 11
+            new Coord() { Position = new Vector3(862.22f, -3129.37f, 5.9f), Heading = 180f }, // 12
+            new Coord() { Position = new Vector3(866.22f, -3129.37f, 5.9f), Heading = 180f }, // 13
+            new Coord() { Position = new Vector3(866.22f, -3143.73f, 5.9f), Heading = 0f }, // 14
+            new Coord() { Position = new Vector3(862.22f, -3143.73f, 5.9f), Heading = 0f }, // 15
+            new Coord() { Position = new Vector3(858.22f, -3143.73f, 5.9f), Heading = 0f }, // 16
+            new Coord() { Position = new Vector3(854.22f, -3143.73f, 5.9f), Heading = 0f }, // 17
+            new Coord() { Position = new Vector3(850.22f, -3143.73f, 5.9f), Heading = 0f }, // 18
+            new Coord() { Position = new Vector3(846.22f, -3143.73f, 5.9f), Heading = 0f }, // 19
+            new Coord() { Position = new Vector3(842.22f, -3143.73f, 5.9f), Heading = 0f }, // 20
+            new Coord() { Position = new Vector3(838.22f, -3143.73f, 5.9f), Heading = 0f }, // 21
+            new Coord() { Position = new Vector3(834.22f, -3143.73f, 5.9f), Heading = 0f }, // 22
+            new Coord() { Position = new Vector3(830.22f, -3143.73f, 5.9f), Heading = 0f }, // 23
+            new Coord() { Position = new Vector3(826.22f, -3143.73f, 5.9f), Heading = 0f }, // 24
+            new Coord() { Position = new Vector3(822.22f, -3143.73f, 5.9f), Heading = 0f }, // 25
+            new Coord() { Position = new Vector3(818.22f, -3143.73f, 5.9f), Heading = 0f }  // 26
         };
     }
 }

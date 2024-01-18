@@ -11,8 +11,18 @@ namespace SurviveTheHuntServer
 
             if(resourceName == Constants.ResourceName)
             {
+                Hunt.InitHuntedQueue(Players);
+
                 // Reload the config file every time the resource is started.
                 BroadcastConfig(Config.Init());
+            }
+        }
+
+        public void OnServerResourceStop(string resourceName)
+        {
+            if(resourceName == Constants.ResourceName)
+            {
+                Shutdown();
             }
         }
 
