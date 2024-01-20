@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - '*'
+      # why doesn't the above catch this?
+      - 'experimental/*'
     tags-ignore:
       - v*.*.*
 
