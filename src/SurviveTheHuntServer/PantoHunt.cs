@@ -93,13 +93,13 @@ namespace SurviveTheHuntServer
             for(int i = 1; i < spawns.Length; i++)
             {
                 // Narrow down the potential spawns to ones that are far enough away from each spawn we've chosen already.
-                potentialSpawns = potentialSpawns.Where((spawnPoint) => !spawns.Any((selectedSpawn) => selectedSpawn.Position.DistanceToSquared(spawnPoint.Position) < MinPantoDistance / minDistanceDenominator)).ToList();
+                potentialSpawns = potentialSpawns.Where((spawnPoint) => !spawns.Any((selectedSpawn) => selectedSpawn != null && selectedSpawn.Position.DistanceToSquared(spawnPoint.Position) < MinPantoDistance / minDistanceDenominator)).ToList();
 
                 // If there aren't any potential spawns far enough away, reinitialise the list but reduce the minimum distance.
                 while (!potentialSpawns.Any())
                 {
                     minDistanceDenominator++;
-                    potentialSpawns = PantoSpawns.Where((spawnPoint) => !spawns.Any((selectedSpawn) => selectedSpawn.Position.DistanceToSquared(spawnPoint.Position) < (MinPantoDistance / minDistanceDenominator))).ToList();
+                    potentialSpawns = PantoSpawns.Where((spawnPoint) => !spawns.Any((selectedSpawn) => selectedSpawn != null && selectedSpawn.Position.DistanceToSquared(spawnPoint.Position) < (MinPantoDistance / minDistanceDenominator))).ToList();
                 }
 
                 // Choose a random potential spawn that is far enough away from each spawn point we've chosen so far.
