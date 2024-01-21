@@ -408,15 +408,14 @@ namespace SurviveTheHuntClient
                 }
             };
 
-            EventHandlers["sth:markPantoAsDead"] += new Action<int>((pantoNetworkId) =>
+            EventHandlers["sth:markPantoAsDead"] += new Action<int, int>((pantoNetworkId, pantoIndex) =>
             {
                 int handle = NetworkGetEntityFromNetworkId(pantoNetworkId);
                 if (DoesEntityExist(handle))
                 {
                     int blip = GetBlipFromEntity(handle);
-                    int targetIndex = GetBlipSprite(blip) - 535;
                     SetBlipColour(blip, 39);
-                    char targetLetter = "ABCDEFGH"[targetIndex];
+                    char targetLetter = "ABCDEFGH"[pantoIndex];
                     AddTextEntry("PantoDeadNotif", $"Target {targetLetter} has been destroyed.");
                     BeginTextCommandDisplayHelp("PantoDeadNotif");
                     EndTextCommandDisplayHelp(0, false, true, 5000);

@@ -191,7 +191,7 @@ namespace SurviveTheHuntServer
                     int currentHealth = GetEntityHealth(PantoHandles[index]);
                     if(currentHealth <= 0 && health != 0)
                     {
-                        main.TriggerClientEventProxy("sth:markPantoAsDead", NetworkGetNetworkIdFromEntity(PantoHandles[index]));
+                        main.TriggerClientEventProxy("sth:markPantoAsDead", NetworkGetNetworkIdFromEntity(PantoHandles[index]), index);
                         PantoHealth[index] = 0;
                     }
 
