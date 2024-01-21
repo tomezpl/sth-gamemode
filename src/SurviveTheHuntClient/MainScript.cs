@@ -426,7 +426,7 @@ namespace SurviveTheHuntClient
                     bool isHunter = PlayerState.Team == Teams.Team.Hunters;
                     SetBlipAsFriendly(blip, isHunter);
                     SetBlipSprite(blip, 535 + counter++);
-                    SetBlipColour(blip, isHunter ? 69 : 59);
+                    SetBlipColour(blip, isHunter ? 2 : 59);
                 }
             });
 
