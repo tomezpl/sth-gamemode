@@ -18,7 +18,7 @@ namespace SurviveTheHuntServer
             }
         }
 
-        public void OnServerResourceStop(string resourceName)
+        public void OnResourceStop(string resourceName)
         {
             if(resourceName == Constants.ResourceName)
             {

@@ -1,9 +1,6 @@
 ﻿using CitizenFX.Core;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntServer
 {
@@ -53,8 +50,15 @@ namespace SurviveTheHuntServer
             /// Starts the hunt for a given player.
             /// </summary>
             /// <param name="huntedPlayer"></param>
-            public void Begin(Player huntedPlayer)
+            public void Begin(Player huntedPlayer, PlayerList players)
             {
+                // TODO:    this is needed for the blips to always update regardless of distance when using OneSync.
+                //          ideally we'd want to only sync each player's position and name - as that's the only data we need - instead of disabling culling.
+                foreach(Player player in players)
+                {
+                    SetPlayerCullingRadius(player.Handle, float.MaxValue);
+                }
+
                 IsStarted = true;
                 HuntedPlayer = huntedPlayer;
                 WinningTeam = Teams.Team.Hunted;
@@ -68,6 +72,9 @@ namespace SurviveTheHuntServer
             /// <param name="winningTeam">Team that should win this hunt.</param>
             public void End(Teams.Team winningTeam)
             {
+                // Reset the player's culling radius.
+                SetPlayerCullingRadius(HuntedPlayer.Handle, 0);
+                
                 WinningTeam = winningTeam;
                 IsStarted = false;
                 HuntedPlayer = null;

@@ -87,6 +87,11 @@ namespace SurviveTheHuntServer
             return false;
         }
 
+        public virtual void Shutdown(MainScript main)
+        {
+
+        }
+
         /// <summary>
         /// Gamemode logic to run on every tick.
         /// </summary>

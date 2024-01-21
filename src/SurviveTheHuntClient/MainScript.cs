@@ -401,6 +401,35 @@ namespace SurviveTheHuntClient
                 }
             };
 
+            EventHandlers["sth:markPantoAsDead"] += new Action<int>((pantoNetworkId) =>
+            {
+                int handle = NetworkGetEntityFromNetworkId(pantoNetworkId);
+                if (DoesEntityExist(handle))
+                {
+                    int blip = GetBlipFromEntity(handle);
+                    int targetIndex = GetBlipSprite(blip) - 535;
+                    SetBlipColour(blip, 39);
+                    char targetLetter = "ABCDEFGH"[targetIndex];
+                    AddTextEntry("PantoDeadNotif", $"Target {targetLetter} has been destroyed.");
+                    BeginTextCommandDisplayHelp("PantoDeadNotif");
+                    EndTextCommandDisplayHelp(0, false, true, 5000);
+                }
+            });
+
+            EventHandlers["sth:applyPantoBlips"] += new Action<List<object>>((pantoNetworkIds) =>
+            {
+                int counter = 0;
+                foreach (int networkId in pantoNetworkIds)
+                {
+                    int handle = NetworkGetEntityFromNetworkId(networkId);
+                    int blip = GetBlipFromEntity(handle);
+                    bool isHunter = PlayerState.Team == Teams.Team.Hunters;
+                    SetBlipAsFriendly(blip, isHunter);
+                    SetBlipSprite(blip, 535 + counter++);
+                    SetBlipColour(blip, isHunter ? 69 : 59);
+                }
+            });
+
             // Event handler for gamemode config being sent by the server.
             EventHandlers["sth:receiveConfig"] += new Action<byte[], byte[]>((weaponsHunters, weaponsHunted) =>
             {

@@ -64,10 +64,10 @@ namespace SurviveTheHuntServer
             }
             else
             {
-                Hunt = new Hunt(Players);
+                Hunt = new PantoHunt(Players);
 
                 EventHandlers["onServerResourceStart"] += new Action<string>(OnServerResourceStart);
-                EventHandlers["onServerResourceStop"] += new Action<string>(OnServerResourceStop);
+                EventHandlers["onResourceStop"] += new Action<string>(OnResourceStop);
                 EventHandlers["playerJoining"] += new Action<Player, string>(PlayerJoining);
                 EventHandlers["playerDropped"] += new Action<Player, string>(PlayerDisconnected);
 
@@ -126,15 +126,15 @@ namespace SurviveTheHuntServer
                 {
                     if(!DoesEntityExist(vehicle))
                     {
-                        Debug.WriteLine($"Vehicle {vehicle} does not exist yet. Waiting up to 500ms...");
-                        for(int i = 0; i < 5 && !DoesEntityExist(vehicle); i++)
+                        Debug.WriteLine($"Vehicle {vehicle} does not exist yet. Waiting up to 5s...");
+                        for(int i = 0; i < 50 && !DoesEntityExist(vehicle); i++)
                         {
                             await Delay(100);
                         }
 
                         if(!DoesEntityExist(vehicle))
                         {
-                            Debug.WriteLine($"After 500ms, {vehicle} still does not exist. This is bad!");
+                            Debug.WriteLine($"After 5s, {vehicle} still does not exist. This is bad!");
                         }
                     }
 
@@ -148,7 +148,7 @@ namespace SurviveTheHuntServer
                 
                 if (LastPlayerToSpawnCars != null)
                 {
-                    TriggerClientEvent(LastPlayerToSpawnCars, "sth:applyCarMods", SpawnedVehicles.Select(handle => NetworkGetNetworkIdFromEntity(handle)).ToArray());
+                    TriggerClientEvent(LastPlayerToSpawnCars, "sth:applyCarMods", SpawnedVehicles.Select(handle => NetworkGetNetworkIdFromEntity(handle)).ToList());
                 }
             }
 
@@ -225,6 +225,10 @@ namespace SurviveTheHuntServer
 
         private void Shutdown()
         {
+            Debug.WriteLine("Shutting down");
+
+            Hunt.Shutdown(this);
+
             foreach(int entity in EntityHandles)
             {
                 DeleteEntity(entity);
@@ -276,7 +280,9 @@ namespace SurviveTheHuntServer
                         TriggerClientEvent(randomPlayer, "sth:notifyHuntedPlayer");
                         TriggerClientEvent("sth:notifyHunters", new { HuntedPlayerName = randomPlayer.Name });
 
-                        GameState.Hunt.Begin(randomPlayer);
+                        GameState.Hunt.Begin(randomPlayer, Players);
+
+                        SetPlayerCullingRadius(randomPlayer.Handle, float.MaxValue);
 
                         TriggerClientEvent("sth:huntStartedByServer", new { EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture), NextNotification = (float)Constants.HuntedPingInterval.TotalSeconds });
                     })
