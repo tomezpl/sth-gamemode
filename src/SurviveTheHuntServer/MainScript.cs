@@ -108,6 +108,8 @@ namespace SurviveTheHuntServer
                 TriggerClientEvent(player, "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
 
                 HuntedPlayerQueue.AddPlayer(player);
+
+                SetPlayerCullingRadius(player.Handle, float.MaxValue);
             }
         }
 

@@ -73,7 +73,8 @@ namespace SurviveTheHuntServer
             public void End(Teams.Team winningTeam)
             {
                 // Reset the player's culling radius.
-                SetPlayerCullingRadius(HuntedPlayer.Handle, 0);
+                // TODO: sort out later
+                //SetPlayerCullingRadius(HuntedPlayer.Handle, 0);
                 
                 WinningTeam = winningTeam;
                 IsStarted = false;
