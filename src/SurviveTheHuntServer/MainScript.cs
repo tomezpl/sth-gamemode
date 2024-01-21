@@ -122,32 +122,23 @@ namespace SurviveTheHuntServer
             if(PendingDistanceCullRadiusReset)
             {
                 Debug.WriteLine("SetEntityDistanceCullingRadius needs to be called again!");
+                bool allEntitiesExist = true;
                 foreach(int vehicle in SpawnedVehicles)
                 {
-                    if(!DoesEntityExist(vehicle))
-                    {
-                        Debug.WriteLine($"Vehicle {vehicle} does not exist yet. Waiting up to 5s...");
-                        for(int i = 0; i < 50 && !DoesEntityExist(vehicle); i++)
-                        {
-                            await Delay(100);
-                        }
+                    bool vehicleExists = DoesEntityExist(vehicle);
+                    allEntitiesExist = vehicleExists && allEntitiesExist;
 
-                        if(!DoesEntityExist(vehicle))
-                        {
-                            Debug.WriteLine($"After 5s, {vehicle} still does not exist. This is bad!");
-                        }
-                    }
-
-                    if(DoesEntityExist(vehicle))
+                    if(vehicleExists)
                     {
                         SetEntityDistanceCullingRadius(vehicle, float.MaxValue);
                     }
                 }
 
-                PendingDistanceCullRadiusReset = false;
+                PendingDistanceCullRadiusReset = !allEntitiesExist;
                 
-                if (LastPlayerToSpawnCars != null)
+                if (LastPlayerToSpawnCars != null && allEntitiesExist)
                 {
+                    Debug.WriteLine("(spawncars) All vehicles created, applying mods...");
                     TriggerClientEvent(LastPlayerToSpawnCars, "sth:applyCarMods", SpawnedVehicles.Select(handle => NetworkGetNetworkIdFromEntity(handle)).ToList());
                 }
             }

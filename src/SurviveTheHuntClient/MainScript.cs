@@ -138,52 +138,59 @@ namespace SurviveTheHuntClient
         /// </summary>
         protected void ApplyCarMods(List<object> cars)
         {
-            int counter = 0;
-            Debug.WriteLine($"Spawned {cars.Count} cars");
-            foreach(int networkId in cars)
+            try
             {
-                Vehicle vehicle = new Vehicle(Entity.FromNetworkId(networkId).Handle);
-
-                if(!DoesEntityExist(vehicle.Handle))
+                int counter = 0;
+                Debug.WriteLine($"Spawned {cars.Count} cars");
+                foreach (int networkId in cars)
                 {
-                    Debug.WriteLine($"Vehicle {vehicle.Handle} does not exist yet!");
-                }
-                while (!DoesEntityExist(vehicle.Handle) && !HasVehicleAssetLoaded(vehicle.Model))
-                {
-                    RequestModel(vehicle.Model);
-                    Wait(50);
-                }
+                    Vehicle vehicle = new Vehicle(Entity.FromNetworkId(networkId).Handle);
 
-                SetVehicleModKit(vehicle.Handle, 0);
-
-                // Set all vehicle mods to maximum.
-                for (int i = 0; i < 50; i++)
-                {
-                    int nbMods = GetNumVehicleMods(vehicle.Handle, i);
-                    if(nbMods > 0)
+                    if (!DoesEntityExist(vehicle.Handle))
                     {
-                        SetVehicleMod(vehicle.Handle, i, nbMods - 1, false);
+                        Debug.WriteLine($"Vehicle {vehicle.Handle} does not exist yet!");
                     }
-                }
-                // Add neons.
-                for(int i = 0; i < 4; i++)
-                {
-                    SetVehicleNeonLightEnabled(vehicle.Handle, i, RNG.NextDouble() >= 0.5);
-                }
-                SetVehicleNeonLightsColour(vehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
-                SetVehicleXenonLightsColour(vehicle.Handle, RNG.Next(0, 12));
+                    while (!DoesEntityExist(vehicle.Handle) && !HasVehicleAssetLoaded(vehicle.Model))
+                    {
+                        RequestModel(vehicle.Model);
+                        Wait(50);
+                    }
 
-                SetVehicleCustomPrimaryColour(vehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
-                SetVehicleCustomSecondaryColour(vehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
+                    SetVehicleModKit(vehicle.Handle, 0);
 
-                // lol
-                if(vehicle.Model.Hash == (uint)VehicleHash.Bmx)
-                {
-                    vehicle.EnginePowerMultiplier = 100f;
-                    vehicle.EngineTorqueMultiplier = 100f;
+                    // Set all vehicle mods to maximum.
+                    for (int i = 0; i < 50; i++)
+                    {
+                        int nbMods = GetNumVehicleMods(vehicle.Handle, i);
+                        if (nbMods > 0)
+                        {
+                            SetVehicleMod(vehicle.Handle, i, nbMods - 1, false);
+                        }
+                    }
+                    // Add neons.
+                    for (int i = 0; i < 4; i++)
+                    {
+                        SetVehicleNeonLightEnabled(vehicle.Handle, i, RNG.NextDouble() >= 0.5);
+                    }
+                    SetVehicleNeonLightsColour(vehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
+                    SetVehicleXenonLightsColour(vehicle.Handle, RNG.Next(0, 12));
+
+                    SetVehicleCustomPrimaryColour(vehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
+                    SetVehicleCustomSecondaryColour(vehicle.Handle, RNG.Next(0, 255), RNG.Next(0, 255), RNG.Next(0, 255));
+
+                    // lol
+                    if (vehicle.Model.Hash == (uint)VehicleHash.Bmx)
+                    {
+                        vehicle.EnginePowerMultiplier = 100f;
+                        vehicle.EngineTorqueMultiplier = 100f;
+                    }
+
+                    counter++;
                 }
-
-                counter++;
+            }
+            catch(Exception ex)
+            {
+                Debug.WriteLine($"Failed to apply car mods. Exception: {ex}");
             }
         }
 
