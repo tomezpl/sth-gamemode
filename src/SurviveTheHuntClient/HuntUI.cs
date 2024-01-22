@@ -340,7 +340,20 @@ namespace SurviveTheHuntClient
             SetBlipCategory(blip.Handle, 7);
             SetBlipShrink(blip.Handle, GetConvar("sth_shrinkPlayerBlips", "false") != "false");
             SetBlipScale(blip.Handle, 0.9f);
-            PlayerBlips.Add(playerPedEntity, new { blip, id = playerIndex });
+
+            dynamic playerBlip = new { blip, id = playerIndex };
+            if (!PlayerBlips.ContainsKey(playerPedEntity))
+            {
+                PlayerBlips.Add(playerPedEntity, playerBlip);
+            }
+            else
+            {
+                if (DoesBlipExist(PlayerBlips[playerPedEntity].blip.Handle))
+                {
+                    RemoveBlip(PlayerBlips[playerPedEntity].blip.Handle);
+                }
+                PlayerBlips[playerPedEntity] = playerBlip;
+            }
         }
 
         /// <summary>
@@ -417,7 +430,7 @@ namespace SurviveTheHuntClient
                 if (!IsMpGamerTagActive(player.Handle))
                 {
                     CreateMpGamerTagWithCrewColor(player.Handle, player.Name, false, false, "", 0, 0, 0, 0);
-                    if(!PlayerOverheadNames.ContainsKey(player.Handle))
+                    if(!PlayerOverheadNames.ContainsKey(player.Character.Handle))
                     {
                         PlayerOverheadNames.Add(player.Character.Handle, player.Handle);
                     }
