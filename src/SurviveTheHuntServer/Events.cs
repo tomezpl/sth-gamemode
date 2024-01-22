@@ -1,5 +1,7 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntServer.Utils;
+using System;
+using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntServer
 {
@@ -29,6 +31,20 @@ namespace SurviveTheHuntServer
         public void ClientStarted([FromSource] Player player)
         {
             BroadcastConfig(player, Config);
+        }
+
+        [EventHandler("sth:playerSpawned")]
+        public async void PlayerSpawned(int playerId)
+        {
+            string playerName = Players[playerId].Name;
+            Debug.WriteLine($"Player \"{playerName}\" spawned");
+            int playerPed = Players[playerId].Character.Handle;
+            SetEntityDistanceCullingRadius(playerPed, float.MaxValue);
+            await Delay(1000);
+            TriggerClientEvent("sth:updatePlayerBlip", playerPed, playerId, playerName);
+
+            /*Debug.WriteLine($"Cleaning clothes for {Players[playerId].Name}");
+            TriggerClientEvent("sth:cleanClothesForPlayer", new { PlayerId = playerId });*/
         }
     }
 }

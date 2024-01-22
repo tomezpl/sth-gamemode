@@ -210,7 +210,7 @@ namespace SurviveTheHuntClient
             PlayerState.WeaponsGiven = false;
             PlayerState.ForcedUnarmed = false;
 
-            TriggerServerEvent("sth:cleanClothes", new { PlayerId = GetPlayerServerId(PlayerId()) });
+            TriggerServerEvent("sth:playerSpawned", GetPlayerServerId(PlayerId()));
 
             // Enable friendly fire.
             NetworkSetFriendlyFireOption(true);
@@ -236,6 +236,7 @@ namespace SurviveTheHuntClient
             HuntUI.DrawRemainingTime(ref GameState);
             HuntUI.FadeBlips();
             HuntUI.UpdateTeammateBlips(Players, ref GameState, ref PlayerState);
+            HuntUI.UpdatePlayerOverheadNames(Players, ref GameState, ref PlayerState);
 
             PlayerState.UpdateWeapons(Game.PlayerPed);
 
@@ -293,6 +294,13 @@ namespace SurviveTheHuntClient
                     }
                 }
             }
+        }
+
+        [EventHandler("sth:updatePlayerBlip")]
+        private void UpdatePlayerBlip(int playerEntityId, int playerIndex, string playerName)
+        {
+            int entityHandle = NetworkGetEntityFromNetworkId(playerEntityId);
+            HuntUI.CreatePlayerBlip(playerEntityId, playerIndex, playerName);
         }
 
         /// <summary>

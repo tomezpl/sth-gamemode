@@ -20,6 +20,8 @@ namespace SurviveTheHuntClient
         /// <remarks>TODO: Change this to a hashset?</remarks>
         private static Dictionary<int, dynamic> PlayerBlips = new Dictionary<int, dynamic>();
 
+        private static Dictionary<int, int> PlayerOverheadNames = new Dictionary<int, int>();
+
         /// <summary>
         /// Handles for currently active player peds; this is needed so blips aren't tracking dead player peds etc.
         /// </summary>
@@ -327,6 +329,20 @@ namespace SurviveTheHuntClient
             EndTextCommandThefeedPostTicker(true, true);
         }
 
+        public static void CreatePlayerBlip(int playerPedEntity, int playerIndex, string playerName)
+        {
+            Blip blip = new Blip(AddBlipForEntity(playerPedEntity));
+            blip.Name = playerName;
+            Debug.WriteLine($"playerIndex: {playerIndex}");
+            SetBlipColour(blip.Handle, playerIndex + 10);
+            SetBlipDisplay(blip.Handle, 6);
+            ShowHeadingIndicatorOnBlip(blip.Handle, true);
+            SetBlipCategory(blip.Handle, 7);
+            SetBlipShrink(blip.Handle, GetConvar("sth_shrinkPlayerBlips", "false") != "false");
+            SetBlipScale(blip.Handle, 0.9f);
+            PlayerBlips.Add(playerPedEntity, new { blip, id = playerIndex });
+        }
+
         /// <summary>
         /// Manages the blips for the local player and their teammates.
         /// </summary>
@@ -335,49 +351,22 @@ namespace SurviveTheHuntClient
         /// <param name="playerState">Local player state.</param>
         public static void UpdateTeammateBlips(PlayerList players, ref GameState gameState, ref PlayerState playerState)
         {
+            // Set the player's blip colour based on their ID so that it is unique & replicated across all clients.
+            SetBlipColour(GetMainPlayerBlipId(), Game.Player.ServerId + 10);
+            
             // TODO: The heavy use of collections in this method seems to increase the tick time by a considerable amount.
             // Need to only invoke the blip update when a player connects, disconnects or dies; Otherwise only update the visibility of existing blips.
-
-            foreach (Player player in players)
+            foreach (int ped in PlayerBlips.Keys)
             {
-                // Set the player's blip colour based on their ID so that it is unique & replicated across all clients.
-                if(player == Game.Player)
+                if(ped == PlayerPedId())
                 {
-                    SetBlipColour(GetMainPlayerBlipId(), player.Handle + 10);
                     continue;
                 }
 
-                // Creates overhead player name labels if need be.
-                if (!IsMpGamerTagActive(player.Handle))
-                {
-                    //Debug.WriteLine($"Creating GamerTag for {player.Name}");
-                    CreateMpGamerTagWithCrewColor(player.Handle, player.Name, false, false, "", 0, 0, 0, 0);
-                }
-
-                if (!PlayerBlips.ContainsKey(player.Character.Handle))
-                {
-                    // If the player hasn't got a blip yet, create one.
-                    Blip blip = new Blip(AddBlipForEntity(player.Character.Handle));
-                    blip.Name = player.Name;
-                    SetBlipColour(blip.Handle, player.Handle + 10);
-                    SetBlipDisplay(blip.Handle, 6);
-                    ShowHeadingIndicatorOnBlip(blip.Handle, true);
-                    SetBlipCategory(blip.Handle, 7);
-                    SetBlipShrink(blip.Handle, GetConvar("sth_shrinkPlayerBlips", "false") != "false");
-                    SetBlipScale(blip.Handle, 0.9f);
-                    PlayerBlips.Add(player.Character.Handle, new { blip, id = player.Handle });
-                }
-                else
-                {
-                    // If the player has a blip, sync their overhead player name label colour with it.
-                    Blip blip = PlayerBlips[player.Character.Handle].blip;
-                    SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(blip.Handle));
-                }
-
                 // Mark the player as an active ped to know that its blips & gamertag shouldn't be deleted.
-                if (player.Character.Exists() && player.Character.IsAlive && !ActivePeds.Contains(player.Character.Handle))
+                if (!IsPedDeadOrDying(ped, true))
                 {
-                    ActivePeds.Add(player.Character.Handle);
+                    ActivePeds.Add(ped);
                 }
             }
 
@@ -394,24 +383,18 @@ namespace SurviveTheHuntClient
                     pedsToDelete.Add(ped);
                     continue;
                 }
-
-                if(gameState.Hunt.IsStarted && (playerState.Team == Team.Hunted || ped == gameState.Hunt.HuntedPlayer.Character.Handle) && !GameState.IsPedTooFar(new Ped(ped)))
+                
+                if(gameState.Hunt.IsStarted && (playerState.Team == Team.Hunted || PlayerBlips[ped].id == gameState.Hunt.HuntedPlayer.Handle) && !GameState.IsPedTooFar(new Ped(ped)))
                 {
                     // Hide the blip if it's within the play area bounds and the player is on the opposite team.
                     Blip blip = PlayerBlips[ped].blip;
                     SetBlipDisplay(blip.Handle, 0);
-                    int id = PlayerBlips[ped].id;
-
-                    SetMpGamerTagVisibility(id, 0, false);
                 }
                 else
                 {
                     // Show the blip if it's out of the play area.
                     Blip blip = PlayerBlips[ped].blip;
                     SetBlipDisplay(blip.Handle, 6);
-                    int id = PlayerBlips[ped].id;
-
-                    SetMpGamerTagVisibility(id, 0, true);
                 }
             }
 
@@ -420,13 +403,81 @@ namespace SurviveTheHuntClient
             {
                 Blip blip = PlayerBlips[ped].blip;
                 blip.Delete();
-                int id = PlayerBlips[ped].id;
-                //Debug.WriteLine($"Removing GamerTag from {new Player(id).Name}");
-                RemoveMpGamerTag(id);
                 PlayerBlips.Remove(ped);
             }
 
             ActivePeds.Clear();
+        }
+
+        public static void UpdatePlayerOverheadNames(PlayerList players, ref GameState gameState, ref PlayerState playerState) 
+        {
+            foreach (Player player in players)
+            {
+                // Creates overhead player name labels if need be.
+                if (!IsMpGamerTagActive(player.Handle))
+                {
+                    CreateMpGamerTagWithCrewColor(player.Handle, player.Name, false, false, "", 0, 0, 0, 0);
+                    if(!PlayerOverheadNames.ContainsKey(player.Handle))
+                    {
+                        PlayerOverheadNames.Add(player.Character.Handle, player.Handle);
+                    }
+                }
+
+                if (IsMpGamerTagActive(player.Handle) && PlayerBlips.TryGetValue(player.Character.Handle, out dynamic playerBlip))
+                {
+                    SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(playerBlip.blip.Handle));
+                }
+                else if(IsMpGamerTagActive(player.Handle) && player.ServerId == Game.Player.ServerId)
+                {
+                    SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(GetMainPlayerBlipId()));
+                }
+            }
+
+            List<int> playersToDelete = new List<int>();
+
+            foreach (int playerPed in PlayerOverheadNames.Keys)
+            {
+                int playerHandle = PlayerOverheadNames[playerPed];
+
+                // Delete check
+                bool playerExists = false;
+                try
+                {
+                    playerExists = DoesEntityExist(playerPed);
+                } 
+                catch
+                {
+                    playerExists = false;
+                }
+
+                if (!playerExists)
+                {
+                    playersToDelete.Add(playerPed);
+                    continue;
+                }
+                else
+                {
+                    bool isPlayerOOB = GameState.IsPedTooFar(new Ped(playerPed));
+                    if (gameState.Hunt.IsStarted && (playerState.Team == Team.Hunted || playerHandle == gameState.Hunt.HuntedPlayer.Handle || playerHandle == Game.Player.Handle) && !isPlayerOOB)
+                    {
+                        SetMpGamerTagVisibility(playerHandle, 0, false);
+                    }
+                    else if((gameState.Hunt.IsStarted && isPlayerOOB) || (gameState.Hunt.IsStarted && playerHandle != Game.Player.Handle))
+                    {
+                        SetMpGamerTagVisibility(playerHandle, 0, true);
+                    }
+                }
+            }
+
+            // Delete inactive peds.
+            foreach (int playerPed in playersToDelete)
+            {
+                if (!IsMpGamerTagFree(PlayerOverheadNames[playerPed]))
+                {
+                    RemoveMpGamerTag(PlayerOverheadNames[playerPed]);
+                }
+                PlayerOverheadNames.Remove(playerPed);
+            }
         }
     }
 }

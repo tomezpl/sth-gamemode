@@ -108,8 +108,6 @@ namespace SurviveTheHuntServer
                 TriggerClientEvent(player, "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
 
                 HuntedPlayerQueue.AddPlayer(player);
-
-                SetPlayerCullingRadius(player.Handle, float.MaxValue);
             }
         }
 
@@ -238,15 +236,6 @@ namespace SurviveTheHuntServer
             STHEvents = new Dictionary<string, Action<dynamic>>
             {
                 {
-                    "cleanClothes", new Action<dynamic>(data =>
-                    {
-                        int playerId = data.PlayerId;
-                        Console.WriteLine($"Cleaning clothes for {Players[playerId].Name}");
-
-                        TriggerClientEvent("sth:cleanClothesForPlayer", new { PlayerId = playerId });
-                    })
-                },
-                {
                     "playerDied", new Action<dynamic>(data =>
                     {
                         int playerId = data.PlayerId;
@@ -274,8 +263,6 @@ namespace SurviveTheHuntServer
                         TriggerClientEvent("sth:notifyHunters", new { HuntedPlayerName = randomPlayer.Name });
 
                         GameState.Hunt.Begin(randomPlayer, Players);
-
-                        SetPlayerCullingRadius(randomPlayer.Handle, float.MaxValue);
 
                         TriggerClientEvent("sth:huntStartedByServer", new { EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture), NextNotification = (float)Constants.HuntedPingInterval.TotalSeconds });
                     })
