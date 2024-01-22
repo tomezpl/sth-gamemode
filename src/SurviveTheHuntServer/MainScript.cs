@@ -80,8 +80,6 @@ namespace SurviveTheHuntServer
 
                 EventHandlers["sth:clientStarted"] += new Action<Player>(ClientStarted);
 
-                EventHandlers["sth:spawnCars"] += new Action<Player>(SpawnCarsCommand);
-
                 Tick += UpdateLoop;
 
                 HuntedPlayerQueue = Hunt.InitHuntedQueue(Players);
@@ -164,7 +162,8 @@ namespace SurviveTheHuntServer
             TriggerClientEvent("sth:notifyWinner", new { WinningTeam = (int)GameState.Hunt.WinningTeam });
         }
 
-        private void SpawnCarsCommand([FromSource] Player source)
+        [EventHandler("sth:spawnCars")]
+        private async void SpawnCarsCommand([FromSource] Player source)
         {
             List<int> carsToSpawn = new List<int>(Constants.CarSpawnPoints.Length);
 
@@ -187,6 +186,8 @@ namespace SurviveTheHuntServer
                 if (DoesEntityExist(vehicleToDelete))
                 {
                     DeleteEntity(vehicleToDelete);
+
+                    await Delay(1);
                 }
                 EntityHandles.Remove(vehicleToDelete);
             }
@@ -198,13 +199,14 @@ namespace SurviveTheHuntServer
             {
                 Coord spawnPoint = Constants.CarSpawnPoints[counter];
                 Vector3 spawnPos = spawnPoint.Position;
-
+                
                 Debug.WriteLine("Creating a vehicle");
                 int spawnedVehicle = CreateVehicle((uint)vehicle, spawnPos.X, spawnPos.Y, spawnPos.Z, spawnPoint.Heading, true, false);
                 SpawnedVehicles.Add(spawnedVehicle);
                 //spawnedEntities[counter] = Entity.FromNetworkId(spawnedVehicle).NetworkId;
                 Debug.WriteLine("Setting huge distance culling radius");
                 //SetEntityDistanceCullingRadius(spawnedVehicle, float.MaxValue);
+                await Delay(3);
                 
                 counter++;
             }
