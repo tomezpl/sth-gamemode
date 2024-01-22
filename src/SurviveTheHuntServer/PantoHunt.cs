@@ -58,8 +58,6 @@ namespace SurviveTheHuntServer
         /// </summary>
         private const int MaxObjectives = (TargetHBlipSprite - TargetABlipSprite) + 1;
 
-        private List<int> PantoBlipHandles = new List<int>();
-
         private List<int> PantoHealth = new List<int>();
 
         public PantoHunt(IEnumerable<Player> playerHandles) : base(playerHandles)
@@ -110,14 +108,14 @@ namespace SurviveTheHuntServer
             return spawns;
         }
 
-        private void Start(MainScript main)
+        private async Task Start(MainScript main)
         {
             CalledStart = true;
             Coord[] pantoSpawns = PickRandomPantoSpawns(5, main.RNG);
 
             foreach (Coord spawnPoint in pantoSpawns)
             {
-                PantoHandles.Add(main.SpawnVehicle("panto", spawnPoint.Position, spawnPoint.Heading));
+                PantoHandles.Add(await main.SpawnVehicle("panto", spawnPoint.Position, spawnPoint.Heading));
                 string spawnName = PantoSpawnNames[PantoSpawns.ToList().IndexOf(spawnPoint)];
                 Debug.WriteLine($"Created a Panto at {spawnName}");
                 PantoHealth.Add(1000);
@@ -157,21 +155,12 @@ namespace SurviveTheHuntServer
             Debug.WriteLine("Removed Pantos");
             PantoHandles.Clear();
 
-            Debug.WriteLine("Removing Panto blips");
-            for(int i = 0; i < PantoBlipHandles.Count; i++)
-            {
-                int blip = PantoBlipHandles[i];
-                RemoveBlip(ref blip);
-            }
-            Debug.WriteLine("Removed Panto blips");
-            PantoBlipHandles.Clear();
-
             PantoHealth.Clear();
         }
 
-        public override void Tick(MainScript main)
+        public override async Task Tick(MainScript main)
         {
-            base.Tick(main);
+            await base.Tick(main);
 
             if(!main.GameState.Hunt.IsStarted)
             {
@@ -188,32 +177,43 @@ namespace SurviveTheHuntServer
                 int index = 0;
                 foreach(int health in PantoHealth)
                 {
-                    int currentHealth = GetEntityHealth(PantoHandles[index]);
-                    if(currentHealth <= 0 && health != 0)
+                    if (DoesEntityExist(PantoHandles[index]))
                     {
-                        main.TriggerClientEventProxy("sth:markPantoAsDead", NetworkGetNetworkIdFromEntity(PantoHandles[index]), index);
-                        PantoHealth[index] = 0;
+                        int currentHealth = GetEntityHealth(PantoHandles[index]);
+                        if (currentHealth <= 0 && health != 0)
+                        {
+                            main.TriggerClientEventProxy("sth:markPantoAsDead", NetworkGetNetworkIdFromEntity(PantoHandles[index]), index);
+                            PantoHealth[index] = 0;
+                        }
                     }
 
                     index++;
                 }
             }
 
-            if(PantoBlipHandles.Count > 0 && PantoBlipsNeedUpdate)
+            if(PantoHandles.Count > 0 && PantoBlipsNeedUpdate)
             {
-                
-                PantoBlipsNeedUpdate = false;
-                Debug.WriteLine("Triggering client-side blip natives by broadcasting sth:applyPantoBlips...");
-                main.TriggerClientEventProxy("sth:applyPantoBlips", PantoHandles.Select(h => NetworkGetNetworkIdFromEntity(h)).ToList());
-                Debug.WriteLine("sth:applyPantoBlips event sent");
+                bool pantoDoesNotExistYet = false;
+                foreach(int handle in PantoHandles)
+                {
+                    pantoDoesNotExistYet = !DoesEntityExist(handle);
+                }
+
+                if (!pantoDoesNotExistYet)
+                {
+                    Debug.WriteLine("Triggering client-side blip natives by broadcasting sth:applyPantoBlips...");
+                    main.TriggerClientEventProxy("sth:applyPantoBlips", string.Join(";", PantoHandles.Select(h => $"{NetworkGetNetworkIdFromEntity(h)}").ToArray()));
+                    Debug.WriteLine("sth:applyPantoBlips event sent");
+                    PantoBlipsNeedUpdate = false;
+                }
             }
 
             if(!PantosNeedCullingRadiusUpdate && PantosNeedMods)
             {
                 foreach(int handle in PantoHandles)
                 {
+                    // hot pink panto baby
                     SetVehicleColours(handle, 135, 135);
-                    PantoBlipHandles.Add(AddBlipForEntity(handle));
                 }
 
                 PantosNeedMods = false;
@@ -241,7 +241,7 @@ namespace SurviveTheHuntServer
 
             if(!CalledStart)
             {
-                Start(main);
+                await Start(main);
             }
         }
     }

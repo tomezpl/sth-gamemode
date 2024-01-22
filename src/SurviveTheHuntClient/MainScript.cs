@@ -430,17 +430,21 @@ namespace SurviveTheHuntClient
                 }
             });
 
-            EventHandlers["sth:applyPantoBlips"] += new Action<List<object>>((pantoNetworkIds) =>
+            EventHandlers["sth:applyPantoBlips"] += new Action<string>((pantoNetworkIdString) =>
             {
+                string[] pantoNetworkIds = pantoNetworkIdString.Split(';');
                 int counter = 0;
-                foreach (int networkId in pantoNetworkIds)
+                foreach (string networkIdStr in pantoNetworkIds)
                 {
-                    int handle = NetworkGetEntityFromNetworkId(networkId);
-                    int blip = GetBlipFromEntity(handle);
-                    bool isHunter = PlayerState.Team == Teams.Team.Hunters;
-                    SetBlipAsFriendly(blip, isHunter);
-                    SetBlipSprite(blip, 535 + counter++);
-                    SetBlipColour(blip, isHunter ? 2 : 59);
+                    if (int.TryParse(networkIdStr, out int networkId))
+                    {
+                        int handle = NetworkGetEntityFromNetworkId(networkId);
+                        int blip = AddBlipForEntity(handle);
+                        bool isHunter = PlayerState.Team == Teams.Team.Hunters;
+                        SetBlipAsFriendly(blip, isHunter);
+                        SetBlipSprite(blip, 535 + counter++);
+                        SetBlipColour(blip, isHunter ? 3 : 59);
+                    }
                 }
             });
 

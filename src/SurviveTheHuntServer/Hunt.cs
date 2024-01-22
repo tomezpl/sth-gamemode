@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntServer
@@ -95,7 +96,7 @@ namespace SurviveTheHuntServer
         /// <summary>
         /// Gamemode logic to run on every tick.
         /// </summary>
-        public virtual void Tick(MainScript main)
+        public virtual async Task Tick(MainScript main)
         {
             if (main.GameState.Hunt.IsStarted)
             {
