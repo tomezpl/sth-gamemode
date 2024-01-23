@@ -426,6 +426,7 @@ namespace SurviveTheHuntClient
         {
             foreach (Player player in players)
             {
+                Debug.WriteLine($"Player \"{player.Name}\" handle: {player.Handle}");
                 // Creates overhead player name labels if need be.
                 if (!IsMpGamerTagActive(player.Handle))
                 {
