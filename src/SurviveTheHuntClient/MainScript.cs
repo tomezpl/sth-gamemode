@@ -300,7 +300,7 @@ namespace SurviveTheHuntClient
         private void UpdatePlayerBlip(int playerEntityId, int playerIndex, string playerName)
         {
             int entityHandle = NetworkGetEntityFromNetworkId(playerEntityId);
-            HuntUI.CreatePlayerBlip(playerEntityId, playerIndex, playerName);
+            HuntUI.CreatePlayerBlip(entityHandle, playerIndex, playerName);
         }
 
         /// <summary>
