@@ -31,6 +31,8 @@ namespace SurviveTheHuntServer
         /// </summary>
         protected Dictionary<string, Action<dynamic>> STHEvents;
 
+        protected Dictionary<string, int> PlayerPeds = new Dictionary<string, int>();
+
         private readonly HuntedQueue HuntedPlayerQueue = null;
 
         private readonly Config Config = null;
@@ -96,7 +98,7 @@ namespace SurviveTheHuntServer
 
         protected void PlayerJoining([FromSource] Player player, string oldId)
         {
-            if(string.IsNullOrWhiteSpace(player?.Name))
+            if (string.IsNullOrWhiteSpace(player?.Name))
             {
                 Console.WriteLine("Joining player name was null");
             }
@@ -111,35 +113,70 @@ namespace SurviveTheHuntServer
 
         private async Task UpdateLoop()
         {
-            if(DateTime.UtcNow >= LastTimeSync + Constants.TimeSyncInterval)
+            if (DateTime.UtcNow >= LastTimeSync + Constants.TimeSyncInterval)
             {
                 TriggerClientEvent("sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
                 LastTimeSync = DateTime.UtcNow;
             }
 
-            if(PendingDistanceCullRadiusReset)
+            if (PendingDistanceCullRadiusReset)
             {
                 Debug.WriteLine("SetEntityDistanceCullingRadius needs to be called again!");
                 bool allEntitiesExist = true;
-                foreach(int vehicle in SpawnedVehicles)
+                foreach (int vehicle in SpawnedVehicles)
                 {
                     bool vehicleExists = DoesEntityExist(vehicle);
                     allEntitiesExist = vehicleExists && allEntitiesExist;
 
-                    if(vehicleExists)
+                    if (vehicleExists)
                     {
                         SetEntityDistanceCullingRadius(vehicle, float.MaxValue);
                     }
                 }
 
                 PendingDistanceCullRadiusReset = !allEntitiesExist;
-                
+
                 if (LastPlayerToSpawnCars != null && allEntitiesExist)
                 {
                     Debug.WriteLine("(spawncars) All vehicles created, applying mods...");
                     TriggerClientEvent(LastPlayerToSpawnCars, "sth:applyCarMods", SpawnedVehicles.Select(handle => NetworkGetNetworkIdFromEntity(handle)).ToList());
                 }
             }
+
+            /*int playerCounter = 0;
+            foreach(Player player in Players)
+            {
+                if(!PlayerPeds.TryGetValue(player.Handle, out int playerModel))
+                {
+                    playerModel = GetEntityModel(GetPlayerPed(player.Handle));
+                    // Player ped not tracked yet, add it now.
+                    if (DoesEntityExist(GetPlayerPed(player.Handle)))
+                    {
+                        PlayerPeds.Add(player.Handle, playerModel);
+
+                        Debug.WriteLine($"Creating an initial blip for {player.Name}");
+                        TriggerClientEvent("sth:updatePlayerBlip", NetworkGetNetworkIdFromEntity(GetPlayerPed(player.Handle)), playerCounter, player.Name);
+                    }
+                }
+                else
+                {
+                    int currentPlayerModel = GetPlayerPed(player.Handle);
+                    if (DoesEntityExist(GetPlayerPed(player.Handle)))
+                    {
+                        // Ped changed, update the entry. Need to create a new blip!
+                        if (playerModel != currentPlayerModel)
+                        {
+                            Debug.WriteLine($"Stored: {playerModel}, current: {currentPlayerModel}");
+                            PlayerPeds[player.Handle] = currentPlayerModel;
+                            Debug.WriteLine($"Updating the blip for {player.Name} as their ped changed");
+                            TriggerClientEvent("sth:updatePlayerBlip", NetworkGetNetworkIdFromEntity(GetPlayerPed(player.Handle)), playerCounter, player.Name);
+                        }
+                    }
+                }
+
+                playerCounter++;
+            }
+            */
 
             Hunt.Tick(this);
         }
@@ -152,6 +189,12 @@ namespace SurviveTheHuntServer
         public void TriggerClientEventProxy(Player player, string eventName, params object[] args)
         {
             TriggerClientEvent(player, eventName, args);
+        }
+
+        [EventHandler("sth:invalidatePlayerPed")]
+        private void InvalidatePlayerPed([FromSource] Player src, int ped, int playerServerId)
+        {
+            TriggerClientEvent("sth:updatePlayerBlip", ped, playerServerId, src.Name);
         }
 
         /// <summary>

@@ -350,7 +350,9 @@ namespace SurviveTheHuntClient
             {
                 if (DoesBlipExist(PlayerBlips[playerPedEntity].blip.Handle))
                 {
-                    RemoveBlip(PlayerBlips[playerPedEntity].blip.Handle);
+                    int blipHandle = PlayerBlips[playerPedEntity].blip.Handle;
+                    SetBlipDisplay(blipHandle, 0);
+                    RemoveBlip(ref blipHandle);
                 }
                 PlayerBlips[playerPedEntity] = playerBlip;
             }

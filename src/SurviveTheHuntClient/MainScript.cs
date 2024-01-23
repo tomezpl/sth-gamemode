@@ -45,6 +45,8 @@ namespace SurviveTheHuntClient
         /// </summary>
         private readonly DeathBlips DeathBlips;
 
+        private int PlayerPed;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -60,6 +62,8 @@ namespace SurviveTheHuntClient
             EventHandlers["sth:applyCarMods"] += new Action<List<object>>(ApplyCarMods);
 
             DeathBlips = new DeathBlips(GetConvarInt("sth_deathbliplifespan", Constants.DefaultDeathBlipLifespan));
+
+            PlayerPed = PlayerPedId();
         }
 
         protected void OnResourceStopping(string resourceName)
@@ -248,6 +252,13 @@ namespace SurviveTheHuntClient
             {
                 TriggerServerEvent("sth:playerDied", new { PlayerId = Game.Player.ServerId, PlayerPosX = PlayerPos.X, PlayerPosY = PlayerPos.Y, PlayerPosZ = PlayerPos.Z, PlayerTeam = PlayerState.Team });
                 PlayerState.DeathReported = true;
+            }
+
+            if(PlayerPedId() != PlayerPed)
+            {
+                Debug.WriteLine($"Player Ped changed from {PlayerPed} to {PlayerPedId()}. Calling invalidate");
+                PlayerPed = PlayerPedId();
+                TriggerServerEvent("sth:invalidatePlayerPed", NetworkGetNetworkIdFromEntity(PlayerPed), Player.Local.ServerId);
             }
 
             GameOverCheck();
