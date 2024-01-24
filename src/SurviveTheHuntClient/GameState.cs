@@ -49,9 +49,9 @@ namespace SurviveTheHuntClient
             /// <summary>
             /// Currently hunted player.
             /// </summary>
-            public Player HuntedPlayer { get => _HuntedPlayer; set { _HuntedPlayer = value; HuntedPlayerServerId = value.ServerId; } }
+            public Player HuntedPlayer { get => _HuntedPlayer; set { _HuntedPlayer = value; HuntedPlayerPedNetworkId = value.Character.NetworkId; } }
 
-            public int? HuntedPlayerServerId { get; set; } = null;
+            public int? HuntedPlayerPedNetworkId { get; set; } = null;
 
             /// <summary>
             /// Mugshot texture of the currently hunted player.

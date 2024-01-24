@@ -399,9 +399,9 @@ namespace SurviveTheHuntClient
                     continue;
                 }
 
-                int playerHandle = PlayerBlips[ped].id;
-                int playerServerId = GetPlayerServerId(playerHandle);
-                bool isPlayerOOB = GameState.IsPedTooFar(new Ped(ped));
+                Ped playerPed = new Ped(ped);
+                int playerPedNetworkId = playerPed.NetworkId;
+                bool isPlayerOOB = GameState.IsPedTooFar(playerPed);
                 bool shouldDisplayBlip = false;
                 if (gameState.Hunt.IsStarted)
                 {
@@ -415,7 +415,7 @@ namespace SurviveTheHuntClient
                         {
                             shouldDisplayBlip = false;
                         }
-                        else if (playerServerId != gameState.Hunt.HuntedPlayerServerId && playerServerId != Player.Local.ServerId)
+                        else if (playerPedNetworkId != gameState.Hunt.HuntedPlayerPedNetworkId && playerPedNetworkId != Player.Local.Character.NetworkId)
                         {
                             shouldDisplayBlip = true;
                         }
@@ -423,7 +423,7 @@ namespace SurviveTheHuntClient
                 }
                 else
                 {
-                    shouldDisplayBlip = playerServerId != Player.Local.ServerId;
+                    shouldDisplayBlip = playerPedNetworkId != Player.Local.ServerId;
                 }
 
                 // Show the blip if it's out of the play area.
@@ -506,7 +506,7 @@ namespace SurviveTheHuntClient
                             {
                                 shouldDisplayGamerTag = false;
                             }
-                            else if(playerServerId != gameState.Hunt.HuntedPlayerServerId && playerServerId != Player.Local.ServerId)
+                            else if(playerServerId != gameState.Hunt.HuntedPlayerPedNetworkId && playerServerId != Player.Local.ServerId)
                             {
                                 shouldDisplayGamerTag = true;
                             }
