@@ -194,7 +194,7 @@ namespace SurviveTheHuntServer
         [EventHandler("sth:invalidatePlayerPed")]
         private void InvalidatePlayerPed([FromSource] Player src, int ped, int playerServerId)
         {
-            TriggerClientEvent("sth:updatePlayerBlip", ped, playerServerId, src.Name);
+            TriggerClientEvent("sth:updatePlayerBlip", ped, playerServerId, src.Name, GameState.Hunt.HuntedPlayer?.Handle == src.Handle);
         }
 
         /// <summary>

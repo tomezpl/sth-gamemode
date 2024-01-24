@@ -308,8 +308,13 @@ namespace SurviveTheHuntClient
         }
 
         [EventHandler("sth:updatePlayerBlip")]
-        private void UpdatePlayerBlip(int playerEntityId, int playerIndex, string playerName)
+        private void UpdatePlayerBlip(int playerEntityId, int playerIndex, string playerName, bool isHunted)
         {
+            if(isHunted)
+            {
+                GameState.Hunt.HuntedPlayerPedNetworkId = playerEntityId;
+            }
+            
             int entityHandle = NetworkGetEntityFromNetworkId(playerEntityId);
             HuntUI.CreatePlayerBlip(entityHandle, playerIndex, playerName);
         }

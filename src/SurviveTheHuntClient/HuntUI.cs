@@ -469,15 +469,15 @@ namespace SurviveTheHuntClient
 
             List<int> playersToDelete = new List<int>();
 
-            foreach (int playerPed in PlayerOverheadNames.Keys)
+            foreach (int playerPedHandle in PlayerOverheadNames.Keys)
             {
-                int playerHandle = PlayerOverheadNames[playerPed];
+                int playerHandle = PlayerOverheadNames[playerPedHandle];
 
                 // Delete check
                 bool playerExists = false;
                 try
                 {
-                    playerExists = DoesEntityExist(playerPed);
+                    playerExists = DoesEntityExist(playerPedHandle);
                 } 
                 catch
                 {
@@ -486,13 +486,14 @@ namespace SurviveTheHuntClient
 
                 if (!playerExists)
                 {
-                    playersToDelete.Add(playerPed);
+                    playersToDelete.Add(playerPedHandle);
                     continue;
                 }
                 else
                 {
-                    bool isPlayerOOB = GameState.IsPedTooFar(new Ped(playerPed));
-                    int playerServerId = GetPlayerServerId(playerHandle);
+                    Ped playerPed = new Ped(playerPedHandle);
+                    bool isPlayerOOB = GameState.IsPedTooFar(playerPed);
+                    int playerPedNetworkId = playerPed.NetworkId;
                     bool shouldDisplayGamerTag = false;
                     if(gameState.Hunt.IsStarted)
                     {
@@ -506,7 +507,7 @@ namespace SurviveTheHuntClient
                             {
                                 shouldDisplayGamerTag = false;
                             }
-                            else if(playerServerId != gameState.Hunt.HuntedPlayerPedNetworkId && playerServerId != Player.Local.ServerId)
+                            else if(playerPedNetworkId != gameState.Hunt.HuntedPlayerPedNetworkId && playerPedNetworkId != Player.Local.Character.NetworkId)
                             {
                                 shouldDisplayGamerTag = true;
                             }
@@ -514,7 +515,7 @@ namespace SurviveTheHuntClient
                     }
                     else
                     {
-                        shouldDisplayGamerTag = playerServerId != Player.Local.ServerId;
+                        shouldDisplayGamerTag = playerPedNetworkId != Player.Local.Character.NetworkId;
                     }
 
                     SetMpGamerTagVisibility(playerHandle, 0, shouldDisplayGamerTag);
