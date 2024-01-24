@@ -398,19 +398,37 @@ namespace SurviveTheHuntClient
                     pedsToDelete.Add(ped);
                     continue;
                 }
-                
-                if(gameState.Hunt.IsStarted && (playerState.Team == Team.Hunted || PlayerBlips[ped].id == gameState.Hunt.HuntedPlayer.Handle) && !GameState.IsPedTooFar(new Ped(ped)))
+
+                int playerHandle = PlayerBlips[ped].id;
+                bool isPlayerOOB = GameState.IsPedTooFar(new Ped(ped));
+                bool shouldDisplayBlip = false;
+                if (gameState.Hunt.IsStarted)
                 {
-                    // Hide the blip if it's within the play area bounds and the player is on the opposite team.
-                    Blip blip = PlayerBlips[ped].blip;
-                    SetBlipDisplay(blip.Handle, 0);
+                    if (isPlayerOOB)
+                    {
+                        shouldDisplayBlip = true;
+                    }
+                    else
+                    {
+                        if (playerState.Team == Team.Hunted)
+                        {
+                            shouldDisplayBlip = false;
+                        }
+                        else if (GetPlayerServerId(playerHandle) != gameState.Hunt.HuntedPlayerServerId && playerHandle != Player.Local.Handle)
+                        {
+                            shouldDisplayBlip = true;
+                        }
+                    }
                 }
                 else
                 {
-                    // Show the blip if it's out of the play area.
-                    Blip blip = PlayerBlips[ped].blip;
-                    SetBlipDisplay(blip.Handle, 6);
+                    shouldDisplayBlip = true;
                 }
+
+                // Show the blip if it's out of the play area.
+                // Hide the blip if it's within the play area bounds and the player is on the opposite team.
+                Blip blip = PlayerBlips[ped].blip;
+                SetBlipDisplay(blip.Handle, shouldDisplayBlip ? 6 : 0);
             }
 
             // Delete inactive peds.
@@ -473,14 +491,31 @@ namespace SurviveTheHuntClient
                 else
                 {
                     bool isPlayerOOB = GameState.IsPedTooFar(new Ped(playerPed));
-                    if (gameState.Hunt.IsStarted && (playerState.Team == Team.Hunted || playerHandle == gameState.Hunt.HuntedPlayer.Handle || playerHandle == Game.Player.Handle) && !isPlayerOOB)
+                    bool shouldDisplayGamerTag = false;
+                    if(gameState.Hunt.IsStarted)
                     {
-                        SetMpGamerTagVisibility(playerHandle, 0, false);
+                        if(isPlayerOOB)
+                        {
+                            shouldDisplayGamerTag = true;
+                        }
+                        else
+                        {
+                            if(playerState.Team == Team.Hunted)
+                            {
+                                shouldDisplayGamerTag = false;
+                            }
+                            else if(GetPlayerServerId(playerHandle) != gameState.Hunt.HuntedPlayerServerId && playerHandle != Player.Local.Handle)
+                            {
+                                shouldDisplayGamerTag = true;
+                            }
+                        }
                     }
-                    else if((gameState.Hunt.IsStarted && isPlayerOOB) || (gameState.Hunt.IsStarted && playerHandle != Game.Player.Handle))
+                    else
                     {
-                        SetMpGamerTagVisibility(playerHandle, 0, true);
+                        shouldDisplayGamerTag = true;
                     }
+
+                    SetMpGamerTagVisibility(playerHandle, 0, shouldDisplayGamerTag);
                 }
             }
 

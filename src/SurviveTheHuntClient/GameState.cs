@@ -44,10 +44,14 @@ namespace SurviveTheHuntClient
             /// </summary>
             public bool CanBeStarted { get { return !IsInProgress && !IsEnding; } }
 
+            private Player _HuntedPlayer = null;
+
             /// <summary>
             /// Currently hunted player.
             /// </summary>
-            public Player HuntedPlayer { get; set; } = null;
+            public Player HuntedPlayer { get => _HuntedPlayer; set { _HuntedPlayer = value; HuntedPlayerServerId = value.ServerId; } }
+
+            public int? HuntedPlayerServerId { get; set; } = null;
 
             /// <summary>
             /// Mugshot texture of the currently hunted player.
