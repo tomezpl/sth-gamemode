@@ -400,6 +400,7 @@ namespace SurviveTheHuntClient
                 }
 
                 int playerHandle = PlayerBlips[ped].id;
+                int playerServerId = GetPlayerServerId(playerHandle);
                 bool isPlayerOOB = GameState.IsPedTooFar(new Ped(ped));
                 bool shouldDisplayBlip = false;
                 if (gameState.Hunt.IsStarted)
@@ -414,7 +415,7 @@ namespace SurviveTheHuntClient
                         {
                             shouldDisplayBlip = false;
                         }
-                        else if (GetPlayerServerId(playerHandle) != gameState.Hunt.HuntedPlayerServerId && playerHandle != Player.Local.Handle)
+                        else if (playerServerId != gameState.Hunt.HuntedPlayerServerId && playerServerId != Player.Local.ServerId)
                         {
                             shouldDisplayBlip = true;
                         }
@@ -422,7 +423,7 @@ namespace SurviveTheHuntClient
                 }
                 else
                 {
-                    shouldDisplayBlip = true;
+                    shouldDisplayBlip = playerServerId != Player.Local.ServerId;
                 }
 
                 // Show the blip if it's out of the play area.
@@ -491,6 +492,7 @@ namespace SurviveTheHuntClient
                 else
                 {
                     bool isPlayerOOB = GameState.IsPedTooFar(new Ped(playerPed));
+                    int playerServerId = GetPlayerServerId(playerHandle);
                     bool shouldDisplayGamerTag = false;
                     if(gameState.Hunt.IsStarted)
                     {
@@ -504,7 +506,7 @@ namespace SurviveTheHuntClient
                             {
                                 shouldDisplayGamerTag = false;
                             }
-                            else if(GetPlayerServerId(playerHandle) != gameState.Hunt.HuntedPlayerServerId && playerHandle != Player.Local.Handle)
+                            else if(playerServerId != gameState.Hunt.HuntedPlayerServerId && playerServerId != Player.Local.ServerId)
                             {
                                 shouldDisplayGamerTag = true;
                             }
@@ -512,7 +514,7 @@ namespace SurviveTheHuntClient
                     }
                     else
                     {
-                        shouldDisplayGamerTag = true;
+                        shouldDisplayGamerTag = playerServerId != Player.Local.ServerId;
                     }
 
                     SetMpGamerTagVisibility(playerHandle, 0, shouldDisplayGamerTag);
