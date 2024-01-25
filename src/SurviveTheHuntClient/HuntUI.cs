@@ -22,6 +22,16 @@ namespace SurviveTheHuntClient
 
         private static Dictionary<int, int> PlayerOverheadNames = new Dictionary<int, int>();
 
+
+        public class BlipUpdateRequest
+        {
+            public int PlayerEntityNetworkId { get; set; }
+            public int PlayerIndex { get; set; }
+            public string PlayerName { get; set; }
+        }
+
+        public static List<BlipUpdateRequest> BlipsToUpdate = new List<BlipUpdateRequest>();
+
         /// <summary>
         /// Handles for currently active player peds; this is needed so blips aren't tracking dead player peds etc.
         /// </summary>
@@ -368,6 +378,17 @@ namespace SurviveTheHuntClient
         {
             // Set the player's blip colour based on their ID so that it is unique & replicated across all clients.
             SetBlipColour(GetMainPlayerBlipId(), Game.Player.ServerId + 10);
+
+            for (int i = 0; i < BlipsToUpdate.Count; i++)
+            {
+                if (NetworkDoesNetworkIdExist(BlipsToUpdate[i].PlayerEntityNetworkId) && NetworkDoesEntityExistWithNetworkId(BlipsToUpdate[i].PlayerEntityNetworkId))
+                {
+                    int entityHandle = NetToPed(BlipsToUpdate[i].PlayerEntityNetworkId);
+                    CreatePlayerBlip(entityHandle, BlipsToUpdate[i].PlayerIndex, BlipsToUpdate[i].PlayerName);
+                    BlipsToUpdate.RemoveAt(i);
+                    i--;
+                }
+            }
             
             // TODO: The heavy use of collections in this method seems to increase the tick time by a considerable amount.
             // Need to only invoke the blip update when a player connects, disconnects or dies; Otherwise only update the visibility of existing blips.

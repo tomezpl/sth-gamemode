@@ -258,7 +258,7 @@ namespace SurviveTheHuntClient
             {
                 Debug.WriteLine($"Player Ped changed from {PlayerPed} to {PlayerPedId()}. Calling invalidate");
                 PlayerPed = PlayerPedId();
-                TriggerServerEvent("sth:invalidatePlayerPed", NetworkGetNetworkIdFromEntity(PlayerPed), Player.Local.ServerId);
+                TriggerServerEvent("sth:invalidatePlayerPed", PedToNet(PlayerPed), Player.Local.ServerId);
             }
 
             GameOverCheck();
@@ -308,15 +308,20 @@ namespace SurviveTheHuntClient
         }
 
         [EventHandler("sth:updatePlayerBlip")]
-        private void UpdatePlayerBlip(int playerEntityId, int playerIndex, string playerName, bool isHunted)
+        private void UpdatePlayerBlip(int playerPedNetId, int playerIndex, string playerName, bool isHunted)
         {
             if(isHunted)
             {
-                GameState.Hunt.HuntedPlayerPedNetworkId = playerEntityId;
+                GameState.Hunt.HuntedPlayerPedNetworkId = playerPedNetId;
             }
-            
-            int entityHandle = NetworkGetEntityFromNetworkId(playerEntityId);
-            HuntUI.CreatePlayerBlip(entityHandle, playerIndex, playerName);
+
+            // The entities might not be synced immediately, so we store a "request" first, then calling UpdateTeammateBlips() on each tick will create blips as those entities are replicated.
+            HuntUI.BlipsToUpdate.Add(new HuntUI.BlipUpdateRequest 
+            { 
+                PlayerEntityNetworkId = playerPedNetId, 
+                PlayerIndex = playerIndex, 
+                PlayerName = playerName 
+            });
         }
 
         /// <summary>
