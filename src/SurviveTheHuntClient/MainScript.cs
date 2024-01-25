@@ -254,11 +254,12 @@ namespace SurviveTheHuntClient
                 PlayerState.DeathReported = true;
             }
 
-            if(PlayerPedId() != PlayerPed)
+            int currentPlayerPed = PlayerPedId();
+            if(currentPlayerPed != PlayerPed && NetworkDoesNetworkIdExist(PedToNet(currentPlayerPed)) && NetworkDoesEntityExistWithNetworkId(PedToNet(currentPlayerPed)))
             {
-                Debug.WriteLine($"Player Ped changed from {PlayerPed} to {PlayerPedId()}. Calling invalidate");
-                PlayerPed = PlayerPedId();
-                TriggerServerEvent("sth:invalidatePlayerPed", PedToNet(PlayerPed), Player.Local.ServerId);
+                Debug.WriteLine($"Player Ped changed from {PlayerPed} to {currentPlayerPed}. Calling invalidate");
+                PlayerPed = currentPlayerPed;
+                TriggerServerEvent("sth:invalidatePlayerPed", PedToNet(currentPlayerPed), Player.Local.ServerId);
             }
 
             GameOverCheck();

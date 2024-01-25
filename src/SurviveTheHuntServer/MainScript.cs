@@ -31,8 +31,6 @@ namespace SurviveTheHuntServer
         /// </summary>
         protected Dictionary<string, Action<dynamic>> STHEvents;
 
-        protected Dictionary<string, int> PlayerPeds = new Dictionary<string, int>();
-
         private readonly HuntedQueue HuntedPlayerQueue = null;
 
         private readonly Config Config = null;
@@ -142,41 +140,6 @@ namespace SurviveTheHuntServer
                     TriggerClientEvent(LastPlayerToSpawnCars, "sth:applyCarMods", SpawnedVehicles.Select(handle => NetworkGetNetworkIdFromEntity(handle)).ToList());
                 }
             }
-
-            /*int playerCounter = 0;
-            foreach(Player player in Players)
-            {
-                if(!PlayerPeds.TryGetValue(player.Handle, out int playerModel))
-                {
-                    playerModel = GetEntityModel(GetPlayerPed(player.Handle));
-                    // Player ped not tracked yet, add it now.
-                    if (DoesEntityExist(GetPlayerPed(player.Handle)))
-                    {
-                        PlayerPeds.Add(player.Handle, playerModel);
-
-                        Debug.WriteLine($"Creating an initial blip for {player.Name}");
-                        TriggerClientEvent("sth:updatePlayerBlip", NetworkGetNetworkIdFromEntity(GetPlayerPed(player.Handle)), playerCounter, player.Name);
-                    }
-                }
-                else
-                {
-                    int currentPlayerModel = GetPlayerPed(player.Handle);
-                    if (DoesEntityExist(GetPlayerPed(player.Handle)))
-                    {
-                        // Ped changed, update the entry. Need to create a new blip!
-                        if (playerModel != currentPlayerModel)
-                        {
-                            Debug.WriteLine($"Stored: {playerModel}, current: {currentPlayerModel}");
-                            PlayerPeds[player.Handle] = currentPlayerModel;
-                            Debug.WriteLine($"Updating the blip for {player.Name} as their ped changed");
-                            TriggerClientEvent("sth:updatePlayerBlip", NetworkGetNetworkIdFromEntity(GetPlayerPed(player.Handle)), playerCounter, player.Name);
-                        }
-                    }
-                }
-
-                playerCounter++;
-            }
-            */
 
             Hunt.Tick(this);
         }
