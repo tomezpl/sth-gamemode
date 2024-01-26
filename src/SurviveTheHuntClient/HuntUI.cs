@@ -339,7 +339,7 @@ namespace SurviveTheHuntClient
             EndTextCommandThefeedPostTicker(true, true);
         }
 
-        public static void CreatePlayerBlip(int playerPedEntity, int playerIndex, string playerName)
+        public static bool CreatePlayerBlip(int playerPedEntity, int playerIndex, string playerName)
         {
             if(PlayerBlips.ContainsKey(playerPedEntity))
             {
@@ -353,6 +353,8 @@ namespace SurviveTheHuntClient
                 }
 
                 PlayerBlips.Remove(playerPedEntity);
+
+                return false;
             }
 
             Blip blip = new Blip(AddBlipForEntity(playerPedEntity));
@@ -367,6 +369,8 @@ namespace SurviveTheHuntClient
 
             dynamic playerBlip = new { blip, id = playerIndex };
             PlayerBlips.Add(playerPedEntity, playerBlip);
+
+            return true;
         }
 
         /// <summary>
@@ -387,9 +391,12 @@ namespace SurviveTheHuntClient
                     int entityHandle = NetToPed(BlipsToUpdate[i].PlayerEntityNetworkId);
                     if (DoesEntityExist(entityHandle) && IsEntityAPed(entityHandle))
                     {
-                        CreatePlayerBlip(entityHandle, BlipsToUpdate[i].PlayerIndex, BlipsToUpdate[i].PlayerName);
-                        BlipsToUpdate.RemoveAt(i);
-                        i--;
+                        // If there was an existing blip for the player and it was just removed, defer creating the new blip until the next tick.
+                        if (CreatePlayerBlip(entityHandle, BlipsToUpdate[i].PlayerIndex, BlipsToUpdate[i].PlayerName))
+                        {
+                            BlipsToUpdate.RemoveAt(i);
+                            i--;
+                        }
                     }
                 }
             }
