@@ -341,6 +341,20 @@ namespace SurviveTheHuntClient
 
         public static void CreatePlayerBlip(int playerPedEntity, int playerIndex, string playerName)
         {
+            if(PlayerBlips.ContainsKey(playerPedEntity))
+            {
+                // TODO: i think this bit might be fucking shit up
+                // maybe don't delete if the player ped handle matches?
+                if (DoesBlipExist(PlayerBlips[playerPedEntity].blip.Handle))
+                {
+                    int blipHandle = PlayerBlips[playerPedEntity].blip.Handle;
+                    SetBlipDisplay(blipHandle, 0);
+                    RemoveBlip(ref blipHandle);
+                }
+
+                PlayerBlips.Remove(playerPedEntity);
+            }
+
             Blip blip = new Blip(AddBlipForEntity(playerPedEntity));
             blip.Name = playerName;
             Debug.WriteLine($"playerIndex: {playerIndex}");
@@ -352,20 +366,7 @@ namespace SurviveTheHuntClient
             SetBlipScale(blip.Handle, 0.9f);
 
             dynamic playerBlip = new { blip, id = playerIndex };
-            if (!PlayerBlips.ContainsKey(playerPedEntity))
-            {
-                PlayerBlips.Add(playerPedEntity, playerBlip);
-            }
-            else
-            {
-                if (DoesBlipExist(PlayerBlips[playerPedEntity].blip.Handle))
-                {
-                    int blipHandle = PlayerBlips[playerPedEntity].blip.Handle;
-                    SetBlipDisplay(blipHandle, 0);
-                    RemoveBlip(ref blipHandle);
-                }
-                PlayerBlips[playerPedEntity] = playerBlip;
-            }
+            PlayerBlips.Add(playerPedEntity, playerBlip);
         }
 
         /// <summary>

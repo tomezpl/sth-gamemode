@@ -157,6 +157,7 @@ namespace SurviveTheHuntServer
         [EventHandler("sth:invalidatePlayerPed")]
         private void InvalidatePlayerPed([FromSource] Player src, int ped, int playerServerId)
         {
+            SetEntityDistanceCullingRadius(NetworkGetEntityFromNetworkId(ped), float.MaxValue);
             TriggerClientEvent("sth:updatePlayerBlip", ped, playerServerId, src.Name, GameState.Hunt.HuntedPlayer?.Handle == src.Handle);
         }
 

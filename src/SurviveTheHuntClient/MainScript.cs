@@ -321,7 +321,7 @@ namespace SurviveTheHuntClient
             { 
                 PlayerEntityNetworkId = playerPedNetId, 
                 PlayerIndex = playerIndex, 
-                PlayerName = playerName 
+                PlayerName = playerName
             });
         }
 
