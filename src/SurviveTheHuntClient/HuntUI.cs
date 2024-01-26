@@ -341,7 +341,7 @@ namespace SurviveTheHuntClient
 
         public static bool CreatePlayerBlip(int playerPedEntity, int playerIndex, string playerName)
         {
-            if(PlayerBlips.ContainsKey(playerPedEntity))
+            if(false || PlayerBlips.ContainsKey(playerPedEntity))
             {
                 // TODO: i think this bit might be fucking shit up
                 // maybe don't delete if the player ped handle matches?
