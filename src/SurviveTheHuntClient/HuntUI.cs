@@ -385,9 +385,12 @@ namespace SurviveTheHuntClient
                 if (NetworkDoesNetworkIdExist(BlipsToUpdate[i].PlayerEntityNetworkId) && NetworkDoesEntityExistWithNetworkId(BlipsToUpdate[i].PlayerEntityNetworkId))
                 {
                     int entityHandle = NetToPed(BlipsToUpdate[i].PlayerEntityNetworkId);
-                    CreatePlayerBlip(entityHandle, BlipsToUpdate[i].PlayerIndex, BlipsToUpdate[i].PlayerName);
-                    BlipsToUpdate.RemoveAt(i);
-                    i--;
+                    if (DoesEntityExist(entityHandle) && IsEntityAPed(entityHandle))
+                    {
+                        CreatePlayerBlip(entityHandle, BlipsToUpdate[i].PlayerIndex, BlipsToUpdate[i].PlayerName);
+                        BlipsToUpdate.RemoveAt(i);
+                        i--;
+                    }
                 }
             }
             
