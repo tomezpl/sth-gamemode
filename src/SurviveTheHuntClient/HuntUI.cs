@@ -342,7 +342,7 @@ namespace SurviveTheHuntClient
                 // maybe don't delete if the player ped handle matches?
                 if (DoesBlipExist(PlayerBlips[playerIndex].blip.Handle))
                 {
-                    int blipHandle = PlayerBlips[playerPedEntity].blip.Handle;
+                    int blipHandle = PlayerBlips[playerIndex].blip.Handle;
                     SetBlipDisplay(blipHandle, 0);
                     RemoveBlip(ref blipHandle);
                 }
