@@ -363,7 +363,7 @@ namespace SurviveTheHuntClient
             SetBlipScale(blip.Handle, 0.9f);
 
             PlayerBlip playerBlip = new PlayerBlip { blip = blip, pedHandle = playerPedEntity };
-            PlayerBlips.Add(playerPedEntity, playerBlip);
+            PlayerBlips.Add(playerIndex, playerBlip);
 
             return true;
         }
