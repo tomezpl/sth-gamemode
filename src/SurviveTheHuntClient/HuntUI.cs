@@ -30,7 +30,7 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Handles for currently active player peds; this is needed so blips aren't tracking dead player peds etc.
         /// </summary>
-        private static List<int> ActivePeds = new List<int>();
+        private static List<int> ActivePlayers = new List<int>();
 
         /// <summary>
         /// Blips with opacity fading over time.
@@ -381,37 +381,35 @@ namespace SurviveTheHuntClient
             
             // TODO: The heavy use of collections in this method seems to increase the tick time by a considerable amount.
             // Need to only invoke the blip update when a player connects, disconnects or dies; Otherwise only update the visibility of existing blips.
-            foreach (PlayerBlip playerBlip in PlayerBlips.Values)
+            foreach (KeyValuePair<int, PlayerBlip> playerBlip in PlayerBlips)
             {
-                if (playerBlip.pedHandle == PlayerPedId())
+                if (playerBlip.Value.pedHandle == PlayerPedId())
                 {
                     continue;
                 }
 
                 // Mark the player as an active ped to know that its blips & gamertag shouldn't be deleted.
-                if (DoesEntityExist(playerBlip.pedHandle) && IsEntityAPed(playerBlip.pedHandle) && !IsPedDeadOrDying(playerBlip.pedHandle, true))
+                if (DoesEntityExist(playerBlip.Value.pedHandle) && IsEntityAPed(playerBlip.Value.pedHandle) && !IsPedDeadOrDying(playerBlip.Value.pedHandle, true))
                 {
-                    ActivePeds.Add(playerBlip.pedHandle);
+                    ActivePlayers.Add(playerBlip.Key);
                 }
             }
 
             // Display player names on blips (in bigmap).
             N_0x82cedc33687e1f50(true);
 
-            List<int> pedsToDelete = new List<int>();
+            List<int> playerBlipsToDelete = new List<int>();
 
             foreach(int playerServerId in PlayerBlips.Keys)
             {
-                int ped = PlayerBlips[playerServerId].pedHandle;
-
                 // Delete check
-                if (!ActivePeds.Contains(ped))
+                if (!ActivePlayers.Contains(playerServerId))
                 {
-                    pedsToDelete.Add(ped);
+                    playerBlipsToDelete.Add(playerServerId);
                     continue;
                 }
 
-                Ped playerPed = new Ped(ped);
+                Ped playerPed = new Ped(PlayerBlips[playerServerId].pedHandle);
                 int playerPedNetworkId = playerPed.NetworkId;
                 bool isPlayerOOB = GameState.IsPedTooFar(playerPed);
                 bool shouldDisplayBlip = false;
@@ -445,14 +443,14 @@ namespace SurviveTheHuntClient
             }
 
             // Delete inactive peds.
-            foreach(int ped in pedsToDelete)
+            foreach(int playerServerId in playerBlipsToDelete)
             {
-                Blip blip = PlayerBlips[ped].blip;
+                Blip blip = PlayerBlips[playerServerId].blip;
                 blip.Delete();
-                PlayerBlips.Remove(ped);
+                PlayerBlips.Remove(playerServerId);
             }
 
-            ActivePeds.Clear();
+            ActivePlayers.Clear();
         }
 
         public static void UpdatePlayerOverheadNames(PlayerList players, ref GameState gameState, ref PlayerState playerState) 
@@ -469,7 +467,7 @@ namespace SurviveTheHuntClient
                     }
                 }
 
-                if (IsMpGamerTagActive(player.Handle) && PlayerBlips.TryGetValue(player.Character.Handle, out PlayerBlip playerBlip))
+                if (IsMpGamerTagActive(player.Handle) && PlayerBlips.TryGetValue(player.ServerId, out PlayerBlip playerBlip))
                 {
                     SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(playerBlip.blip.Handle));
                 }
