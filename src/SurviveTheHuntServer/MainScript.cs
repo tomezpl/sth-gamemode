@@ -49,6 +49,15 @@ namespace SurviveTheHuntServer
 
         private Player LastPlayerToSpawnCars = null;
 
+        public class BlipUpdateRequest
+        {
+            public int PlayerEntityNetworkId { get; set; }
+            public int PlayerIndex { get; set; }
+            public Player Player { get; set; }
+        }
+
+        public static List<BlipUpdateRequest> BlipsToUpdate = new List<BlipUpdateRequest>();
+
         public MainScript()
         {
             if (GetCurrentResourceName() != Constants.ResourceName)
@@ -141,6 +150,22 @@ namespace SurviveTheHuntServer
                 }
             }
 
+            for(int i = 0; i < BlipsToUpdate.Count; i++)
+            {
+                Player player = BlipsToUpdate[i].Player;
+                int playerServerId = BlipsToUpdate[i].PlayerIndex;
+                int pedNetId = BlipsToUpdate[i].PlayerEntityNetworkId;
+                int ped = NetworkGetEntityFromNetworkId(pedNetId);
+                if (DoesEntityExist(ped) && player.Character?.Handle == ped)
+                {
+                    bool isHunted = GameState.Hunt.HuntedPlayer?.Handle == player.Handle;
+                    Debug.WriteLine($"Updating player blip for {player.Name}.\n\tChanged from {player.Character?.Handle} to {ped}.\n\tHandle: {player.Handle}\n{(isHunted ? "\tThey are hunted\n" : "")}");
+                    TriggerClientEvent("sth:updatePlayerBlip", ped, playerServerId, player.Name, isHunted);
+                    BlipsToUpdate.RemoveAt(i);
+                    i--;
+                }
+            }
+
             Hunt.Tick(this);
         }
 
@@ -158,7 +183,12 @@ namespace SurviveTheHuntServer
         private void InvalidatePlayerPed([FromSource] Player src, int ped, int playerServerId)
         {
             SetEntityDistanceCullingRadius(NetworkGetEntityFromNetworkId(ped), float.MaxValue);
-            TriggerClientEvent("sth:updatePlayerBlip", ped, playerServerId, src.Name, GameState.Hunt.HuntedPlayer?.Handle == src.Handle);
+            BlipsToUpdate.Add(new BlipUpdateRequest 
+            { 
+                PlayerEntityNetworkId = ped, 
+                PlayerIndex = playerServerId,
+                Player = src
+            });
         }
 
         /// <summary>

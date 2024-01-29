@@ -316,13 +316,7 @@ namespace SurviveTheHuntClient
                 GameState.Hunt.HuntedPlayerPedNetworkId = playerPedNetId;
             }
 
-            // The entities might not be synced immediately, so we store a "request" first, then calling UpdateTeammateBlips() on each tick will create blips as those entities are replicated.
-            HuntUI.BlipsToUpdate.Add(new HuntUI.BlipUpdateRequest 
-            { 
-                PlayerEntityNetworkId = playerPedNetId, 
-                PlayerIndex = playerIndex, 
-                PlayerName = playerName
-            });
+            HuntUI.CreatePlayerBlip(NetToPed(playerPedNetId), playerIndex, playerName);
         }
 
         /// <summary>

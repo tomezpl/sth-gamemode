@@ -14,23 +14,18 @@ namespace SurviveTheHuntClient
         /// </summary>
         private static Blip RadiusBlip = null;
 
+        private struct PlayerBlip
+        {
+            public Blip blip;
+            public int pedHandle;
+        }
+
         /// <summary>
         /// Regular player blips to show on the radar.
         /// </summary>
-        /// <remarks>TODO: Change this to a hashset?</remarks>
-        private static Dictionary<int, dynamic> PlayerBlips = new Dictionary<int, dynamic>();
+        private static Dictionary<int, PlayerBlip> PlayerBlips = new Dictionary<int, PlayerBlip>();
 
         private static Dictionary<int, int> PlayerOverheadNames = new Dictionary<int, int>();
-
-
-        public class BlipUpdateRequest
-        {
-            public int PlayerEntityNetworkId { get; set; }
-            public int PlayerIndex { get; set; }
-            public string PlayerName { get; set; }
-        }
-
-        public static List<BlipUpdateRequest> BlipsToUpdate = new List<BlipUpdateRequest>();
 
         /// <summary>
         /// Handles for currently active player peds; this is needed so blips aren't tracking dead player peds etc.
@@ -341,18 +336,18 @@ namespace SurviveTheHuntClient
 
         public static bool CreatePlayerBlip(int playerPedEntity, int playerIndex, string playerName)
         {
-            if(false || PlayerBlips.ContainsKey(playerPedEntity))
+            if(PlayerBlips.ContainsKey(playerIndex))
             {
                 // TODO: i think this bit might be fucking shit up
                 // maybe don't delete if the player ped handle matches?
-                if (DoesBlipExist(PlayerBlips[playerPedEntity].blip.Handle))
+                if (DoesBlipExist(PlayerBlips[playerIndex].blip.Handle))
                 {
                     int blipHandle = PlayerBlips[playerPedEntity].blip.Handle;
                     SetBlipDisplay(blipHandle, 0);
                     RemoveBlip(ref blipHandle);
                 }
 
-                PlayerBlips.Remove(playerPedEntity);
+                PlayerBlips.Remove(playerIndex);
 
                 return false;
             }
@@ -367,7 +362,7 @@ namespace SurviveTheHuntClient
             SetBlipShrink(blip.Handle, GetConvar("sth_shrinkPlayerBlips", "false") != "false");
             SetBlipScale(blip.Handle, 0.9f);
 
-            dynamic playerBlip = new { blip, id = playerIndex };
+            PlayerBlip playerBlip = new PlayerBlip { blip = blip, pedHandle = playerPedEntity };
             PlayerBlips.Add(playerPedEntity, playerBlip);
 
             return true;
@@ -383,37 +378,20 @@ namespace SurviveTheHuntClient
         {
             // Set the player's blip colour based on their ID so that it is unique & replicated across all clients.
             SetBlipColour(GetMainPlayerBlipId(), Game.Player.ServerId + 10);
-
-            for (int i = 0; i < BlipsToUpdate.Count; i++)
-            {
-                if (NetworkDoesNetworkIdExist(BlipsToUpdate[i].PlayerEntityNetworkId) && NetworkDoesEntityExistWithNetworkId(BlipsToUpdate[i].PlayerEntityNetworkId))
-                {
-                    int entityHandle = NetToPed(BlipsToUpdate[i].PlayerEntityNetworkId);
-                    if (DoesEntityExist(entityHandle) && IsEntityAPed(entityHandle))
-                    {
-                        // If there was an existing blip for the player and it was just removed, defer creating the new blip until the next tick.
-                        if (CreatePlayerBlip(entityHandle, BlipsToUpdate[i].PlayerIndex, BlipsToUpdate[i].PlayerName))
-                        {
-                            BlipsToUpdate.RemoveAt(i);
-                            i--;
-                        }
-                    }
-                }
-            }
             
             // TODO: The heavy use of collections in this method seems to increase the tick time by a considerable amount.
             // Need to only invoke the blip update when a player connects, disconnects or dies; Otherwise only update the visibility of existing blips.
-            foreach (int ped in PlayerBlips.Keys)
+            foreach (PlayerBlip playerBlip in PlayerBlips.Values)
             {
-                if(ped == PlayerPedId())
+                if (playerBlip.pedHandle == PlayerPedId())
                 {
                     continue;
                 }
 
                 // Mark the player as an active ped to know that its blips & gamertag shouldn't be deleted.
-                if (!IsPedDeadOrDying(ped, true))
+                if (DoesEntityExist(playerBlip.pedHandle) && IsEntityAPed(playerBlip.pedHandle) && !IsPedDeadOrDying(playerBlip.pedHandle, true))
                 {
-                    ActivePeds.Add(ped);
+                    ActivePeds.Add(playerBlip.pedHandle);
                 }
             }
 
@@ -422,8 +400,10 @@ namespace SurviveTheHuntClient
 
             List<int> pedsToDelete = new List<int>();
 
-            foreach(int ped in PlayerBlips.Keys)
+            foreach(int playerServerId in PlayerBlips.Keys)
             {
+                int ped = PlayerBlips[playerServerId].pedHandle;
+
                 // Delete check
                 if (!ActivePeds.Contains(ped))
                 {
@@ -455,12 +435,12 @@ namespace SurviveTheHuntClient
                 }
                 else
                 {
-                    shouldDisplayBlip = playerPedNetworkId != Player.Local.ServerId;
+                    shouldDisplayBlip = playerPedNetworkId != Player.Local.Character.NetworkId;
                 }
 
                 // Show the blip if it's out of the play area.
                 // Hide the blip if it's within the play area bounds and the player is on the opposite team.
-                Blip blip = PlayerBlips[ped].blip;
+                Blip blip = PlayerBlips[playerServerId].blip;
                 SetBlipDisplay(blip.Handle, shouldDisplayBlip ? 6 : 0);
             }
 
@@ -489,7 +469,7 @@ namespace SurviveTheHuntClient
                     }
                 }
 
-                if (IsMpGamerTagActive(player.Handle) && PlayerBlips.TryGetValue(player.Character.Handle, out dynamic playerBlip))
+                if (IsMpGamerTagActive(player.Handle) && PlayerBlips.TryGetValue(player.Character.Handle, out PlayerBlip playerBlip))
                 {
                     SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(playerBlip.blip.Handle));
                 }
