@@ -160,7 +160,7 @@ namespace SurviveTheHuntServer
                 {
                     bool isHunted = GameState.Hunt.HuntedPlayer?.Handle == player.Handle;
                     Debug.WriteLine($"Updating player blip for {player.Name}.\n\tChanged from {player.Character?.Handle} to {ped}.\n\tHandle: {player.Handle}\n{(isHunted ? "\tThey are hunted\n" : "")}");
-                    TriggerClientEvent("sth:updatePlayerBlip", ped, playerServerId, player.Name, isHunted);
+                    TriggerClientEvent("sth:updatePlayerBlip", pedNetId, playerServerId, player.Name, isHunted);
                     BlipsToUpdate.RemoveAt(i);
                     i--;
                 }
