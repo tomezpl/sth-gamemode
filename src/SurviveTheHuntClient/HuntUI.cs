@@ -343,13 +343,13 @@ namespace SurviveTheHuntClient
                 if (DoesBlipExist(PlayerBlips[playerIndex].blip.Handle))
                 {
                     int blipHandle = PlayerBlips[playerIndex].blip.Handle;
-                    SetBlipDisplay(blipHandle, 0);
-                    RemoveBlip(ref blipHandle);
+                    //SetBlipDisplay(blipHandle, 0);
+                    //RemoveBlip(ref blipHandle);
                 }
 
-                PlayerBlips.Remove(playerIndex);
+                //PlayerBlips.Remove(playerIndex);
 
-                return false;
+                //return false;
             }
 
             Blip blip = new Blip(AddBlipForEntity(playerPedEntity));
@@ -363,7 +363,7 @@ namespace SurviveTheHuntClient
             SetBlipScale(blip.Handle, 0.9f);
 
             PlayerBlip playerBlip = new PlayerBlip { blip = blip, pedHandle = playerPedEntity };
-            PlayerBlips.Add(playerIndex, playerBlip);
+            PlayerBlips[playerIndex] = playerBlip;
 
             return true;
         }
@@ -446,7 +446,7 @@ namespace SurviveTheHuntClient
             foreach(int playerServerId in playerBlipsToDelete)
             {
                 Blip blip = PlayerBlips[playerServerId].blip;
-                blip.Delete();
+                //blip.Delete();
                 PlayerBlips.Remove(playerServerId);
             }
 
