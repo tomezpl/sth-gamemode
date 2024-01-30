@@ -354,7 +354,7 @@ namespace SurviveTheHuntClient
 
             Blip blip = new Blip(AddBlipForEntity(playerPedEntity));
             blip.Name = playerName;
-            Debug.WriteLine($"playerIndex: {playerIndex}");
+            Debug.WriteLine($"playerIndex: {playerIndex}, playerPedEntity: {playerPedEntity}");
             SetBlipColour(blip.Handle, playerIndex + 10);
             SetBlipDisplay(blip.Handle, 6);
             ShowHeadingIndicatorOnBlip(blip.Handle, true);
