@@ -159,7 +159,7 @@ namespace SurviveTheHuntServer
                 if (DoesEntityExist(ped) && player.Character?.Handle == ped)
                 {
                     bool isHunted = GameState.Hunt.HuntedPlayer?.Handle == player.Handle;
-                    Debug.WriteLine($"Updating player blip for {player.Name}.\n\tChanged from {player.Character?.Handle} to {ped}.\n\tHandle: {player.Handle}\n{(isHunted ? "\tThey are hunted\n" : "")}");
+                    Debug.WriteLine($"Updating player blip for {player.Name}.\n\tChanged from {player.Character?.Handle} (net: {player.Character?.NetworkId} to {ped} (net: {pedNetId}).\n\tHandle: {player.Handle}\n{(isHunted ? "\tThey are hunted\n" : "")}");
                     TriggerClientEvent("sth:updatePlayerBlip", pedNetId, playerServerId, player.Name, isHunted);
                     BlipsToUpdate.RemoveAt(i);
                     i--;

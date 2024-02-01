@@ -257,7 +257,7 @@ namespace SurviveTheHuntClient
             int currentPlayerPed = PlayerPedId();
             if(currentPlayerPed != PlayerPed && NetworkDoesNetworkIdExist(PedToNet(currentPlayerPed)) && NetworkDoesEntityExistWithNetworkId(PedToNet(currentPlayerPed)))
             {
-                Debug.WriteLine($"Player Ped changed from {PlayerPed} to {currentPlayerPed}. Calling invalidate");
+                Debug.WriteLine($"Player Ped changed from {PlayerPed} (net: {PedToNet(currentPlayerPed)}) to {currentPlayerPed} (net: {PedToNet(currentPlayerPed)}). Calling invalidate");
                 PlayerPed = currentPlayerPed;
                 TriggerServerEvent("sth:invalidatePlayerPed", PedToNet(currentPlayerPed), Player.Local.ServerId);
             }
@@ -316,7 +316,7 @@ namespace SurviveTheHuntClient
                 GameState.Hunt.HuntedPlayerPedNetworkId = playerPedNetId;
             }
 
-            HuntUI.CreatePlayerBlip(NetToPed(playerPedNetId), playerIndex, playerName);
+            HuntUI.CreatePlayerBlip(playerPedNetId, playerIndex, playerName);
         }
 
         /// <summary>

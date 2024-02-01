@@ -16,8 +16,10 @@ namespace SurviveTheHuntClient
 
         private struct PlayerBlip
         {
-            public Blip blip;
-            public int pedHandle;
+            public Blip Blip;
+            public int PedHandle;
+            public int PedNetworkId;
+            public string PlayerName;
         }
 
         /// <summary>
@@ -334,15 +336,17 @@ namespace SurviveTheHuntClient
             EndTextCommandThefeedPostTicker(true, true);
         }
 
-        public static bool CreatePlayerBlip(int playerPedEntity, int playerIndex, string playerName)
+        public static bool CreatePlayerBlip(int playerPedNetId, int playerIndex, string playerName)
         {
+            int playerPedEntity = NetToPed(playerPedNetId);
+
             if(PlayerBlips.ContainsKey(playerIndex))
             {
                 // TODO: i think this bit might be fucking shit up
                 // maybe don't delete if the player ped handle matches?
-                if (DoesBlipExist(PlayerBlips[playerIndex].blip.Handle))
+                if (DoesBlipExist(PlayerBlips[playerIndex].Blip.Handle))
                 {
-                    int blipHandle = PlayerBlips[playerIndex].blip.Handle;
+                    int blipHandle = PlayerBlips[playerIndex].Blip.Handle;
                     //SetBlipDisplay(blipHandle, 0);
                     //RemoveBlip(ref blipHandle);
                 }
@@ -354,7 +358,7 @@ namespace SurviveTheHuntClient
 
             Blip blip = new Blip(AddBlipForEntity(playerPedEntity));
             blip.Name = playerName;
-            Debug.WriteLine($"playerIndex: {playerIndex}, playerPedEntity: {playerPedEntity}");
+            Debug.WriteLine($"playerIndex: {playerIndex}, playerPedEntity: {playerPedEntity}, playerPedNetId: {playerPedNetId}");
             SetBlipColour(blip.Handle, playerIndex + 10);
             SetBlipDisplay(blip.Handle, 6);
             ShowHeadingIndicatorOnBlip(blip.Handle, true);
@@ -362,7 +366,13 @@ namespace SurviveTheHuntClient
             SetBlipShrink(blip.Handle, GetConvar("sth_shrinkPlayerBlips", "false") != "false");
             SetBlipScale(blip.Handle, 0.9f);
 
-            PlayerBlip playerBlip = new PlayerBlip { blip = blip, pedHandle = playerPedEntity };
+            PlayerBlip playerBlip = new PlayerBlip 
+            { 
+                Blip = blip, 
+                PedHandle = playerPedEntity,
+                PedNetworkId = playerPedNetId,
+                PlayerName = playerName
+            };
             PlayerBlips[playerIndex] = playerBlip;
 
             return true;
@@ -383,13 +393,13 @@ namespace SurviveTheHuntClient
             // Need to only invoke the blip update when a player connects, disconnects or dies; Otherwise only update the visibility of existing blips.
             foreach (KeyValuePair<int, PlayerBlip> playerBlip in PlayerBlips)
             {
-                if (playerBlip.Value.pedHandle == PlayerPedId())
+                if (playerBlip.Value.PedHandle == PlayerPedId())
                 {
                     continue;
                 }
 
                 // Mark the player as an active ped to know that its blips & gamertag shouldn't be deleted.
-                if (DoesEntityExist(playerBlip.Value.pedHandle) && IsEntityAPed(playerBlip.Value.pedHandle) && !IsPedDeadOrDying(playerBlip.Value.pedHandle, true))
+                if (DoesEntityExist(playerBlip.Value.PedHandle) && IsEntityAPed(playerBlip.Value.PedHandle) && !IsPedDeadOrDying(playerBlip.Value.PedHandle, true))
                 {
                     ActivePlayers.Add(playerBlip.Key);
                 }
@@ -409,8 +419,16 @@ namespace SurviveTheHuntClient
                     continue;
                 }
 
-                Ped playerPed = new Ped(PlayerBlips[playerServerId].pedHandle);
-                int playerPedNetworkId = playerPed.NetworkId;
+                Ped playerPed = new Ped(PlayerBlips[playerServerId].PedHandle);
+                int playerPedNetworkId = PlayerBlips[playerServerId].PedNetworkId;
+
+                int currentPedHandle = NetToPed(playerPedNetworkId);
+                if(currentPedHandle != PlayerBlips[playerServerId].PedHandle && DoesEntityExist(currentPedHandle))
+                {
+                    Debug.WriteLine($"Ped changed for {PlayerBlips[playerServerId].PlayerName} ({playerServerId}), re-creating blip");
+                    CreatePlayerBlip(playerPedNetworkId, playerServerId, PlayerBlips[playerServerId].PlayerName);
+                }
+
                 bool isPlayerOOB = GameState.IsPedTooFar(playerPed);
                 bool shouldDisplayBlip = false;
                 if (gameState.Hunt.IsStarted)
@@ -438,14 +456,14 @@ namespace SurviveTheHuntClient
 
                 // Show the blip if it's out of the play area.
                 // Hide the blip if it's within the play area bounds and the player is on the opposite team.
-                Blip blip = PlayerBlips[playerServerId].blip;
+                Blip blip = PlayerBlips[playerServerId].Blip;
                 SetBlipDisplay(blip.Handle, shouldDisplayBlip ? 6 : 0);
             }
 
             // Delete inactive peds.
             foreach(int playerServerId in playerBlipsToDelete)
             {
-                Blip blip = PlayerBlips[playerServerId].blip;
+                Blip blip = PlayerBlips[playerServerId].Blip;
                 //blip.Delete();
                 PlayerBlips.Remove(playerServerId);
             }
@@ -469,7 +487,7 @@ namespace SurviveTheHuntClient
 
                 if (IsMpGamerTagActive(player.Handle) && PlayerBlips.TryGetValue(player.ServerId, out PlayerBlip playerBlip))
                 {
-                    SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(playerBlip.blip.Handle));
+                    SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(playerBlip.Blip.Handle));
                 }
                 else if(IsMpGamerTagActive(player.Handle) && player.ServerId == Game.Player.ServerId)
                 {
