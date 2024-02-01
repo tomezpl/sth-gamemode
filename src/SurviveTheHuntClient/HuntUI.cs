@@ -465,7 +465,7 @@ namespace SurviveTheHuntClient
             {
                 Blip blip = PlayerBlips[playerServerId].Blip;
                 //blip.Delete();
-                PlayerBlips.Remove(playerServerId);
+                //PlayerBlips.Remove(playerServerId);
             }
 
             ActivePlayers.Clear();
