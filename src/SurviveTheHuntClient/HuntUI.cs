@@ -338,7 +338,7 @@ namespace SurviveTheHuntClient
 
         public static bool CreatePlayerBlip(int playerPedNetId, int playerIndex, string playerName)
         {
-            int playerPedEntity = NetToPed(playerPedNetId);
+            int playerPedEntity = NetworkGetEntityFromNetworkId(playerPedNetId);
 
             if(PlayerBlips.ContainsKey(playerIndex))
             {
@@ -413,16 +413,16 @@ namespace SurviveTheHuntClient
             foreach(int playerServerId in PlayerBlips.Keys)
             {
                 // Delete check
-                if (!ActivePlayers.Contains(playerServerId))
+                /*if (!ActivePlayers.Contains(playerServerId))
                 {
                     playerBlipsToDelete.Add(playerServerId);
                     continue;
-                }
+                }*/
 
                 Ped playerPed = new Ped(PlayerBlips[playerServerId].PedHandle);
                 int playerPedNetworkId = PlayerBlips[playerServerId].PedNetworkId;
 
-                int currentPedHandle = NetToPed(playerPedNetworkId);
+                int currentPedHandle = NetworkGetEntityFromNetworkId(playerPedNetworkId);
                 if(currentPedHandle != PlayerBlips[playerServerId].PedHandle && DoesEntityExist(currentPedHandle))
                 {
                     Debug.WriteLine($"Ped changed for {PlayerBlips[playerServerId].PlayerName} ({playerServerId}), re-creating blip");

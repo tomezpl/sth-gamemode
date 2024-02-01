@@ -255,11 +255,11 @@ namespace SurviveTheHuntClient
             }
 
             int currentPlayerPed = PlayerPedId();
-            if(currentPlayerPed != PlayerPed && NetworkDoesNetworkIdExist(PedToNet(currentPlayerPed)) && NetworkDoesEntityExistWithNetworkId(PedToNet(currentPlayerPed)))
+            if(currentPlayerPed != PlayerPed && NetworkDoesNetworkIdExist(NetworkGetNetworkIdFromEntity(currentPlayerPed)) && NetworkDoesEntityExistWithNetworkId(NetworkGetNetworkIdFromEntity(currentPlayerPed)))
             {
-                Debug.WriteLine($"Player Ped changed from {PlayerPed} (net: {PedToNet(currentPlayerPed)}) to {currentPlayerPed} (net: {PedToNet(currentPlayerPed)}). Calling invalidate");
+                Debug.WriteLine($"Player Ped changed from {PlayerPed} (net: {NetworkGetNetworkIdFromEntity(currentPlayerPed)}) to {currentPlayerPed} (net: {NetworkGetNetworkIdFromEntity(currentPlayerPed)}). Calling invalidate");
                 PlayerPed = currentPlayerPed;
-                TriggerServerEvent("sth:invalidatePlayerPed", PedToNet(currentPlayerPed), Player.Local.ServerId);
+                TriggerServerEvent("sth:invalidatePlayerPed", NetworkGetNetworkIdFromEntity(currentPlayerPed), Player.Local.ServerId);
             }
 
             GameOverCheck();
