@@ -14,7 +14,7 @@ namespace SurviveTheHuntClient
         /// </summary>
         private static Blip RadiusBlip = null;
 
-        private struct PlayerBlip
+        private class PlayerBlip
         {
             public Blip Blip;
             public int PedHandle;
@@ -336,25 +336,9 @@ namespace SurviveTheHuntClient
             EndTextCommandThefeedPostTicker(true, true);
         }
 
-        public static bool CreatePlayerBlip(int playerPedNetId, int playerIndex, string playerName)
+        public static bool CreatePlayerBlip(int playerPedNetId, int playerIndex, string playerName, bool removeExisting = true)
         {
             int playerPedEntity = NetworkGetEntityFromNetworkId(playerPedNetId);
-
-            if(PlayerBlips.ContainsKey(playerIndex))
-            {
-                // TODO: i think this bit might be fucking shit up
-                // maybe don't delete if the player ped handle matches?
-                if (DoesBlipExist(PlayerBlips[playerIndex].Blip.Handle))
-                {
-                    int blipHandle = PlayerBlips[playerIndex].Blip.Handle;
-                    //SetBlipDisplay(blipHandle, 0);
-                    //RemoveBlip(ref blipHandle);
-                }
-
-                //PlayerBlips.Remove(playerIndex);
-
-                //return false;
-            }
 
             Blip blip = new Blip(AddBlipForEntity(playerPedEntity));
             blip.Name = playerName;
@@ -373,7 +357,29 @@ namespace SurviveTheHuntClient
                 PedNetworkId = playerPedNetId,
                 PlayerName = playerName
             };
-            PlayerBlips[playerIndex] = playerBlip;
+
+            if (PlayerBlips.ContainsKey(playerIndex))
+            {
+                PlayerBlips[playerIndex].PedHandle = playerPedEntity;
+                PlayerBlips[playerIndex].PedNetworkId = playerPedNetId;
+                PlayerBlips[playerIndex].PlayerName = playerName;
+
+                if(removeExisting)
+                {
+                    int blipHandle = PlayerBlips[playerIndex].Blip.Handle;
+                    if (DoesBlipExist(blipHandle))
+                    {
+                        SetBlipDisplay(blipHandle, 0);
+                        RemoveBlip(ref blipHandle);
+                    }
+                }
+
+                PlayerBlips[playerIndex].Blip = blip;
+            }
+            else
+            {
+                PlayerBlips.Add(playerIndex, playerBlip);
+            }
 
             return true;
         }
