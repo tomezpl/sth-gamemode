@@ -37,7 +37,7 @@ namespace SurviveTheHuntServer
             foreach(Player player in Players)
             {
                 bool isHunted = GameState.Hunt.HuntedPlayer?.Handle == player.Handle;
-                playerBlipInfoBuilder.Append($"{NetworkGetEntityFromNetworkId(player.Character.Handle)},{player.Handle},{player.Name},{(isHunted ? '1' : '0')};");
+                playerBlipInfoBuilder.Append($"{NetworkGetNetworkIdFromEntity(player.Character.Handle)},{player.Handle},{player.Name},{(isHunted ? '1' : '0')};");
             }
             playerBlipInfoBuilder.Length--;
 
