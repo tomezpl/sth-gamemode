@@ -231,6 +231,7 @@ namespace SurviveTheHuntClient
         private void CreateExistingPlayerBlips(string playersBlipsInfo)
         {
             string[] playerBlipInfo = playersBlipsInfo.Split(';');
+            Debug.WriteLine(playersBlipsInfo);
             foreach(string playerBlipDataString in playerBlipInfo)
             {
                 string[] playerBlipData = playersBlipsInfo.Split(',');
