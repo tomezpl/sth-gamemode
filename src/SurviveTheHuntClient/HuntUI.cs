@@ -27,7 +27,7 @@ namespace SurviveTheHuntClient
         /// </summary>
         private static Dictionary<int, PlayerBlip> PlayerBlips = new Dictionary<int, PlayerBlip>();
 
-        private static Dictionary<int, int> PlayerOverheadNames = new Dictionary<int, int>();
+        private static List<int> PlayerOverheadNames = new List<int>();
 
         /// <summary>
         /// Blips with opacity fading over time.
@@ -470,9 +470,9 @@ namespace SurviveTheHuntClient
                 if (!IsMpGamerTagActive(player.Handle))
                 {
                     CreateMpGamerTagWithCrewColor(player.Handle, player.Name, false, false, "", 0, 0, 0, 0);
-                    if(!PlayerOverheadNames.ContainsKey(player.Character.Handle))
+                    if(!PlayerOverheadNames.Contains(player.Handle))
                     {
-                        PlayerOverheadNames.Add(player.Character.Handle, player.Handle);
+                        PlayerOverheadNames.Add(player.Handle);
                     }
                 }
 
@@ -488,9 +488,9 @@ namespace SurviveTheHuntClient
 
             List<int> playersToDelete = new List<int>();
 
-            foreach (int playerPedHandle in PlayerOverheadNames.Keys)
+            foreach (int playerHandle in PlayerOverheadNames)
             {
-                int playerHandle = PlayerOverheadNames[playerPedHandle];
+                int playerPedHandle = GetPlayerPed(playerHandle);
 
                 // Delete check
                 bool playerExists = false;
@@ -505,7 +505,7 @@ namespace SurviveTheHuntClient
 
                 if (!playerExists)
                 {
-                    playersToDelete.Add(playerPedHandle);
+                    playersToDelete.Add(playerHandle);
                     continue;
                 }
                 else
@@ -542,13 +542,13 @@ namespace SurviveTheHuntClient
             }
 
             // Delete inactive peds.
-            foreach (int playerPed in playersToDelete)
+            foreach (int playerHandle in playersToDelete)
             {
-                if (!IsMpGamerTagFree(PlayerOverheadNames[playerPed]))
+                if (!IsMpGamerTagFree(playerHandle))
                 {
-                    RemoveMpGamerTag(PlayerOverheadNames[playerPed]);
+                    RemoveMpGamerTag(playerHandle);
                 }
-                PlayerOverheadNames.Remove(playerPed);
+                PlayerOverheadNames.Remove(playerHandle);
             }
         }
     }
