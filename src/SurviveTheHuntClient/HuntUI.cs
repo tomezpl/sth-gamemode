@@ -455,6 +455,7 @@ namespace SurviveTheHuntClient
                 if(DoesBlipExist(blip.Handle))
                 {
                     int blipHandle = blip.Handle;
+                    Debug.WriteLine($"Removing blip {blipHandle} for player {PlayerBlips[playerServerId].PlayerName} ({playerServerId}, pedNetId: {PlayerBlips[playerServerId].PedNetworkId}, pedHandle: {PlayerBlips[playerServerId].PedHandle}) because it was not active");
                     RemoveBlip(ref blipHandle);
                 }
                 PlayerBlips.Remove(playerServerId);
