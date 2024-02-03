@@ -462,29 +462,36 @@ namespace SurviveTheHuntClient
             }
         }
 
+        private static void CreatePlayerOverheadName(Player player)
+        {
+            if (!IsMpGamerTagActive(player.Handle))
+            {
+                CreateMpGamerTagWithCrewColor(player.Handle, player.Name, false, false, "", 0, 0, 0, 0);
+                if (!PlayerOverheadNames.Contains(player.Handle))
+                {
+                    PlayerOverheadNames.Add(player.Handle);
+                }
+            }
+
+            if (IsMpGamerTagActive(player.Handle) && PlayerBlips.TryGetValue(player.ServerId, out PlayerBlip playerBlip))
+            {
+                SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(playerBlip.Blip.Handle));
+            }
+            else if (IsMpGamerTagActive(player.Handle) && player.ServerId == Game.Player.ServerId)
+            {
+                SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(GetMainPlayerBlipId()));
+            }
+        }
+
         public static void UpdatePlayerOverheadNames(PlayerList players, ref GameState gameState, ref PlayerState playerState) 
         {
             foreach (Player player in players)
             {
                 // Creates overhead player name labels if need be.
-                if (!IsMpGamerTagActive(player.Handle))
-                {
-                    CreateMpGamerTagWithCrewColor(player.Handle, player.Name, false, false, "", 0, 0, 0, 0);
-                    if(!PlayerOverheadNames.Contains(player.Handle))
-                    {
-                        PlayerOverheadNames.Add(player.Handle);
-                    }
-                }
-
-                if (IsMpGamerTagActive(player.Handle) && PlayerBlips.TryGetValue(player.ServerId, out PlayerBlip playerBlip))
-                {
-                    SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(playerBlip.Blip.Handle));
-                }
-                else if(IsMpGamerTagActive(player.Handle) && player.ServerId == Game.Player.ServerId)
-                {
-                    SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(GetMainPlayerBlipId()));
-                }
+                CreatePlayerOverheadName(player);
             }
+
+            CreatePlayerOverheadName(Game.Player);
 
             List<int> playersToDelete = new List<int>();
 
