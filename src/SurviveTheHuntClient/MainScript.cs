@@ -227,6 +227,22 @@ namespace SurviveTheHuntClient
             }
         }
 
+        [EventHandler("sth:updatePlayerBlipBulk")]
+        private void CreateExistingPlayerBlips(string playersBlipsInfo)
+        {
+            string[] playerBlipInfo = playersBlipsInfo.Split(';');
+            foreach(string playerBlipDataString in playerBlipInfo)
+            {
+                string[] playerBlipData = playersBlipsInfo.Split(',');
+                int pedNetId = int.Parse(playerBlipData[0]);
+                int playerId = int.Parse(playerBlipData[1]);
+                string playerName = playerBlipData[2];
+                bool isHunted = bool.Parse(playerBlipData[3]);
+
+                UpdatePlayerBlip(pedNetId, playerId, playerName, isHunted);
+            }
+        }
+
         protected async Task UpdateLoop()
         {
             if (Game.PlayerPed != null)

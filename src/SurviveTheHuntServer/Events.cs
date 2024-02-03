@@ -1,6 +1,8 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntServer.Utils;
 using System;
+using System.Linq;
+using System.Text;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntServer
@@ -28,9 +30,18 @@ namespace SurviveTheHuntServer
             }
         }
 
-        public void ClientStarted([FromSource] Player player)
+        public void ClientStarted([FromSource] Player joinedPlayer)
         {
-            BroadcastConfig(player, Config);
+            BroadcastConfig(joinedPlayer, Config);
+            StringBuilder playerBlipInfoBuilder = new StringBuilder();
+            foreach(Player player in Players)
+            {
+                bool isHunted = GameState.Hunt.HuntedPlayer?.Handle == player.Handle;
+                playerBlipInfoBuilder.Append($"{NetworkGetEntityFromNetworkId(player.Character.Handle)},{player.Handle},{player.Name},{isHunted};");
+            }
+            playerBlipInfoBuilder.Length--;
+
+            TriggerClientEvent(joinedPlayer, "sth:updatePlayerBlipBulk", playerBlipInfoBuilder.ToString());
         }
 
         [EventHandler("sth:playerSpawned")]
