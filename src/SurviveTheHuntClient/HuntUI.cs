@@ -464,13 +464,10 @@ namespace SurviveTheHuntClient
 
         private static void CreatePlayerOverheadName(Player player)
         {
-            if (!IsMpGamerTagActive(player.Handle))
+            if (!IsMpGamerTagActive(player.Handle) && !PlayerOverheadNames.Contains(player.Handle))
             {
                 CreateMpGamerTagWithCrewColor(player.Handle, player.Name, false, false, "", 0, 0, 0, 0);
-                if (!PlayerOverheadNames.Contains(player.Handle))
-                {
-                    PlayerOverheadNames.Add(player.Handle);
-                }
+                PlayerOverheadNames.Add(player.Handle);
             }
 
             if (IsMpGamerTagActive(player.Handle) && PlayerBlips.TryGetValue(player.ServerId, out PlayerBlip playerBlip))
