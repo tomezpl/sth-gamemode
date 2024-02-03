@@ -442,7 +442,7 @@ namespace SurviveTheHuntClient
                 Blip blip = PlayerBlips[playerServerId].Blip;
                 SetBlipDisplay(blip.Handle, shouldDisplayBlip ? 6 : 0);
 
-                if (!DoesEntityExist(PlayerBlips[playerServerId].PedHandle) || IsEntityAPed(PlayerBlips[playerServerId].PedHandle) || IsPedDeadOrDying(PlayerBlips[playerServerId].PedHandle, true))
+                if (!DoesEntityExist(PlayerBlips[playerServerId].PedHandle) || !IsEntityAPed(PlayerBlips[playerServerId].PedHandle) || IsPedDeadOrDying(PlayerBlips[playerServerId].PedHandle, true))
                 {
                     playerBlipsToDelete.Add(playerServerId);
                 }
