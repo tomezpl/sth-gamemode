@@ -242,7 +242,6 @@ namespace SurviveTheHuntServer
                 SpawnedVehicles.Add(spawnedVehicle);
                 //spawnedEntities[counter] = Entity.FromNetworkId(spawnedVehicle).NetworkId;
                 Debug.WriteLine("Setting huge distance culling radius");
-                SetEntityDistanceCullingRadius(spawnedVehicle, float.MaxValue);
                 await Delay(3);
                 
                 counter++;
