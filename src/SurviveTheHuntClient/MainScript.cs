@@ -49,6 +49,8 @@ namespace SurviveTheHuntClient
 
         private int? PopAreaId = null;
 
+        private int LastPopRefreshTime = 0;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -274,6 +276,13 @@ namespace SurviveTheHuntClient
             {
                 ResetPlayerStamina(PlayerId());
                 PlayerPos = Game.PlayerPed.Position;
+            }
+
+            // Refresh population every 2.5s
+            if(GetGameTimer() - LastPopRefreshTime > 2500)
+            {
+                PopulateNow();
+                LastPopRefreshTime = GetGameTimer();
             }
 
             HandlePopulation();
