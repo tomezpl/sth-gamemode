@@ -47,7 +47,7 @@ namespace SurviveTheHuntClient
 
         private int PlayerPed;
 
-        private int? PopAreaId = null;
+        private int? PopSphereId = null;
 
         public MainScript()
         {
@@ -110,13 +110,13 @@ namespace SurviveTheHuntClient
 
             float x1 = Constants.PlayAreaNW.X, y1 = Constants.PlayAreaNW.Y, z1 = 0f;
             float x2 = Constants.PlayAreaSE.X, y2 = Constants.PlayAreaSE.Y, z2 = 100f;
+            float radius = Math.Max(Math.Abs(x1 - x2), Math.Abs(y1 - y2)) * .5f;
             float pedMult = 2f, vehMult = 2f;
-            bool p8 = true;
-            PopAreaId = AddPopMultiplierArea(x1, y1, z1, x2, y2, z2, pedMult, vehMult, p8);
+            PopSphereId = AddPopMultiplierSphere((x1+x2)*.5f, (y1+y2)*.5f, 50f, radius, pedMult, vehMult, true, true);
 
-            if(PopAreaId.HasValue && DoesPopMultiplierAreaExist(PopAreaId.Value))
+            if(PopSphereId.HasValue && DoesPopMultiplierSphereExist(PopSphereId.Value))
             {
-                Debug.WriteLine($"Pop area added successfuly with ID {PopAreaId.Value}");
+                Debug.WriteLine($"Pop sphere added successfuly with ID {PopSphereId.Value}");
             }
         }
 
