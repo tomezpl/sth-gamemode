@@ -234,7 +234,7 @@ namespace SurviveTheHuntClient
             Debug.WriteLine(playersBlipsInfo);
             foreach(string playerBlipDataString in playerBlipInfo)
             {
-                string[] playerBlipData = playersBlipsInfo.Split(',');
+                string[] playerBlipData = playerBlipDataString.Split(',');
                 int pedNetId = int.Parse(playerBlipData[0]);
                 int playerId = int.Parse(playerBlipData[1]);
                 string playerName = playerBlipData[2];
