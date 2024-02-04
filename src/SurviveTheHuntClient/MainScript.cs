@@ -47,6 +47,8 @@ namespace SurviveTheHuntClient
 
         private int PlayerPed;
 
+        private int? PopAreaId = null;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -105,6 +107,13 @@ namespace SurviveTheHuntClient
             EventHandlers["playerSpawned"] += new Action(PlayerSpawnedCallback);
 
             Tick += UpdateLoop;
+
+            PopAreaId = AddPopMultiplierArea(Constants.PlayAreaNW.X, Constants.PlayAreaNW.Y, 0f, Constants.PlayAreaSE.X, Constants.PlayAreaSE.Y, 100f, 2f, 2f, true);
+
+            if(PopAreaId.HasValue && DoesPopMultiplierAreaExist(PopAreaId.Value))
+            {
+                Debug.WriteLine($"Pop area added successfuly with ID {PopAreaId.Value}");
+            }
         }
 
         private void OnClientResourceStart(string resource)
@@ -128,9 +137,6 @@ namespace SurviveTheHuntClient
                 {
                     TriggerServerEvent("sth:spawnCars");
                 }), false);
-
-                Vector3 spawn = Constants.DockSpawn;
-                ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
 
                 // Notify the server this client has started so the config can be sent down. This is needed for resource restarts etc.
                 TriggerServerEvent("sth:clientStarted");
@@ -252,6 +258,8 @@ namespace SurviveTheHuntClient
                 PlayerPos = Game.PlayerPed.Position;
             }
 
+            HandlePopulation();
+
             GameState.Hunt.UpdateHuntedMugshot();
             HuntUI.SetBigmap(ref PlayerState);
             HuntUI.DrawRemainingTime(ref GameState);
@@ -286,6 +294,16 @@ namespace SurviveTheHuntClient
             DeathBlips.ClearExpiredBlips();
 
             Wait(0);
+        }
+
+        private void HandlePopulation()
+        {
+            SetAmbientPedRangeMultiplierThisFrame(1f);
+            SetPedDensityMultiplierThisFrame(1f);
+            SetAmbientVehicleRangeMultiplierThisFrame(1f);
+            SetVehicleDensityMultiplierThisFrame(1f);
+            SetParkedVehicleDensityMultiplierThisFrame(1f);
+            SetRandomVehicleDensityMultiplierThisFrame(1f);
         }
 
         /// <summary>

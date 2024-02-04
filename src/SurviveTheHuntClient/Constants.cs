@@ -63,6 +63,10 @@ namespace SurviveTheHuntClient
             }
         };
 
+        public static readonly Vector2 PlayAreaNW = new Vector2(-3085f, 1170f);
+
+        public static readonly Vector2 PlayAreaSE = new Vector2(1985f, -3140f);
+
         /// <summary>
         /// The expected resource name for this gamemode.
         /// </summary>
