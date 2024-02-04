@@ -328,6 +328,8 @@ namespace SurviveTheHuntClient
         [EventHandler("sth:updatePlayerBlip")]
         private void UpdatePlayerBlip(int playerPedNetId, int playerIndex, string playerName, bool isHunted)
         {
+            Debug.WriteLine("UpdatePlayerBlip");
+
             if(isHunted)
             {
                 GameState.Hunt.HuntedPlayerPedNetworkId = playerPedNetId;
