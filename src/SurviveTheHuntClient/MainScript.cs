@@ -281,7 +281,7 @@ namespace SurviveTheHuntClient
             // Refresh population every 2.5s
             if(GetGameTimer() - LastPopRefreshTime > 2500)
             {
-                PopulateNow();
+                //PopulateNow();
                 LastPopRefreshTime = GetGameTimer();
             }
 
