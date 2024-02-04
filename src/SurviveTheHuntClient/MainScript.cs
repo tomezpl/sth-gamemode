@@ -212,7 +212,7 @@ namespace SurviveTheHuntClient
                 float x2 = Constants.PlayAreaSE.X, y2 = Constants.PlayAreaSE.Y, z2 = 100f;
                 float radius = Math.Max(Math.Abs(x1 - x2), Math.Abs(y1 - y2)) * .5f;
                 float pedMult = 2f, vehMult = 2f;
-                PopSphereId = AddPopMultiplierSphere((x1 + x2) * .5f, (y1 + y2) * .5f, 50f, radius, pedMult, vehMult, true, true);
+                PopSphereId = AddPopMultiplierSphere((x1 + x2) * .5f, (y1 + y2) * .5f, 50f, Math.Min(899f, radius), pedMult, vehMult, true, true);
 
                 if (PopSphereId.HasValue && DoesPopMultiplierSphereExist(PopSphereId.Value))
                 {
