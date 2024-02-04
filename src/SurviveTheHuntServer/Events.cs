@@ -41,7 +41,7 @@ namespace SurviveTheHuntServer
             string playerName = Players[playerId].Name;
             Debug.WriteLine($"Player \"{playerName}\" spawned");
             int playerPed = Players[playerId].Character.Handle;
-            //SetEntityDistanceCullingRadius(playerPed, float.MaxValue);
+            SetEntityDistanceCullingRadius(playerPed, float.MaxValue);
             await Delay(1000);
             TriggerClientEvent("sth:updatePlayerBlip", NetworkGetNetworkIdFromEntity(playerPed), playerId, playerName, GameState.Hunt.HuntedPlayer?.Handle == Players[playerId].Handle);
 

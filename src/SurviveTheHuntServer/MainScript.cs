@@ -137,7 +137,7 @@ namespace SurviveTheHuntServer
 
                     if (vehicleExists)
                     {
-                        //SetEntityDistanceCullingRadius(vehicle, float.MaxValue);
+                        SetEntityDistanceCullingRadius(vehicle, float.MaxValue);
                     }
                 }
 
@@ -182,7 +182,7 @@ namespace SurviveTheHuntServer
         [EventHandler("sth:invalidatePlayerPed")]
         private void InvalidatePlayerPed([FromSource] Player src, int ped, int playerServerId)
         {
-            //SetEntityDistanceCullingRadius(NetworkGetEntityFromNetworkId(ped), float.MaxValue);
+            SetEntityDistanceCullingRadius(NetworkGetEntityFromNetworkId(ped), float.MaxValue);
             BlipsToUpdate.Add(new BlipUpdateRequest 
             { 
                 PlayerEntityNetworkId = ped, 
@@ -242,7 +242,7 @@ namespace SurviveTheHuntServer
                 SpawnedVehicles.Add(spawnedVehicle);
                 //spawnedEntities[counter] = Entity.FromNetworkId(spawnedVehicle).NetworkId;
                 Debug.WriteLine("Setting huge distance culling radius");
-                //SetEntityDistanceCullingRadius(spawnedVehicle, float.MaxValue);
+                SetEntityDistanceCullingRadius(spawnedVehicle, float.MaxValue);
                 await Delay(3);
                 
                 counter++;

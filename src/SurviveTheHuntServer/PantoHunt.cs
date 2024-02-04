@@ -229,7 +229,7 @@ namespace SurviveTheHuntServer
 
                     if (!pantoDoesNotExistYet)
                     {
-                        //SetEntityDistanceCullingRadius(pantoHandle, float.MaxValue);
+                        SetEntityDistanceCullingRadius(pantoHandle, float.MaxValue);
                     }
                 }
 
