@@ -108,7 +108,11 @@ namespace SurviveTheHuntClient
 
             Tick += UpdateLoop;
 
-            PopAreaId = AddPopMultiplierArea(Constants.PlayAreaNW.X, Constants.PlayAreaNW.Y, 0f, Constants.PlayAreaSE.X, Constants.PlayAreaSE.Y, 100f, 2f, 2f, true);
+            float x1 = Constants.PlayAreaNW.X, y1 = Constants.PlayAreaNW.Y, z1 = 0f;
+            float x2 = Constants.PlayAreaSE.X, y2 = Constants.PlayAreaSE.Y, z2 = 100f;
+            float pedMult = 2f, vehMult = 2f;
+            bool p8 = true;
+            PopAreaId = AddPopMultiplierArea(x1, y1, z1, x2, y2, z2, pedMult, vehMult, p8);
 
             if(PopAreaId.HasValue && DoesPopMultiplierAreaExist(PopAreaId.Value))
             {
