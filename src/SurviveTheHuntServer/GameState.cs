@@ -56,7 +56,7 @@ namespace SurviveTheHuntServer
                 //          ideally we'd want to only sync each player's position and name - as that's the only data we need - instead of disabling culling.
                 foreach(Player player in players)
                 {
-                    SetPlayerCullingRadius(player.Handle, float.MaxValue);
+                    //SetPlayerCullingRadius(player.Handle, float.MaxValue);
                 }
 
                 IsStarted = true;
