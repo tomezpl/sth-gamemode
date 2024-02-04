@@ -51,7 +51,7 @@ namespace SurviveTheHuntServer
             {
                 Players[playerId].State.Set("sth:spawnedOnce", true, false);
 
-                await Delay(5000);
+                await Delay(3000);
                 StringBuilder playerBlipInfoBuilder = new StringBuilder();
                 foreach (Player player in Players)
                 {
