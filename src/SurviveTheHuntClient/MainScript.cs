@@ -13,7 +13,7 @@ using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient
 {
-    public class MainScript : ClientScript
+    public partial class MainScript : ClientScript
     {
         /// <summary>
         /// Local player state maintained by the client script.
@@ -64,6 +64,8 @@ namespace SurviveTheHuntClient
             }
 
             EventHandlers["sth:applyCarMods"] += new Action<List<object>>(ApplyCarMods);
+
+            EventHandlers["sth:applyPantoBlips"] += new Action<string>(ApplyPantoBlips);
 
             DeathBlips = new DeathBlips(GetConvarInt("sth_deathbliplifespan", Constants.DefaultDeathBlipLifespan));
 
@@ -507,25 +509,6 @@ namespace SurviveTheHuntClient
                     AddTextEntry("PantoDeadNotif", $"Target {targetLetter} has been destroyed.");
                     BeginTextCommandDisplayHelp("PantoDeadNotif");
                     EndTextCommandDisplayHelp(0, false, true, 5000);
-                }
-            });
-
-            EventHandlers["sth:applyPantoBlips"] += new Action<string>((pantoNetworkIdString) =>
-            {
-                string[] pantoNetworkIds = pantoNetworkIdString.Split(';');
-                int counter = 0;
-                foreach (string networkIdStr in pantoNetworkIds)
-                {
-                    if (int.TryParse(networkIdStr, out int networkId))
-                    {
-                        int handle = NetworkGetEntityFromNetworkId(networkId);
-                        int blip = AddBlipForEntity(handle);
-                        bool isHunter = PlayerState.Team == Teams.Team.Hunters;
-                        SetBlipAsFriendly(blip, isHunter);
-                        SetBlipSprite(blip, 535 + counter);
-                        SetBlipColour(blip, isHunter ? 3 : 59);
-                    }
-                    counter++;
                 }
             });
 

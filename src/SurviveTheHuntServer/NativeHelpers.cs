@@ -22,7 +22,7 @@ namespace SurviveTheHuntServer
         {
             uint vehicleHash = (uint)GetHashKey(carName);
             int spawnedVehicle = CreateVehicle(vehicleHash, pos.X, pos.Y, pos.Z, heading, true, false);
-            SpawnedVehicles.Add(spawnedVehicle);
+            EntityHandles.Add(spawnedVehicle);
             await Delay(10);
             return spawnedVehicle;
         }

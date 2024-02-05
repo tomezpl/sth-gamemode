@@ -45,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants.cs" />
+    <Compile Include="Events\PantoHunt.cs" />
     <Compile Include="GameState.cs" />
     <Compile Include="Helpers\DeathBlips.cs" />
     <Compile Include="HuntUI.cs" />
