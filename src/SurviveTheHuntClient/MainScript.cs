@@ -63,7 +63,7 @@ namespace SurviveTheHuntClient
                 EventHandlers[$"sth:{ev.Key}"] += ev.Value;
             }
 
-            EventHandlers["sth:applyCarMods"] += new Action<List<object>>(ApplyCarMods);
+            EventHandlers["sth:applyCarMods"] += new Action<string>(ApplyCarMods);
 
             EventHandlers["sth:applyPantoBlips"] += new Action<string>(ApplyPantoBlips);
 
@@ -132,6 +132,11 @@ namespace SurviveTheHuntClient
 
                 RegisterCommand("spawncars", new Action(() =>
                 {
+                    if (GlobalState.Get("sth:isSpawningCars") == true)
+                    {
+                        Debug.WriteLine("Server is already spawning cars, wait for it to finish before calling spawnCars again!");
+                        return;
+                    }
                     TriggerServerEvent("sth:spawnCars");
                 }), false);
 
@@ -143,12 +148,13 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Applies random mods to cars spawned by the server in the start area after invoking the /spawncars command.
         /// </summary>
-        protected void ApplyCarMods(List<object> cars)
+        protected void ApplyCarMods(string carNetIdString)
         {
             try
             {
                 int counter = 0;
-                Debug.WriteLine($"Spawned {cars.Count} cars");
+                int[] cars = carNetIdString.Split(';').Select(netIdStr => int.Parse(netIdStr)).ToArray();
+                Debug.WriteLine($"Spawned {cars.Length} cars");
                 foreach (int networkId in cars)
                 {
                     Vehicle vehicle = new Vehicle(Entity.FromNetworkId(networkId).Handle);

@@ -146,7 +146,9 @@ namespace SurviveTheHuntServer
                 if (LastPlayerToSpawnCars != null && allEntitiesExist)
                 {
                     Debug.WriteLine("(spawncars) All vehicles created, applying mods...");
-                    TriggerClientEvent(LastPlayerToSpawnCars, "sth:applyCarMods", SpawnedVehicles.Select(handle => NetworkGetNetworkIdFromEntity(handle)).ToList());
+                    // woohoo we're sending the cars' netIds as semicolon-separated values in a string because fivem likes to just not bind lists/arrays correctly at random in the client script?
+                    TriggerClientEvent(LastPlayerToSpawnCars, "sth:applyCarMods", SpawnedVehicles.Select(handle => $"{NetworkGetNetworkIdFromEntity(handle)}").Aggregate((acc, curr) => string.IsNullOrWhiteSpace(acc) ? curr : $"{acc};{curr}"));
+                    GlobalState.Set("sth:isSpawningCars", false, true);
                 }
             }
 
@@ -202,6 +204,14 @@ namespace SurviveTheHuntServer
         [EventHandler("sth:spawnCars")]
         private async void SpawnCarsCommand([FromSource] Player source)
         {
+            if(GlobalState.Get("sth:isSpawningCars") == true)
+            {
+                Debug.WriteLine("Received sth:spawnCars but the previous invocation of this command has not finished yet.");
+                return;
+            }
+
+            GlobalState.Set("sth:isSpawningCars", true, true);
+
             List<int> carsToSpawn = new List<int>(Constants.CarSpawnPoints.Length);
 
             Debug.WriteLine("Getting hash keys");
