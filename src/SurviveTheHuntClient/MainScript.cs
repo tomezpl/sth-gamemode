@@ -209,11 +209,20 @@ namespace SurviveTheHuntClient
         {
             Vector3 spawnLoc = Constants.DockSpawn;
 
-            Exports["spawnmanager"].spawnPlayer(new { x = spawnLoc.X, y = spawnLoc.Y, z = spawnLoc.Z, model = "a_m_m_skater_01" });
+            int randomPedIndex = RNG.Next(0, Constants.DefaultPlayerPeds.Length);
+            string randomPed = Constants.DefaultPlayerPeds[randomPedIndex];
+
+            Exports["spawnmanager"].spawnPlayer(new { x = spawnLoc.X, y = spawnLoc.Y, z = spawnLoc.Z, model = randomPed });
         }
 
         protected void PlayerSpawnedCallback()
         {
+            if(Constants.DefaultPlayerPeds.Any(modelName => GetHashKey(modelName) == Player.Local.Character.Model.Hash))
+            {
+                SetPedRandomComponentVariation(Player.Local.Character.Handle, false);
+                SetPedRandomProps(Player.Local.Character.Handle);
+            }
+
             // Refresh player's death state.
             PlayerState.DeathReported = false;
 

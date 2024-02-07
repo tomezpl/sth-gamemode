@@ -71,5 +71,11 @@ namespace SurviveTheHuntClient
         /// The expected resource name for this gamemode.
         /// </summary>
         public const string ResourceName = "sth-gamemode";
+
+        public static string[] DefaultPlayerPeds =
+        {
+            "a_f_y_carclub_01",
+            "a_m_y_carclub_01"
+        };
     }
 }
