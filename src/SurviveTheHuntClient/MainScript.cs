@@ -47,8 +47,6 @@ namespace SurviveTheHuntClient
 
         private int PlayerPed;
 
-        private int? PopAreaId = null;
-
         private int LastPopRefreshTime = 0;
 
         public MainScript()
@@ -216,31 +214,6 @@ namespace SurviveTheHuntClient
 
         protected void PlayerSpawnedCallback()
         {
-            if(!PopAreaId.HasValue)
-            {
-                try
-                {
-                    float x1 = Constants.PlayAreaNW.X, y1 = Constants.PlayAreaNW.Y, z1 = 0f;
-                    float x2 = Constants.PlayAreaSE.X, y2 = Constants.PlayAreaSE.Y, z2 = 100f;
-                    float pedMult = 2f, vehMult = 2f;
-                    bool p8 = true;
-                    PopAreaId = AddPopMultiplierArea(x1, y1, z1, x2, y2, z2, pedMult, vehMult, p8);
-
-                    if (PopAreaId.HasValue && DoesPopMultiplierAreaExist(PopAreaId.Value))
-                    {
-                        Debug.WriteLine($"Pop area added successfuly with ID {PopAreaId.Value}");
-                    }
-                } catch(Exception ex)
-                {
-                    Debug.WriteLine($"Failed to add pop area: {ex.ToString()}");
-                    PopAreaId = -1;
-                }
-            }
-            else
-            {
-                Debug.WriteLine($"Skipping creating a pop area because {(PopAreaId.Value == -1 ? "it failed" : $"it already exists with ID {PopAreaId.Value}")}");
-            }
-
             // Refresh player's death state.
             PlayerState.DeathReported = false;
 
