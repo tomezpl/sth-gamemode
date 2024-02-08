@@ -75,7 +75,16 @@ namespace SurviveTheHuntClient
         public static string[] DefaultPlayerPeds =
         {
             "a_f_y_carclub_01",
-            "a_m_y_carclub_01"
+            "a_m_y_carclub_01",
+            "a_f_y_clubcust_01",
+            "a_m_y_clubcust_01",
+            "a_f_y_clubcust_02",
+            "a_m_y_clubcust_02",
+            "a_f_y_clubcust_03",
+            "a_m_y_clubcust_03",
+            "a_f_y_clubcust_04",
+            "a_m_y_clubcust_04",
+            "ig_moodyman_02"
         };
     }
 }

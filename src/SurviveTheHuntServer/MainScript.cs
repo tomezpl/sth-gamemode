@@ -19,7 +19,7 @@ namespace SurviveTheHuntServer
 
         public readonly GameState GameState = new GameState();
 
-        public readonly Random RNG = new Random();
+        public readonly Random RNG = new Random((int)DateTime.UtcNow.Ticks);
 
         /// <summary>
         /// UTC time when time was last synced with the clients (to prevent client-side timers desyncing).
