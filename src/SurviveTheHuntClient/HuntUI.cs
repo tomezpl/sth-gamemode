@@ -204,21 +204,23 @@ namespace SurviveTheHuntClient
             AddTextComponentString("TIME LEFT  00:00");
             float timebarWidth = EndTextCommandGetWidth(true);
 
+            float safeZoneSize = GetSafeZoneSize();
+
             // Load and draw the timerbar using the rect width we've measured.
             RequestStreamedTextureDict("timerbars", true);
             if (HasStreamedTextureDictLoaded("timerbars"))
             {
-                DrawSprite("timerbars", "all_black_bg", 0.92f, 0.855f, timebarWidth, 0.06f * 0.5f * 1.4f, 0f, 255, 255, 255, 128);
+                DrawSprite("timerbars", "all_black_bg", 0.92f * safeZoneSize, 0.855f * safeZoneSize, timebarWidth, 0.06f * 0.5f * 1.4f, 0f, 255, 255, 255, 128);
             }
 
             // Draw the time string on top of the timerbar.
             BeginTextCommandDisplayText("STRING");
             AddTextComponentString(timeStr);
-            EndTextCommandDisplayText(0.94f, 0.835f);
+            EndTextCommandDisplayText(0.92f * safeZoneSize + 0.02f, 0.855f * safeZoneSize - 0.02f);
             SetTextScale(0, 0.35f);
             BeginTextCommandDisplayText("STRING");
             AddTextComponentString("TIME LEFT");
-            EndTextCommandDisplayText(0.94f - timebarWidth / 2.35f, 0.845f);
+            EndTextCommandDisplayText(0.94f * safeZoneSize - ((timebarWidth / 2.35f) * safeZoneSize), 0.845f * safeZoneSize);
             SetTextScale(0, 1f);
         }
 
