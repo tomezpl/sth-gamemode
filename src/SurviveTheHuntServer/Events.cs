@@ -43,11 +43,11 @@ namespace SurviveTheHuntServer
             int playerPed = Players[playerId].Character.Handle;
             SetEntityDistanceCullingRadius(playerPed, float.MaxValue);
             await Delay(1000);
-            TriggerClientEvent("sth:updatePlayerBlip", NetworkGetNetworkIdFromEntity(playerPed), playerId, playerName, GameState.Hunt.HuntedPlayer?.Handle == Players[playerId].Handle);
+            TriggerClientEvent("sth:updatePlayerBlip", NetworkGetNetworkIdFromEntity(playerPed), playerId, playerName, GameState?.Hunt?.HuntedPlayer?.Handle == Players[playerId].Handle);
 
 
             // Wait 5s so that player peds have been replicated to the client (hopefully).
-            if (Players[playerId].State.Get("sth:spawnedOnce") != true)
+            if (Players[playerId]?.State != null && Players[playerId].State.Get("sth:spawnedOnce") != true)
             {
                 Players[playerId].State.Set("sth:spawnedOnce", true, false);
 
@@ -55,10 +55,13 @@ namespace SurviveTheHuntServer
                 StringBuilder playerBlipInfoBuilder = new StringBuilder();
                 foreach (Player player in Players)
                 {
-                    bool isHunted = GameState.Hunt.HuntedPlayer?.Handle == player.Handle;
-                    playerBlipInfoBuilder.Append($"{NetworkGetNetworkIdFromEntity(player.Character.Handle)},{player.Handle},{player.Name},{(isHunted ? '1' : '0')};");
+                    if (player?.Character != null)
+                    {
+                        bool isHunted = GameState?.Hunt?.HuntedPlayer?.Handle == player.Handle;
+                        playerBlipInfoBuilder.Append($"{NetworkGetNetworkIdFromEntity(player.Character.Handle)},{player.Handle},{player.Name},{(isHunted ? '1' : '0')};");
+                    }
                 }
-                if (playerBlipInfoBuilder.Length > 0)
+                if (playerBlipInfoBuilder?.Length > 0)
                 {
                     playerBlipInfoBuilder.Length--;
 
