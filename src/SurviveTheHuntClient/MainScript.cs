@@ -328,7 +328,14 @@ namespace SurviveTheHuntClient
                 PlayerState.IsHoldingPhone = !PlayerState.IsHoldingPhone;
                 if(PlayerState.IsHoldingPhone)
                 {
-                    TriggerEvent("scalePhone.OpenApp", 1000, true);
+                    if (PlayerState.Team == Teams.Team.Hunted)
+                    {
+                        TriggerEvent("scalePhone.OpenApp", 1000, true);
+                    }
+                    else
+                    {
+                        TriggerEvent("scalePhone.OpenPhone");
+                    }
                 }
                 else
                 {

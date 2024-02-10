@@ -28,8 +28,7 @@ namespace SurviveTheHuntClient
             Ped playerPed = Game.PlayerPed;
             PlayerState.TakeAwayWeapons(ref playerPed);
 
-            dynamic msgData = new { contact = "Simeon", message = GetSimeonText(), isentthat = false, canOpenMenu = false, selectEvent = "test" };
-            TriggerEvent("scalePhone.BuildMessageView", msgData, 1000);
+            dynamic msgData = new { contact = "Simeon", message = GetSimeonText(), isentthat = false, canOpenMenu = false, selectEvent = "test", hasPic = "char_simeon" };
 
             RequestStreamedTextureDict("char_simeon", false);
             int counter = 0;
@@ -37,6 +36,8 @@ namespace SurviveTheHuntClient
             {
                 await Delay(500);
             }
+
+            TriggerEvent("scalePhone.BuildMessageView", msgData, 1000);
 
             BeginTextCommandThefeedPost("STRING");
             AddTextComponentSubstringPlayerName(GetSimeonText());
