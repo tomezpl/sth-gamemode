@@ -16,7 +16,6 @@ namespace SurviveTheHuntClient
             return $"Destroy these Pantos or you are fucked, my {(isMale ? "boy" : "girl")}! FUCKED!";
         }
 
-        [EventHandler("sth:notifyHuntedPlayer")]
         private async void NotifyHuntedPlayer(dynamic data)
         {
             //Debug.WriteLine("I'm the hunted!");

@@ -413,6 +413,9 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
+                    "notifyHuntedPlayer", new Action<dynamic>(NotifyHuntedPlayer)
+                },
+                {
                     "notifyHunters", new Action<dynamic>(data =>
                     {
                         string huntedPlayerName = data.HuntedPlayerName;
