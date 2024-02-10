@@ -264,6 +264,10 @@ namespace SurviveTheHuntClient
 
         protected async Task UpdateLoop()
         {
+            // FPP can bug out scalePhone and also doesn't fit STH, so we're disabling it.
+            DisableFirstPersonCamThisFrame();
+            DisableVehicleFirstPersonCamThisFrame();
+
             if (Game.PlayerPed != null)
             {
                 ResetPlayerStamina(PlayerId());
