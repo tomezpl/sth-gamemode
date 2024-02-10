@@ -58,12 +58,15 @@ namespace SurviveTheHuntServer
                     bool isHunted = GameState.Hunt.HuntedPlayer?.Handle == player.Handle;
                     playerBlipInfoBuilder.Append($"{NetworkGetNetworkIdFromEntity(player.Character.Handle)},{player.Handle},{player.Name},{(isHunted ? '1' : '0')};");
                 }
-                playerBlipInfoBuilder.Length--;
+                if (playerBlipInfoBuilder.Length > 0)
+                {
+                    playerBlipInfoBuilder.Length--;
 
-                Debug.WriteLine($"Sending player blip info to {playerName} because they are spawning for the first time.");
+                    Debug.WriteLine($"Sending player blip info to {playerName} because they are spawning for the first time.");
 
-                string playerBlipInfo = playerBlipInfoBuilder.ToString();
-                TriggerLatentClientEvent(Players[playerId], "sth:updatePlayerBlipBulk", (playerBlipInfo.Length * sizeof(char)) / 2, playerBlipInfo);
+                    string playerBlipInfo = playerBlipInfoBuilder.ToString();
+                    TriggerLatentClientEvent(Players[playerId], "sth:updatePlayerBlipBulk", (playerBlipInfo.Length * sizeof(char)) / 2, playerBlipInfo);
+                }
             }
 
             /*Debug.WriteLine($"Cleaning clothes for {Players[playerId].Name}");
