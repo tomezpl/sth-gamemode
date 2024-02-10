@@ -34,6 +34,8 @@ namespace SurviveTheHuntClient
         /// </summary>
         public uint LastWeaponEquipped = (uint)WeaponHash.Unarmed;
 
+        public bool IsHoldingPhone { get; set; } = false;
+
         /// <summary>
         /// The team the local player is on.
         /// </summary>

@@ -230,6 +230,8 @@ namespace SurviveTheHuntClient
             PlayerState.WeaponsGiven = false;
             PlayerState.ForcedUnarmed = false;
 
+            PlayerState.IsHoldingPhone = false;
+
             TriggerServerEvent("sth:playerSpawned", GetPlayerServerId(PlayerId()));
 
             // Enable friendly fire.
@@ -307,6 +309,28 @@ namespace SurviveTheHuntClient
             GameOverCheck();
 
             FixCarsInSpawn();
+
+            if(IsControlJustPressed(0, (int)Control.PhoneCancel))
+            {
+                if(PlayerState.IsHoldingPhone)
+                {
+                    PlayerState.IsHoldingPhone = false;
+                    TriggerEvent("scalePhone.ClosePhone");
+                }
+            }
+
+            if (GameState.Hunt.IsStarted && IsControlJustReleased(0, (int)Control.Phone))
+            {
+                PlayerState.IsHoldingPhone = !PlayerState.IsHoldingPhone;
+                if(PlayerState.IsHoldingPhone)
+                {
+                    TriggerEvent("scalePhone.OpenApp", 1000, true);
+                }
+                else
+                {
+                    TriggerEvent("scalePhone.ClosePhone");
+                }
+            }
 
             DeathBlips.ClearExpiredBlips();
 
@@ -389,20 +413,6 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
-                    "notifyHuntedPlayer", new Action<dynamic>(data =>
-                    {
-                        //Debug.WriteLine("I'm the hunted!");
-                        GameState.Hunt.IsStarted = true;
-                        GameState.Hunt.HuntedPlayer = Game.Player;
-
-                        GameState.CurrentObjective = "Survive";
-                        PlayerState.Team = Teams.Team.Hunted;
-
-                        Ped playerPed = Game.PlayerPed;
-                        PlayerState.TakeAwayWeapons(ref playerPed);
-                    })
-                },
-                {
                     "notifyHunters", new Action<dynamic>(data =>
                     {
                         string huntedPlayerName = data.HuntedPlayerName;
@@ -440,6 +450,8 @@ namespace SurviveTheHuntClient
                         }
                         GameState.Hunt.ActualEndTime = Utility.CurrentTime + TimeSpan.FromSeconds(5);
                         HuntUI.DisplayObjective(ref GameState, ref PlayerState, true);
+
+                        TriggerEvent("scalePhone.ClosePhone");
                     })
                 },
                 {
