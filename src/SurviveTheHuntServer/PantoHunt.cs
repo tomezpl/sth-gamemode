@@ -174,20 +174,17 @@ namespace SurviveTheHuntServer
 
             if(PantoHealth.Count > 0 && !PantoBlipsNeedUpdate)
             {
-                int index = 0;
-                foreach(int health in PantoHealth)
+                for(int index = 0; index < PantoHealth.Count; index++)
                 {
                     if (DoesEntityExist(PantoHandles[index]))
                     {
                         int currentHealth = GetEntityHealth(PantoHandles[index]);
-                        if (currentHealth <= 0 && health != 0)
+                        if (currentHealth <= 0 && PantoHealth[index] != 0)
                         {
                             main.TriggerClientEventProxy("sth:markPantoAsDead", NetworkGetNetworkIdFromEntity(PantoHandles[index]), index);
                             PantoHealth[index] = 0;
                         }
                     }
-
-                    index++;
                 }
             }
 
