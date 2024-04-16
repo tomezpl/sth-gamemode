@@ -36,7 +36,17 @@ namespace SurviveTheHuntClient
         /// Vehicles spawned by the gamemode at the spawn area. This is used to delete vehicles on the next <see cref="SpawnCars"/> call.
         /// </summary>
         /// <remarks>TODO: Move this to server-side so any player can spawn vehicles with the previous batch deleting properly?</remarks>
-        protected List<Vehicle> SpawnedVehicles = new List<Vehicle>();
+        protected List<SyncedVehicle> SpawnedVehicles = new List<SyncedVehicle>();
+
+        /// <summary>
+        /// Do <see cref="SpawnedVehicles"/> need their netIDs being sent to the server?
+        /// </summary>
+        private bool SpawnedVehiclesNeedSync = false;
+
+        /// <summary>
+        /// Is the player currently spawning cars? Prevent the spawn cars command from being invoked before the previous one finished.
+        /// </summary>
+        private bool IsSpawningCars = false;
 
         private Vector3 PlayerPos = Vector3.Zero;
 
@@ -68,9 +78,13 @@ namespace SurviveTheHuntClient
                 return;
             }
 
-            foreach (Vehicle vehicleToDelete in SpawnedVehicles)
+            foreach (SyncedVehicle vehicleToDelete in SpawnedVehicles)
             {
-                vehicleToDelete.Delete();
+                Vehicle vehicle = vehicleToDelete.Vehicle;
+                if (vehicle != null && vehicle.Exists())
+                {
+                    vehicle.Delete();
+                }
             }
             SpawnedVehicles.Clear();
 
@@ -120,7 +134,10 @@ namespace SurviveTheHuntClient
 
                 RegisterCommand("spawncars", new Action(() =>
                 {
-                    SpawnCars();
+                    if (!IsSpawningCars)
+                    {
+                        IsSpawningCars = true;
+                    }
                 }), false);
 
                 Vector3 spawn = Constants.DockSpawn;
@@ -134,8 +151,30 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Spawns random cars (picked from <see cref="Constants.Vehicles"/>) in the start area.
         /// </summary>
-        protected void SpawnCars()
+        protected async Task SpawnCars()
         {
+            bool hasVehicleControl = true;
+            for (int i = 0; i < 5; i++)
+            {
+                hasVehicleControl = true;
+                foreach (SyncedVehicle spawnedVehicle in SpawnedVehicles)
+                {
+                    Vehicle vehicle = spawnedVehicle.Vehicle;
+                    SetEntityAsMissionEntity(vehicle.Handle, true, true);
+                    if (NetworkGetEntityOwner(vehicle.Handle) != PlayerId())
+                    {
+                        hasVehicleControl = false;
+                        NetworkRequestControlOfEntity(vehicle.Handle);
+                    }
+                }
+
+                if(!hasVehicleControl)
+                {
+                    Debug.WriteLine("Waiting 1s for vehicle control...");
+                    await Delay(1000);
+                }
+            }
+
             List<VehicleHash> carsToSpawn = new List<VehicleHash>(Constants.CarSpawnPoints.Length);
 
             List<VehicleHash> spawnableCars = Constants.Vehicles.ToList();
@@ -149,9 +188,14 @@ namespace SurviveTheHuntClient
                 spawnableCars.RemoveAt(randomIndex);
             }
 
-            foreach(Vehicle vehicleToDelete in SpawnedVehicles)
+            foreach(SyncedVehicle vehicleToDelete in SpawnedVehicles)
             {
-                vehicleToDelete.Delete();
+                Vehicle vehicle = vehicleToDelete.Vehicle;
+                if (vehicle != null && vehicle.Exists())
+                {
+                    Debug.WriteLine($"Deleting vehicle {vehicle.Handle}");
+                    vehicle.Delete();
+                }
             }
             SpawnedVehicles.Clear();
 
@@ -163,13 +207,15 @@ namespace SurviveTheHuntClient
                     continue;
                 }
                 RequestModel((uint)vehicle);
-                Wait(50);
+                await Delay(50);
 
                 Coord spawnPoint = Constants.CarSpawnPoints[counter];
                 Vector3 spawnPos = spawnPoint.Position;
 
-                Vehicle spawnedVehicle = new Vehicle(CreateVehicle((uint)vehicle, spawnPos.X, spawnPos.Y, spawnPos.Z, spawnPoint.Heading, true, false));
-                SpawnedVehicles.Add(spawnedVehicle);
+                Vehicle spawnedVehicle = new Vehicle(CreateVehicle((uint)vehicle, spawnPos.X, spawnPos.Y, spawnPos.Z, spawnPoint.Heading, true, true));
+                SpawnedVehicles.Add(SyncedVehicle.FromHandle(spawnedVehicle.Handle));
+
+                SetEntityAsMissionEntity(spawnedVehicle.Handle, true, true);
 
                 // Set all vehicle mods to maximum.
                 for (int i = 0; i < 50; i++)
@@ -201,6 +247,7 @@ namespace SurviveTheHuntClient
 
                 counter++;
             }
+            SpawnedVehiclesNeedSync = true;
         }
 
         protected void AutoSpawnCallback()
@@ -256,6 +303,32 @@ namespace SurviveTheHuntClient
             {
                 TriggerServerEvent("sth:playerDied", new { PlayerId = Game.Player.ServerId, PlayerPosX = PlayerPos.X, PlayerPosY = PlayerPos.Y, PlayerPosZ = PlayerPos.Z, PlayerTeam = PlayerState.Team });
                 PlayerState.DeathReported = true;
+            }
+
+            if(IsSpawningCars)
+            {
+                await SpawnCars();
+                IsSpawningCars = false;
+            }
+
+            if (SpawnedVehiclesNeedSync)
+            {
+                string vehicleNetIdsPacked = "";
+                foreach(SyncedVehicle spawnedVehicle in SpawnedVehicles)
+                {
+                    Vehicle vehicle = spawnedVehicle.Vehicle;
+                    if (vehicle != null && vehicle.Exists())
+                    {
+                        vehicleNetIdsPacked += $"{vehicle.NetworkId};";
+                    }
+                }
+
+                if(vehicleNetIdsPacked.Length > 1)
+                {
+                    vehicleNetIdsPacked = vehicleNetIdsPacked.Remove(vehicleNetIdsPacked.Length - 1, 1);
+                    TriggerServerEvent("sth:reqSyncVehicles", vehicleNetIdsPacked);
+                    SpawnedVehiclesNeedSync = false;
+                }
             }
 
             GameOverCheck();
@@ -469,6 +542,29 @@ namespace SurviveTheHuntClient
                     DeathBlips.Add(deathPosX, deathPosY, deathPosZ);
                 }
             });
+        }
+
+        [EventHandler("sth:recvSyncVehicles")]
+        public void SyncVehiclesReceived(string vehicleNetIdsPacked)
+        {
+            int validNetIdCount = 0;
+            int[] vehicleNetIds = vehicleNetIdsPacked.Split(';').Select((netIdStr) => {
+                if (int.TryParse(netIdStr, out int netId))
+                {
+                    validNetIdCount++;
+                    return netId;
+                }
+                else
+                {
+                    return -1;
+                }
+            }).Where((netId) => netId != -1).ToArray();
+
+            if (validNetIdCount > 0)
+            {
+                SpawnedVehicles.Clear();
+                SpawnedVehicles.AddRange(vehicleNetIds.Select((netId) => SyncedVehicle.FromNetId(netId)));
+            }
         }
     }
 }

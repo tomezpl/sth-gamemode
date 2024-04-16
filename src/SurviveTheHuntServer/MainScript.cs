@@ -66,6 +66,7 @@ namespace SurviveTheHuntServer
 
                 Config = new Config();
                 BroadcastConfig(Config);
+                SyncVehicles(SpawnedVehicles);
             }
         }
 
