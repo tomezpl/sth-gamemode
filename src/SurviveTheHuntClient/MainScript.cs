@@ -35,7 +35,6 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Vehicles spawned by the gamemode at the spawn area. This is used to delete vehicles on the next <see cref="SpawnCars"/> call.
         /// </summary>
-        /// <remarks>TODO: Move this to server-side so any player can spawn vehicles with the previous batch deleting properly?</remarks>
         protected List<SyncedVehicle> SpawnedVehicles = new List<SyncedVehicle>();
 
         /// <summary>
@@ -132,11 +131,13 @@ namespace SurviveTheHuntClient
                     TriggerServerEvent("sth:startHunt");
                 }), false);
 
-                RegisterCommand("spawncars", new Action(() =>
+                RegisterCommand("spawncars", new Action(async () =>
                 {
                     if (!IsSpawningCars)
                     {
                         IsSpawningCars = true;
+                        await SpawnCars();
+                        IsSpawningCars = false;
                     }
                 }), false);
 
@@ -303,12 +304,6 @@ namespace SurviveTheHuntClient
             {
                 TriggerServerEvent("sth:playerDied", new { PlayerId = Game.Player.ServerId, PlayerPosX = PlayerPos.X, PlayerPosY = PlayerPos.Y, PlayerPosZ = PlayerPos.Z, PlayerTeam = PlayerState.Team });
                 PlayerState.DeathReported = true;
-            }
-
-            if(IsSpawningCars)
-            {
-                await SpawnCars();
-                IsSpawningCars = false;
             }
 
             if (SpawnedVehiclesNeedSync)
