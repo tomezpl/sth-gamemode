@@ -16,6 +16,9 @@ namespace SurviveTheHuntClient.Helpers
 
         public Vehicle Vehicle { get => (Vehicle)(_vehicleGetter()); }
 
+        public int? NetId;
+        public int? Handle;
+
         private SyncedVehicle(int? entityHandle = null, int? netId = null)
         {
             if(entityHandle == null && netId == null)
@@ -31,6 +34,9 @@ namespace SurviveTheHuntClient.Helpers
             {
                 _vehicleGetter = () => Vehicle.FromNetworkId(netId.Value);
             }
+
+            Handle = entityHandle;
+            NetId = netId;
         }
 
         public static SyncedVehicle FromNetId(int netId)

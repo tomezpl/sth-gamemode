@@ -1,7 +1,9 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntServer.Utils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntServer
 {
@@ -76,6 +78,20 @@ namespace SurviveTheHuntServer
         private void SyncVehicles(string vehicleNetIdsPacked)
         {
             TriggerClientEvent("sth:recvSyncVehicles", vehicleNetIdsPacked);
+        }
+
+        [EventHandler("sth:reqDeleteVehicle")]
+        public void DeleteVehicle([FromSource] Player player, int vehicleNetId)
+        {
+            Debug.WriteLine($"Player {player.Name} ({player.Handle}) is requesting to delete vehicle with net ID {vehicleNetId}");
+            try
+            {
+                TriggerClientEvent("sth:recvDeleteVehicle", vehicleNetId);
+            }
+            catch(Exception ex)
+            {
+                Debug.WriteLine($"Couldn't delete vehicle: {ex.ToString()}");
+            }
         }
     }
 }

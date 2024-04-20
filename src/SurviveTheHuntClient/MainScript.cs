@@ -154,28 +154,6 @@ namespace SurviveTheHuntClient
         /// </summary>
         protected async Task SpawnCars()
         {
-            bool hasVehicleControl = true;
-            for (int i = 0; i < 5; i++)
-            {
-                hasVehicleControl = true;
-                foreach (SyncedVehicle spawnedVehicle in SpawnedVehicles)
-                {
-                    Vehicle vehicle = spawnedVehicle.Vehicle;
-                    SetEntityAsMissionEntity(vehicle.Handle, true, true);
-                    if (NetworkGetEntityOwner(vehicle.Handle) != PlayerId())
-                    {
-                        hasVehicleControl = false;
-                        NetworkRequestControlOfEntity(vehicle.Handle);
-                    }
-                }
-
-                if(!hasVehicleControl)
-                {
-                    Debug.WriteLine("Waiting 1s for vehicle control...");
-                    await Delay(1000);
-                }
-            }
-
             List<VehicleHash> carsToSpawn = new List<VehicleHash>(Constants.CarSpawnPoints.Length);
 
             List<VehicleHash> spawnableCars = Constants.Vehicles.ToList();
@@ -191,13 +169,19 @@ namespace SurviveTheHuntClient
 
             foreach(SyncedVehicle vehicleToDelete in SpawnedVehicles)
             {
-                Vehicle vehicle = vehicleToDelete.Vehicle;
-                if (vehicle != null && vehicle.Exists())
+                bool hasNetId = vehicleToDelete.NetId.HasValue;
+                int id = hasNetId ? vehicleToDelete.NetId.Value : vehicleToDelete.Handle.Value;
+                if (hasNetId || Vehicle.Exists(vehicleToDelete.Vehicle))
                 {
-                    Debug.WriteLine($"Deleting vehicle {vehicle.Handle}");
-                    vehicle.Delete();
+                    Debug.WriteLine($"Requesting to delete vehicle with {(hasNetId ? "net ID" : "entity handle")} {id}");
+                    TriggerServerEvent("sth:reqDeleteVehicle", hasNetId ? id : VehToNet(id));
+                }
+                else
+                {
+                    Debug.WriteLine($"Vehicle with {(hasNetId ? "net ID" : "entity handle")} {id} doesn't exist!");
                 }
             }
+            await Delay(3500);
             SpawnedVehicles.Clear();
 
             int counter = 0;
@@ -560,6 +544,20 @@ namespace SurviveTheHuntClient
             {
                 SpawnedVehicles.Clear();
                 SpawnedVehicles.AddRange(vehicleNetIds.Select((netId) => SyncedVehicle.FromNetId(netId)));
+            }
+        }
+
+        [EventHandler("sth:recvDeleteVehicle")]
+        public void DeleteVehicle(int vehicleNetId)
+        {
+            if(NetworkDoesNetworkIdExist(vehicleNetId) && Vehicle.Exists(Vehicle.FromNetworkId(vehicleNetId)))
+            {
+                SetEntityAsMissionEntity(NetToVeh(vehicleNetId), true, true);
+                Vehicle.FromNetworkId(vehicleNetId).Delete();
+            }
+            else
+            {
+                Debug.WriteLine($"vehicleNetId {vehicleNetId} doesn't exist");
             }
         }
     }
