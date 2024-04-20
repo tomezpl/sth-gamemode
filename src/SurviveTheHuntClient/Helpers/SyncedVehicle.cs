@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace SurviveTheHuntClient.Helpers
 {
+    /// <summary>
+    /// Helper class to simplify using the Vehicle natives. Allows vehicles to be looked up either via handle or netID.
+    /// </summary>
     public class SyncedVehicle
     {
         private readonly Func<Entity> _vehicleGetter;
