@@ -218,13 +218,14 @@ namespace SurviveTheHuntClient
 
                 SetEntityAsMissionEntity(spawnedVehicle.Handle, true, true);
 
+                SetVehicleModKit(spawnedVehicle.Handle, 0);
+
                 // Set all vehicle mods to maximum.
                 for (int i = 0; i < 50; i++)
                 {
                     int nbMods = GetNumVehicleMods(spawnedVehicle.Handle, i);
                     if(nbMods > 0)
                     {
-                        SetVehicleModKit(spawnedVehicle.Handle, i);
                         SetVehicleMod(spawnedVehicle.Handle, i, nbMods - 1, false);
                     }
                 }
