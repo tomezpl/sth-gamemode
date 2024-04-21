@@ -13,6 +13,8 @@ using Vector3 = SurviveTheHuntShared.Utils.Vector3;
 using CfxVector3 = CitizenFX.Core.Vector3;
 using SurviveTheHuntClient.Helpers;
 using static CitizenFX.Core.Native.API;
+using SharedConstants = SurviveTheHuntShared.Constants;
+using SurviveTheHuntShared.Core;
 
 namespace SurviveTheHuntClient
 {
@@ -69,7 +71,7 @@ namespace SurviveTheHuntClient
                 EventHandlers[$"sth:{ev.Key}"] += ev.Value;
             }
 
-            DeathBlips = new DeathBlips(GetConvarInt("sth_deathbliplifespan", Constants.DefaultDeathBlipLifespan));
+            DeathBlips = new DeathBlips(GetConvarInt("sth_deathbliplifespan", SharedConstants.DefaultDeathBlipLifespan));
         }
 
         protected void OnResourceStopping(string resourceName)
@@ -121,7 +123,7 @@ namespace SurviveTheHuntClient
         {
             // This event is fired for every client resource started.
             // We need to check that the resource name is sth-gamemode so we only perform init once!
-            if (resource == Constants.ResourceName)
+            if (resource == SharedConstants.ResourceName)
             {
                 RegisterCommand("respawn", new Action(() =>
                 {
@@ -144,7 +146,7 @@ namespace SurviveTheHuntClient
                     }
                 }), false);
 
-                Vector3 spawn = Constants.DockSpawn;
+                Vector3 spawn = SharedConstants.DockSpawn;
                 ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
 
                 // Notify the server this client has started so the config can be sent down. This is needed for resource restarts etc.
@@ -157,7 +159,7 @@ namespace SurviveTheHuntClient
         /// </summary>
         protected async Task SpawnCars()
         {
-            List<VehicleHash> carsToSpawn = new List<VehicleHash>(Constants.CarSpawnPoints.Length);
+            List<VehicleHash> carsToSpawn = new List<VehicleHash>(SharedConstants.CarSpawnPoints.Length);
 
             List<VehicleHash> spawnableCars = Constants.Vehicles.ToList();
 
@@ -197,7 +199,7 @@ namespace SurviveTheHuntClient
                 RequestModel((uint)vehicle);
                 await Delay(50);
 
-                Coord spawnPoint = Constants.CarSpawnPoints[counter];
+                Coord spawnPoint = SharedConstants.CarSpawnPoints[counter];
                 Vector3 spawnPos = spawnPoint.Position;
 
                 Vehicle spawnedVehicle = new Vehicle(CreateVehicle((uint)vehicle, spawnPos.X, spawnPos.Y, spawnPos.Z, spawnPoint.Heading, true, true));
@@ -241,7 +243,7 @@ namespace SurviveTheHuntClient
 
         protected void AutoSpawnCallback()
         {
-            Vector3 spawnLoc = Constants.DockSpawn;
+            Vector3 spawnLoc = SharedConstants.DockSpawn;
 
             Exports["spawnmanager"].spawnPlayer(new { x = spawnLoc.X, y = spawnLoc.Y, z = spawnLoc.Z, model = "a_m_m_skater_01" });
         }
@@ -348,9 +350,9 @@ namespace SurviveTheHuntClient
             foreach(Vehicle vehicle in World.GetAllVehicles())
             {
                 CfxVector3 spawnToVehicleOffset = vehicle.Position;
-                spawnToVehicleOffset.X -= Constants.DockSpawn.X;
-                spawnToVehicleOffset.Y -= Constants.DockSpawn.Y;
-                spawnToVehicleOffset.Z -= Constants.DockSpawn.Z;
+                spawnToVehicleOffset.X -= SharedConstants.DockSpawn.X;
+                spawnToVehicleOffset.Y -= SharedConstants.DockSpawn.Y;
+                spawnToVehicleOffset.Z -= SharedConstants.DockSpawn.Z;
 
                 bool closeToSpawn = 50f >= spawnToVehicleOffset.Length();
                 vehicle.IsInvincible = closeToSpawn;
@@ -483,44 +485,12 @@ namespace SurviveTheHuntClient
             {
                 Debug.WriteLine("sth:receiveConfig received!");
 
-                // The weapons are sent as byte arrays, and therefore need to be deserialized into WeaponAmmo objects
-                Func<byte[], Weapons.WeaponAmmo[]> getWeapons = (weapons) =>
-                {
-                    Weapons.WeaponAmmo[] output = new Weapons.WeaponAmmo[weapons.Length / (sizeof(uint) + sizeof(ushort))];
-                 
-                    // Each weapon is uint hash followed by ushort ammo count.
-                    byte[] buffer = new byte[sizeof(uint) + sizeof(ushort)];
-                    using (MemoryStream ms = new MemoryStream(weapons, false))
-                    {
-                        while (ms.Position < ms.Length)
-                        {
-                            // Zero the buffer.
-                            Array.Clear(buffer, 0, buffer.Length);
-
-                            // Get the weapon index based on the position in the byte array.
-                            long index = ms.Position / (sizeof(uint) + sizeof(ushort));
-
-                            // Read the weapon hash.
-                            ms.Read(buffer, 0, sizeof(uint));
-                            // Read the ammo count.
-                            ms.Read(buffer, sizeof(uint), sizeof(ushort));
-
-                            // Store the weapon hash and ammo count in a WeaponAmmo object.
-                            output[index] = new Weapons.WeaponAmmo(BitConverter.ToUInt32(buffer, 0), BitConverter.ToUInt16(buffer, sizeof(uint)));
-                        }
-                    }
-
-                    return output;
-                };
-
-                Weapons.WeaponAmmo[]
-                    hunters = getWeapons(weaponsHunters),
-                    hunted = getWeapons(weaponsHunted);
+                Config.Deserialized deserialized = Config.Serialized.Deserialize(weaponsHunters, weaponsHunted);
 
                 Debug.WriteLine("parsed weapons config!");
 
-                Constants.WeaponLoadouts[Teams.Team.Hunters] = hunters;
-                Constants.WeaponLoadouts[Teams.Team.Hunted] = hunted;
+                Constants.WeaponLoadouts[Teams.Team.Hunters] = deserialized.HuntersWeapons;
+                Constants.WeaponLoadouts[Teams.Team.Hunted] = deserialized.HuntedWeapons;
             });
 
             EventHandlers["sth:markPlayerDeath"] += new Action<float, float, float, Teams.Team>((deathPosX, deathPosY, deathPosZ, team) =>

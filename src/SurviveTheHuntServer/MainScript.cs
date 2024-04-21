@@ -7,8 +7,9 @@ using System.Threading.Tasks;
 
 using CitizenFX.Core;
 using SurviveTheHuntServer.Helpers;
-using SurviveTheHuntServer.Utils;
+using SurviveTheHuntShared.Core;
 using static CitizenFX.Core.Native.API;
+using SharedConstants = SurviveTheHuntShared.Constants;
 
 namespace SurviveTheHuntServer
 {
@@ -30,15 +31,15 @@ namespace SurviveTheHuntServer
 
         private readonly HuntedQueue HuntedPlayerQueue = null;
 
-        private readonly Config Config = null;
+        private Config Config;
 
         public MainScript()
         {
-            if (GetCurrentResourceName() != Constants.ResourceName)
+            if (GetCurrentResourceName() != SharedConstants.ResourceName)
             {
                 try
                 {
-                    throw new Exception($"Survive the Hunt: Invalid resource name! Resource name should be {Constants.ResourceName}");
+                    throw new Exception($"Survive the Hunt: Invalid resource name! Resource name should be {SharedConstants.ResourceName}");
                 }
                 catch (Exception e)
                 {
@@ -64,7 +65,7 @@ namespace SurviveTheHuntServer
 
                 HuntedPlayerQueue = Hunt.InitHuntedQueue(Players);
 
-                Config = new Config();
+                Config = ServerConfig.FromJsonFile();
                 BroadcastConfig(Config);
                 SyncVehicles(SpawnedVehicles);
             }
@@ -102,7 +103,7 @@ namespace SurviveTheHuntServer
 
         private async Task UpdateLoop()
         {
-            if(DateTime.UtcNow >= LastTimeSync + Constants.TimeSyncInterval)
+            if(DateTime.UtcNow >= LastTimeSync + SharedConstants.TimeSyncInterval)
             {
                 TriggerClientEvent("sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
                 LastTimeSync = DateTime.UtcNow;
@@ -116,7 +117,7 @@ namespace SurviveTheHuntServer
                     NotifyWinner();
                 }
 
-                if(DateTime.UtcNow - GameState.Hunt.LastPingTime >= Constants.HuntedPingInterval)
+                if(DateTime.UtcNow - GameState.Hunt.LastPingTime >= SharedConstants.HuntedPingInterval)
                 {
                     GameState.Hunt.LastPingTime = DateTime.UtcNow;
                     float radius = 200f;
@@ -189,14 +190,14 @@ namespace SurviveTheHuntServer
 
                         GameState.Hunt.Begin(randomPlayer);
 
-                        TriggerClientEvent("sth:huntStartedByServer", new { EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture), NextNotification = (float)Constants.HuntedPingInterval.TotalSeconds });
+                        TriggerClientEvent("sth:huntStartedByServer", new { EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture), NextNotification = (float)SharedConstants.HuntedPingInterval.TotalSeconds });
                     })
                 },
                 {
                     "broadcastHuntedZone", new Action<dynamic>(data =>
                     {
                         Vector3 pos = data.Position;
-                        TriggerClientEvent("sth:notifyAboutHuntedZone", new { PlayerName = GameState.Hunt.HuntedPlayer.Name, Position = pos, NextNotification = (float)Constants.HuntedPingInterval.TotalSeconds });
+                        TriggerClientEvent("sth:notifyAboutHuntedZone", new { PlayerName = GameState.Hunt.HuntedPlayer.Name, Position = pos, NextNotification = (float)SharedConstants.HuntedPingInterval.TotalSeconds });
                     })
                 }
             };

@@ -1,5 +1,6 @@
 ﻿using CitizenFX.Core;
-using SurviveTheHuntServer.Utils;
+using SurviveTheHuntServer;
+using SharedConstants = SurviveTheHuntShared.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,10 +16,11 @@ namespace SurviveTheHuntServer
         {
             Debug.WriteLine($"{resourceName} resource started!");
 
-            if(resourceName == Constants.ResourceName)
+            if(resourceName == SharedConstants.ResourceName)
             {
                 // Reload the config file every time the resource is started.
-                BroadcastConfig(Config.Init());
+                Config = ServerConfig.FromJsonFile();
+                BroadcastConfig(Config);
                 SyncVehicles(SpawnedVehicles);
             }
         }
