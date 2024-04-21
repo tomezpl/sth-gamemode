@@ -53,11 +53,16 @@
     <Compile Include="PlayerState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="HelperClasses.cs" />
-    <Compile Include="Teams.cs" />
     <Compile Include="Utility.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SurviveTheHuntShared\SurviveTheHuntShared.csproj">
+      <Project>{a49f7ac5-2652-4c94-930c-950f8c80283a}</Project>
+      <Name>SurviveTheHuntShared</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

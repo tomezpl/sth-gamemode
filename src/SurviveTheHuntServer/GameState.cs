@@ -1,9 +1,7 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntShared.Core;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using SharedConstants = SurviveTheHuntShared.Constants;
 
 namespace SurviveTheHuntServer
 {
@@ -42,7 +40,7 @@ namespace SurviveTheHuntServer
             /// <summary>
             /// UTC time when the hunt session should end (it could end before that).
             /// </summary>
-            public DateTime EndTime { get { return StartTime + Constants.HuntDuration; } }
+            public DateTime EndTime { get { return StartTime + SharedConstants.HuntDuration; } }
 
             /// <summary>
             /// UTC time of last time the hunted player was pinged on the map.

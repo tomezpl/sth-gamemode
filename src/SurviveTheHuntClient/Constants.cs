@@ -1,9 +1,7 @@
 ﻿using CitizenFX.Core;
-using System;
+using SurviveTheHuntShared.Core;
+using SurviveTheHuntShared.Utils;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SurviveTheHuntClient
 {
@@ -12,11 +10,6 @@ namespace SurviveTheHuntClient
     /// </summary>
     public static class Constants
     {
-        /// <summary>
-        /// Spawn location (Terminal, Port of Los Santos)
-        /// </summary>
-        public static readonly Vector3 DockSpawn = new Vector3 { X = 851.379f, Y = -3140.005f, Z = 5.900808f };
-
         /// <summary>
         /// How long the hunted player's radius stays at max. opacity on the radar (in seconds).
         /// </summary>
@@ -34,21 +27,6 @@ namespace SurviveTheHuntClient
         /// This was manually measured in gameplay.
         /// </remarks>
         public static readonly float FeedPostMessageDuration = 15f;
-
-        /// <summary>
-        /// Y-axis out of bounds limit for the allowed hunt area.
-        /// </summary>
-        public static readonly float OutOfBoundsYLimit = 1130f;
-
-        /// <summary>
-        /// How long before a ping should the mugshot be generated?
-        /// </summary>
-        public static readonly TimeSpan MugshotGenerationTimeout = TimeSpan.FromSeconds(10);
-
-        /// <summary>
-        /// Amount of time (in seconds) a player's death blip stays on the map.
-        /// </summary>
-        public const int DefaultDeathBlipLifespan = 5;
 
         /// <summary>
         /// Weapon loadouts for each team.
@@ -121,43 +99,5 @@ namespace SurviveTheHuntClient
             VehicleHash.Zentorno,
             VehicleHash.ZType
         };
-
-        /// <summary>
-        /// Locations for spawning cars in the spawn area.
-        /// </summary>
-        public static readonly Coord[] CarSpawnPoints = new Coord[]
-        {
-            new Coord() { Position = new Vector3(818.21f, -3128.38f, 5.9f), Heading = 180f }, // 1
-            new Coord() { Position = new Vector3(822.22f, -3129.37f, 5.9f), Heading = 180f }, // 2
-            new Coord() { Position = new Vector3(826.22f, -3129.37f, 5.9f), Heading = 180f }, // 3
-            new Coord() { Position = new Vector3(830.22f, -3129.37f, 5.9f), Heading = 180f }, // 4
-            new Coord() { Position = new Vector3(834.22f, -3129.37f, 5.9f), Heading = 180f }, // 5
-            new Coord() { Position = new Vector3(838.22f, -3129.37f, 5.9f), Heading = 180f }, // 6
-            new Coord() { Position = new Vector3(842.22f, -3129.37f, 5.9f), Heading = 180f }, // 7
-            new Coord() { Position = new Vector3(846.22f, -3129.37f, 5.9f), Heading = 180f }, // 8
-            new Coord() { Position = new Vector3(850.22f, -3129.37f, 5.9f), Heading = 180f }, // 9
-            new Coord() { Position = new Vector3(854.22f, -3129.37f, 5.9f), Heading = 180f }, // 10
-            new Coord() { Position = new Vector3(858.22f, -3129.37f, 5.9f), Heading = 180f }, // 11
-            new Coord() { Position = new Vector3(862.22f, -3129.37f, 5.9f), Heading = 180f }, // 12
-            new Coord() { Position = new Vector3(866.22f, -3129.37f, 5.9f), Heading = 180f }, // 13
-            new Coord() { Position = new Vector3(866.22f, -3143.73f, 5.9f), Heading = 0f }, // 14
-            new Coord() { Position = new Vector3(862.22f, -3143.73f, 5.9f), Heading = 0f }, // 15
-            new Coord() { Position = new Vector3(858.22f, -3143.73f, 5.9f), Heading = 0f }, // 16
-            new Coord() { Position = new Vector3(854.22f, -3143.73f, 5.9f), Heading = 0f }, // 17
-            new Coord() { Position = new Vector3(850.22f, -3143.73f, 5.9f), Heading = 0f }, // 18
-            new Coord() { Position = new Vector3(846.22f, -3143.73f, 5.9f), Heading = 0f }, // 19
-            new Coord() { Position = new Vector3(842.22f, -3143.73f, 5.9f), Heading = 0f }, // 20
-            new Coord() { Position = new Vector3(838.22f, -3143.73f, 5.9f), Heading = 0f }, // 21
-            new Coord() { Position = new Vector3(834.22f, -3143.73f, 5.9f), Heading = 0f }, // 22
-            new Coord() { Position = new Vector3(830.22f, -3143.73f, 5.9f), Heading = 0f }, // 23
-            new Coord() { Position = new Vector3(826.22f, -3143.73f, 5.9f), Heading = 0f }, // 24
-            new Coord() { Position = new Vector3(822.22f, -3143.73f, 5.9f), Heading = 0f }, // 25
-            new Coord() { Position = new Vector3(818.22f, -3143.73f, 5.9f), Heading = 0f }  // 26
-        };
-
-        /// <summary>
-        /// The expected resource name for this gamemode.
-        /// </summary>
-        public const string ResourceName = "sth-gamemode";
     }
 }

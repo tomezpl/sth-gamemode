@@ -1,9 +1,11 @@
 ﻿using CitizenFX.Core;
-using SurviveTheHuntServer.Utils;
+using SurviveTheHuntServer;
+using SharedConstants = SurviveTheHuntShared.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using static CitizenFX.Core.Native.API;
+using SurviveTheHuntShared;
 
 namespace SurviveTheHuntServer
 {
@@ -15,10 +17,11 @@ namespace SurviveTheHuntServer
         {
             Debug.WriteLine($"{resourceName} resource started!");
 
-            if(resourceName == Constants.ResourceName)
+            if(resourceName == SharedConstants.ResourceName)
             {
                 // Reload the config file every time the resource is started.
-                BroadcastConfig(Config.Init());
+                Config = ServerConfig.FromJsonFile();
+                BroadcastConfig(Config);
                 SyncVehicles(SpawnedVehicles);
             }
         }
@@ -29,7 +32,7 @@ namespace SurviveTheHuntServer
             SyncVehicles(SpawnedVehicles);
         }
 
-        [EventHandler("sth:reqSyncVehicles")]
+        [EventHandler(Events.Server.RequestSyncVehicles)]
         public void SyncVehiclesRequested([FromSource] Player player, string vehicleNetIdsPacked)
         {
             Debug.WriteLine($"Received vehicleNetIdsPacked: {vehicleNetIdsPacked}");
@@ -77,16 +80,16 @@ namespace SurviveTheHuntServer
 
         private void SyncVehicles(string vehicleNetIdsPacked)
         {
-            TriggerClientEvent("sth:recvSyncVehicles", vehicleNetIdsPacked);
+            TriggerClientEvent(Events.Client.ReceiveSyncedVehicles, vehicleNetIdsPacked);
         }
 
-        [EventHandler("sth:reqDeleteVehicle")]
+        [EventHandler(Events.Server.RequestDeleteVehicle)]
         public void DeleteVehicle([FromSource] Player player, int vehicleNetId)
         {
             Debug.WriteLine($"Player {player.Name} ({player.Handle}) is requesting to delete vehicle with net ID {vehicleNetId}");
             try
             {
-                TriggerClientEvent("sth:recvDeleteVehicle", vehicleNetId);
+                TriggerClientEvent(Events.Client.ReceiveDeleteVehicle, vehicleNetId);
             }
             catch(Exception ex)
             {
