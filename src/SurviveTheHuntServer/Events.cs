@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using static CitizenFX.Core.Native.API;
+using SurviveTheHuntShared;
 
 namespace SurviveTheHuntServer
 {
@@ -31,7 +32,7 @@ namespace SurviveTheHuntServer
             SyncVehicles(SpawnedVehicles);
         }
 
-        [EventHandler("sth:reqSyncVehicles")]
+        [EventHandler(Events.Server.RequestSyncVehicles)]
         public void SyncVehiclesRequested([FromSource] Player player, string vehicleNetIdsPacked)
         {
             Debug.WriteLine($"Received vehicleNetIdsPacked: {vehicleNetIdsPacked}");
@@ -82,13 +83,13 @@ namespace SurviveTheHuntServer
             TriggerClientEvent("sth:recvSyncVehicles", vehicleNetIdsPacked);
         }
 
-        [EventHandler("sth:reqDeleteVehicle")]
+        [EventHandler(Events.Server.RequestDeleteVehicle)]
         public void DeleteVehicle([FromSource] Player player, int vehicleNetId)
         {
             Debug.WriteLine($"Player {player.Name} ({player.Handle}) is requesting to delete vehicle with net ID {vehicleNetId}");
             try
             {
-                TriggerClientEvent("sth:recvDeleteVehicle", vehicleNetId);
+                TriggerClientEvent(Events.Client.ReceiveDeleteVehicle, vehicleNetId);
             }
             catch(Exception ex)
             {

@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 using CitizenFX.Core;
 using SurviveTheHuntServer.Helpers;
+using SurviveTheHuntShared;
 using SurviveTheHuntShared.Core;
 using static CitizenFX.Core.Native.API;
 using SharedConstants = SurviveTheHuntShared.Constants;
@@ -59,7 +58,7 @@ namespace SurviveTheHuntServer
                     EventHandlers[$"sth:{ev.Key}"] += ev.Value;
                 }
 
-                EventHandlers["sth:clientStarted"] += new Action<Player>(ClientStarted);
+                EventHandlers[Events.Server.ClientStarted] += new Action<Player>(ClientStarted);
 
                 Tick += UpdateLoop;
 
@@ -95,7 +94,7 @@ namespace SurviveTheHuntServer
             else
             {
                 Console.WriteLine($"{player.Name} is joining; syncing time offset now.");
-                TriggerClientEvent(player, "sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
+                TriggerClientEvent(player, Events.Client.ReceiveTimeSync, new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
 
                 HuntedPlayerQueue.AddPlayer(player);
             }
@@ -105,7 +104,7 @@ namespace SurviveTheHuntServer
         {
             if(DateTime.UtcNow >= LastTimeSync + SharedConstants.TimeSyncInterval)
             {
-                TriggerClientEvent("sth:receiveTimeSync", new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
+                TriggerClientEvent(Events.Client.ReceiveTimeSync, new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
                 LastTimeSync = DateTime.UtcNow;
             }
 
@@ -125,7 +124,7 @@ namespace SurviveTheHuntServer
                     float offsetX = (((float)RNG.NextDouble() * 2f) - 1f) * playerLocationRadius;
                     float offsetY = (((float)RNG.NextDouble() * 2f) - 1f) * playerLocationRadius;
 
-                    TriggerClientEvent("sth:showPingOnMap", new
+                    TriggerClientEvent(Events.Client.ShowPingOnMap, new
                     {
                         CreationDate = GameState.Hunt.LastPingTime.ToString("F", CultureInfo.InvariantCulture),
                         PlayerName = GameState.Hunt.HuntedPlayer.Name,
@@ -142,7 +141,7 @@ namespace SurviveTheHuntServer
         /// </summary>
         private void NotifyWinner()
         {
-            TriggerClientEvent("sth:notifyWinner", new { WinningTeam = (int)GameState.Hunt.WinningTeam });
+            TriggerClientEvent(Events.Client.NotifyWinner, new { WinningTeam = (int)GameState.Hunt.WinningTeam });
         }
 
         /// <summary>
@@ -153,16 +152,16 @@ namespace SurviveTheHuntServer
             STHEvents = new Dictionary<string, Action<dynamic>>
             {
                 {
-                    "cleanClothes", new Action<dynamic>(data =>
+                    Events.Server.RequestCleanClothes.EventName(), new Action<dynamic>(data =>
                     {
                         int playerId = data.PlayerId;
                         Console.WriteLine($"Cleaning clothes for {Players[playerId].Name}");
 
-                        TriggerClientEvent("sth:cleanClothesForPlayer", new { PlayerId = playerId });
+                        TriggerClientEvent(Events.Client.ReceiveCleanClothes, new { PlayerId = playerId });
                     })
                 },
                 {
-                    "playerDied", new Action<dynamic>(data =>
+                    Events.Server.PlayerDied.EventName(), new Action<dynamic>(data =>
                     {
                         int playerId = data.PlayerId;
 
@@ -175,29 +174,29 @@ namespace SurviveTheHuntServer
                         }
 
                         // Mark the player's death location with a blip for everyone.
-                        TriggerClientEvent("sth:markPlayerDeath", data.PlayerPosX, data.PlayerPosY, data.PlayerPosZ, data.PlayerTeam);
+                        TriggerClientEvent(Events.Client.MarkPlayerDeath, data.PlayerPosX, data.PlayerPosY, data.PlayerPosZ, data.PlayerTeam);
                     })
                 },
                 {
-                    "startHunt", new Action<dynamic>(data =>
+                    Events.Server.RequestStartHunt.EventName(), new Action<dynamic>(data =>
                     {
                         Player randomPlayer = Hunt.ChooseRandomPlayer(Players, ref GameState);
 
                         GameState.Hunt.LastHuntedPlayer = randomPlayer;
 
-                        TriggerClientEvent(randomPlayer, "sth:notifyHuntedPlayer");
-                        TriggerClientEvent("sth:notifyHunters", new { HuntedPlayerName = randomPlayer.Name });
+                        TriggerClientEvent(randomPlayer, Events.Client.NotifyHuntedPlayer);
+                        TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerName = randomPlayer.Name });
 
                         GameState.Hunt.Begin(randomPlayer);
 
-                        TriggerClientEvent("sth:huntStartedByServer", new { EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture), NextNotification = (float)SharedConstants.HuntedPingInterval.TotalSeconds });
+                        TriggerClientEvent(Events.Client.HuntStartedByServer, new { EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture), NextNotification = (float)SharedConstants.HuntedPingInterval.TotalSeconds });
                     })
                 },
                 {
-                    "broadcastHuntedZone", new Action<dynamic>(data =>
+                    Events.Server.BroadcastHuntedZone.EventName(), new Action<dynamic>(data =>
                     {
                         Vector3 pos = data.Position;
-                        TriggerClientEvent("sth:notifyAboutHuntedZone", new { PlayerName = GameState.Hunt.HuntedPlayer.Name, Position = pos, NextNotification = (float)SharedConstants.HuntedPingInterval.TotalSeconds });
+                        TriggerClientEvent(Events.Client.NotifyAboutHuntedZone, new { PlayerName = GameState.Hunt.HuntedPlayer.Name, Position = pos, NextNotification = (float)SharedConstants.HuntedPingInterval.TotalSeconds });
                     })
                 }
             };

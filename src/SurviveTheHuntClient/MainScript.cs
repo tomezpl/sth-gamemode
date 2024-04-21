@@ -15,6 +15,7 @@ using SurviveTheHuntClient.Helpers;
 using static CitizenFX.Core.Native.API;
 using SharedConstants = SurviveTheHuntShared.Constants;
 using SurviveTheHuntShared.Core;
+using SurviveTheHuntShared;
 
 namespace SurviveTheHuntClient
 {
@@ -133,7 +134,7 @@ namespace SurviveTheHuntClient
 
                 RegisterCommand("starthunt", new Action(() =>
                 {
-                    TriggerServerEvent("sth:startHunt");
+                    TriggerServerEvent(Events.Server.RequestStartHunt);
                 }), false);
 
                 RegisterCommand("spawncars", new Action(async () =>
@@ -150,7 +151,7 @@ namespace SurviveTheHuntClient
                 ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
 
                 // Notify the server this client has started so the config can be sent down. This is needed for resource restarts etc.
-                TriggerServerEvent("sth:clientStarted");
+                TriggerServerEvent(Events.Server.ClientStarted);
             }
         }
 
@@ -179,7 +180,7 @@ namespace SurviveTheHuntClient
                 if (hasNetId || Vehicle.Exists(vehicleToDelete.Vehicle))
                 {
                     Debug.WriteLine($"Requesting to delete vehicle with {(hasNetId ? "net ID" : "entity handle")} {id}");
-                    TriggerServerEvent("sth:reqDeleteVehicle", hasNetId ? id : VehToNet(id));
+                    TriggerServerEvent(Events.Server.RequestDeleteVehicle, hasNetId ? id : VehToNet(id));
                 }
                 else
                 {
@@ -257,7 +258,7 @@ namespace SurviveTheHuntClient
             PlayerState.WeaponsGiven = false;
             PlayerState.ForcedUnarmed = false;
 
-            TriggerServerEvent("sth:cleanClothes", new { PlayerId = GetPlayerServerId(PlayerId()) });
+            TriggerServerEvent(Events.Server.RequestCleanClothes, new { PlayerId = GetPlayerServerId(PlayerId()) });
 
             // Enable friendly fire.
             NetworkSetFriendlyFireOption(true);
@@ -292,7 +293,7 @@ namespace SurviveTheHuntClient
             // Check and report player death to the server if needed.
             if(!Game.Player.IsAlive && !PlayerState.DeathReported)
             {
-                TriggerServerEvent("sth:playerDied", new { PlayerId = Game.Player.ServerId, PlayerPosX = PlayerPos.X, PlayerPosY = PlayerPos.Y, PlayerPosZ = PlayerPos.Z, PlayerTeam = PlayerState.Team });
+                TriggerServerEvent(Events.Server.PlayerDied, new { PlayerId = Game.Player.ServerId, PlayerPosX = PlayerPos.X, PlayerPosY = PlayerPos.Y, PlayerPosZ = PlayerPos.Z, PlayerTeam = PlayerState.Team });
                 PlayerState.DeathReported = true;
             }
 
@@ -311,7 +312,7 @@ namespace SurviveTheHuntClient
                 if(vehicleNetIdsPacked.Length > 1)
                 {
                     vehicleNetIdsPacked = vehicleNetIdsPacked.Remove(vehicleNetIdsPacked.Length - 1, 1);
-                    TriggerServerEvent("sth:reqSyncVehicles", vehicleNetIdsPacked);
+                    TriggerServerEvent(Events.Server.RequestSyncVehicles, vehicleNetIdsPacked);
                     SpawnedVehiclesNeedSync = false;
                 }
             }
@@ -375,7 +376,7 @@ namespace SurviveTheHuntClient
             STHEvents = new Dictionary<string, Action<dynamic>>
             {
                 {
-                    "cleanClothesForPlayer", new Action<dynamic>(data =>
+                    Events.Client.ReceiveCleanClothes.EventName(), new Action<dynamic>(data =>
                     {
                         int playerId = data.PlayerId;
 
@@ -383,7 +384,7 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
-                    "notifyHuntedPlayer", new Action<dynamic>(data =>
+                    Events.Client.NotifyHuntedPlayer.EventName(), new Action<dynamic>(data =>
                     {
                         //Debug.WriteLine("I'm the hunted!");
                         GameState.Hunt.IsStarted = true;
@@ -397,7 +398,7 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
-                    "notifyHunters", new Action<dynamic>(data =>
+                    Events.Client.NotifyHunters.EventName(), new Action<dynamic>(data =>
                     {
                         string huntedPlayerName = data.HuntedPlayerName;
 
@@ -420,7 +421,7 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
-                    "notifyWinner", new Action<dynamic>(data =>
+                    Events.Client.NotifyWinner.EventName(), new Action<dynamic>(data =>
                     {
                         int winningTeam = data.WinningTeam;
                         GameState.Hunt.IsOver = true;
@@ -437,7 +438,7 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
-                    "huntStartedByServer", new Action<dynamic>(data =>
+                    Events.Client.HuntStartedByServer.EventName(), new Action<dynamic>(data =>
                     {
                         float secondsTillPing = data.NextNotification;
                         GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(secondsTillPing);
@@ -450,19 +451,19 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
-                    "showPingOnMap", new Action<dynamic>(data =>
+                    Events.Client.ShowPingOnMap.EventName(), new Action<dynamic>(data =>
                     {
                         string playerName = data.PlayerName;
                         HuntUI.CreateRadiusBlipForPlayer(Players[playerName], data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
                         if(playerName == Game.Player.Name)
                         {
                             CfxVector3 position = GetEntityCoords(PlayerPedId(), false);
-                            TriggerServerEvent("sth:broadcastHuntedZone", new { Position = position });
+                            TriggerServerEvent(Events.Server.BroadcastHuntedZone, new { Position = position });
                         }
                     })
                 },
                 {
-                    "notifyAboutHuntedZone", new Action<dynamic>(data =>
+                    Events.Client.NotifyAboutHuntedZone.EventName(), new Action<dynamic>(data =>
                     {
                         string playerName = data.PlayerName;
                         float nextNotificationTimeout = data.NextNotification;
@@ -471,7 +472,7 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
-                    "receiveTimeSync", new Action<dynamic>(data =>
+                    Events.Client.ReceiveTimeSync.EventName(), new Action<dynamic>(data =>
                     {
                         string currentServerTimeStr = data.CurrentServerTime;
                         DateTime currentServerTime = DateTime.ParseExact(currentServerTimeStr, "F", CultureInfo.InvariantCulture);
@@ -481,7 +482,7 @@ namespace SurviveTheHuntClient
             };
 
             // Event handler for gamemode config being sent by the server.
-            EventHandlers["sth:receiveConfig"] += new Action<byte[], byte[]>((weaponsHunters, weaponsHunted) =>
+            EventHandlers[Events.Client.ReceiveConfig] += new Action<byte[], byte[]>((weaponsHunters, weaponsHunted) =>
             {
                 Debug.WriteLine("sth:receiveConfig received!");
 
@@ -493,7 +494,7 @@ namespace SurviveTheHuntClient
                 Constants.WeaponLoadouts[Teams.Team.Hunted] = deserialized.HuntedWeapons;
             });
 
-            EventHandlers["sth:markPlayerDeath"] += new Action<float, float, float, Teams.Team>((deathPosX, deathPosY, deathPosZ, team) =>
+            EventHandlers[Events.Client.MarkPlayerDeath] += new Action<float, float, float, Teams.Team>((deathPosX, deathPosY, deathPosZ, team) =>
             {
                 if (team == PlayerState.Team || string.Equals(GetConvar("sth_globalPlayerDeathBlips", "false"), "true", StringComparison.OrdinalIgnoreCase))
                 {
@@ -502,7 +503,7 @@ namespace SurviveTheHuntClient
             });
         }
 
-        [EventHandler("sth:recvSyncVehicles")]
+        [EventHandler(Events.Client.ReceiveSyncedVehicles)]
         public void SyncVehiclesReceived(string vehicleNetIdsPacked)
         {
             int validNetIdCount = 0;
@@ -525,7 +526,7 @@ namespace SurviveTheHuntClient
             }
         }
 
-        [EventHandler("sth:recvDeleteVehicle")]
+        [EventHandler(Events.Client.ReceiveDeleteVehicle)]
         public void DeleteVehicle(int vehicleNetId)
         {
             if(NetworkDoesNetworkIdExist(vehicleNetId) && Vehicle.Exists(Vehicle.FromNetworkId(vehicleNetId)))
