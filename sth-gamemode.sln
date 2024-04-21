@@ -18,7 +18,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "configs", "configs", "{B798
 		configs\team_loadouts.json = configs\team_loadouts.json
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SurviveTheHuntShared", "SurviveTheHuntShared\SurviveTheHuntShared.csproj", "{A49F7AC5-2652-4C94-930C-950F8C80283A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SurviveTheHuntShared", "src\SurviveTheHuntShared\SurviveTheHuntShared.csproj", "{A49F7AC5-2652-4C94-930C-950F8C80283A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
