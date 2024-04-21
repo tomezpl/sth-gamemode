@@ -8,6 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using CitizenFX.Core;
+using SurviveTheHuntShared.Utils;
+using Vector3 = SurviveTheHuntShared.Utils.Vector3;
+using CfxVector3 = CitizenFX.Core.Vector3;
 using SurviveTheHuntClient.Helpers;
 using static CitizenFX.Core.Native.API;
 
@@ -47,7 +50,7 @@ namespace SurviveTheHuntClient
         /// </summary>
         private bool IsSpawningCars = false;
 
-        private Vector3 PlayerPos = Vector3.Zero;
+        private CfxVector3 PlayerPos = CfxVector3.Zero;
 
         /// <summary>
         /// Blips used to represent player deaths on the radar.
@@ -344,7 +347,12 @@ namespace SurviveTheHuntClient
         {
             foreach(Vehicle vehicle in World.GetAllVehicles())
             {
-                bool closeToSpawn = 50f >= (Constants.DockSpawn - vehicle.Position).Length();
+                CfxVector3 spawnToVehicleOffset = vehicle.Position;
+                spawnToVehicleOffset.X -= Constants.DockSpawn.X;
+                spawnToVehicleOffset.Y -= Constants.DockSpawn.Y;
+                spawnToVehicleOffset.Z -= Constants.DockSpawn.Z;
+
+                bool closeToSpawn = 50f >= spawnToVehicleOffset.Length();
                 vehicle.IsInvincible = closeToSpawn;
                 if (closeToSpawn)
                 {
@@ -446,7 +454,7 @@ namespace SurviveTheHuntClient
                         HuntUI.CreateRadiusBlipForPlayer(Players[playerName], data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
                         if(playerName == Game.Player.Name)
                         {
-                            Vector3 position = GetEntityCoords(PlayerPedId(), false);
+                            CfxVector3 position = GetEntityCoords(PlayerPedId(), false);
                             TriggerServerEvent("sth:broadcastHuntedZone", new { Position = position });
                         }
                     })

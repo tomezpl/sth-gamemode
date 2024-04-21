@@ -1,9 +1,11 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntShared.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Vector3 = SurviveTheHuntShared.Utils.Vector3;
 
 namespace SurviveTheHuntClient
 {
