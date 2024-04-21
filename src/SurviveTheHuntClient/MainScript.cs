@@ -198,7 +198,15 @@ namespace SurviveTheHuntClient
                     continue;
                 }
                 RequestModel((uint)vehicle);
-                await Delay(50);
+                // Wait up to 1500ms (in 150ms intervals) for the model to load.
+                for (int i = 0; i < 10; i++)
+                {
+                    await Delay(150);
+                    if(HasModelLoaded((uint)vehicle))
+                    {
+                        break;
+                    }
+                }
 
                 Coord spawnPoint = SharedConstants.CarSpawnPoints[counter];
                 Vector3 spawnPos = spawnPoint.Position;
@@ -482,16 +490,17 @@ namespace SurviveTheHuntClient
             };
 
             // Event handler for gamemode config being sent by the server.
-            EventHandlers[Events.Client.ReceiveConfig] += new Action<byte[], byte[]>((weaponsHunters, weaponsHunted) =>
+            EventHandlers[Events.Client.ReceiveConfig] += new Action<byte[], byte[], string>((weaponsHunters, weaponsHunted, vehicleList) =>
             {
                 Debug.WriteLine("sth:receiveConfig received!");
 
-                Config.Deserialized deserialized = Config.Serialized.Deserialize(weaponsHunters, weaponsHunted);
+                Config.Deserialized deserialized = Config.Serialized.Deserialize(weaponsHunters, weaponsHunted, vehicleList);
 
-                Debug.WriteLine("parsed weapons config!");
+                Debug.WriteLine("parsed config!");
 
                 Constants.WeaponLoadouts[Teams.Team.Hunters] = deserialized.HuntersWeapons;
                 Constants.WeaponLoadouts[Teams.Team.Hunted] = deserialized.HuntedWeapons;
+                Constants.Vehicles = deserialized.VehicleWhitelist.Vehicles.Select((vehicleName) => (VehicleHash)GetHashKey(vehicleName)).ToArray();
             });
 
             EventHandlers[Events.Client.MarkPlayerDeath] += new Action<float, float, float, Teams.Team>((deathPosX, deathPosY, deathPosZ, team) =>

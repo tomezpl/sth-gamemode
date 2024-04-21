@@ -1,5 +1,9 @@
+## Features
+- Added spawnable vehicle list configuration. Modify [configs/vehicles.json](https://github.com/tomezpl/sth-gamemode/blob/develop/configs/team_loadouts.json) to add or remove vehicles from the list used by `/spawncars`. ([#34](https://github.com/tomezpl/sth-gamemode/issues/34))
+
 ## Fixes
 - Fixed previous batch of vehicles not being deleted when using `/spawncars`. ([#44](https://github.com/tomezpl/sth-gamemode/issues/44))
+- Fixed some vehicles not spawning if they took too long to load.
 
 ## Known issues
 - Due to how the fix for [#44](https://github.com/tomezpl/sth-gamemode/issues/44) is implemented, there is an additional 3.5s delay when using `/spawncars`.
