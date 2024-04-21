@@ -1,5 +1,6 @@
 ﻿using CitizenFX.Core;
 using Newtonsoft.Json;
+using SurviveTheHuntShared;
 using SurviveTheHuntShared.Core;
 
 namespace SurviveTheHuntServer {
@@ -11,25 +12,30 @@ namespace SurviveTheHuntServer {
         }
 
         /// <summary>
-        /// Creates a <see cref="Config"/> using the weapon loadouts JSON file pointed at by <paramref name="weaponConfigPath"/>.
+        /// Creates a <see cref="Config"/> using the JSON file paths in the parameters.
         /// </summary>
         /// <param name="weaponConfigPath">Relative path to the weapon loadouts JSON file on the server.</param>
+        /// <param name="vehicleConfigPath">Relative path to the vehicle list JSON file on the server.</param>
         /// <returns>A valid <see cref="Config"/> that can be sent to players.</returns>
-        public static Config FromJsonFile(string weaponConfigPath = Constants.WeaponConfigPath)
+        public static Config FromJsonFile(string weaponConfigPath = Constants.WeaponConfigPath, string vehicleConfigPath = Constants.VehicleConfigPath)
         {
-            string loadoutsJson = CitizenFX.Core.Native.API.LoadResourceFile(CitizenFX.Core.Native.API.GetCurrentResourceName(), weaponConfigPath);
-            return FromJson(loadoutsJson);
+            string resourceName = CitizenFX.Core.Native.API.GetCurrentResourceName();
+            string loadoutsJson = CitizenFX.Core.Native.API.LoadResourceFile(resourceName, weaponConfigPath);
+            string vehicleJson = CitizenFX.Core.Native.API.LoadResourceFile(resourceName, vehicleConfigPath);
+            return FromJson(loadoutsJson, vehicleJson);
         }
 
         /// <summary>
-        /// Creates a <see cref="Config"/> using the supplied weapon loadouts JSON string.
+        /// Creates a <see cref="Config"/> using the supplied weapon loadouts and vehicle list JSON strings.
         /// </summary>
-        /// <param name="json">A string containing valid weapon loadouts JSON, ideally loaded from <see cref="Constants.WeaponConfigPath"/>.</param>
+        /// <param name="weaponsJson">A string containing valid weapon loadouts JSON, ideally loaded from <see cref="Constants.WeaponConfigPath"/>.</param>
+        /// <param name="vehicleJson">A string containing valid vehicle names JSON, ideally loaded from <see cref="Constants.VehicleConfigPath"/>.</param>
         /// <returns>A valid <see cref="Config"/> that can be sent to players.</returns>
-        public static Config FromJson(string json)
+        public static Config FromJson(string weaponsJson, string vehicleJson)
         {
             ServerConfig config = new ServerConfig();
-            config._weaponLoadouts = JsonConvert.DeserializeObject<TeamWeaponLoadouts>(json);
+            config._weaponLoadouts = JsonConvert.DeserializeObject<TeamWeaponLoadouts>(weaponsJson);
+            config._vehicleWhitelist = JsonConvert.DeserializeObject<VehicleWhitelist>(vehicleJson);
 
             return config;
         }
@@ -45,7 +51,7 @@ namespace SurviveTheHuntServer {
         public void BroadcastConfig(Config config)
         {
             Debug.WriteLine("Sending serialized config to players");
-            TriggerLatentClientEvent(ServerConfig.ReceiveConfigEvent, ServerConfig.ConfigBroadcastBytesPerSec, config.Serialize().EventParams);
+            TriggerLatentClientEvent(Events.Client.ReceiveConfig, ServerConfig.ConfigBroadcastBytesPerSec, config.Serialize().EventParams);
         }
 
         /// <summary>
@@ -56,7 +62,7 @@ namespace SurviveTheHuntServer {
         public void BroadcastConfig(Player player, Config config)
         {
             Debug.WriteLine($"Sending serialized config to player {player.Name}");
-            TriggerLatentClientEvent(player, ServerConfig.ReceiveConfigEvent, ServerConfig.ConfigBroadcastBytesPerSec, config.Serialize().EventParams);
+            TriggerLatentClientEvent(player, Events.Client.ReceiveConfig, ServerConfig.ConfigBroadcastBytesPerSec, config.Serialize().EventParams);
         }
     }
 }

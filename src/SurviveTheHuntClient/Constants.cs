@@ -44,7 +44,7 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Vehicles that can be spawned.
         /// </summary>
-        public static readonly VehicleHash[] Vehicles = new VehicleHash[]
+        public static VehicleHash[] Vehicles = new VehicleHash[]
         {
             VehicleHash.Adder,
             VehicleHash.Banshee2,

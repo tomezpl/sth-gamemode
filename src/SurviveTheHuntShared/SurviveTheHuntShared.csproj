@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="Core\Config.cs" />
+    <Compile Include="Core\VehicleWhitelist.cs" />
     <Compile Include="Core\Teams.cs" />
     <Compile Include="Core\WeaponLoadout.cs" />
     <Compile Include="Events.cs" />

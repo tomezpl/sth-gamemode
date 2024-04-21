@@ -17,6 +17,7 @@ namespace SurviveTheHuntShared.Core
         protected Config() { }
 
         protected TeamWeaponLoadouts _weaponLoadouts = null;
+        protected VehicleWhitelist _vehicleWhitelist = null;
 
         /// <summary>
         /// Weapon loadouts for each team loaded from the JSON file.
@@ -24,15 +25,15 @@ namespace SurviveTheHuntShared.Core
         public TeamWeaponLoadouts WeaponLoadouts { get => _weaponLoadouts; }
 
         /// <summary>
+        /// An allowlist of vehicles that can be spawned for the players.
+        /// </summary>
+        public VehicleWhitelist VehicleWhitelist { get => _vehicleWhitelist; }
+
+        /// <summary>
         /// Speed at which config data should be sent. 
         /// Not a scientific measurement but should be enough to broadcast the loadout config in its current form in under a second. Tweak as needed.
         /// </summary>
-        public const int ConfigBroadcastBytesPerSec = 64;
-
-        /// <summary>
-        /// Event name to use for sending the config. Needs to match in the client.
-        /// </summary>
-        public const string ReceiveConfigEvent = "sth:receiveConfig";
+        public const int ConfigBroadcastBytesPerSec = 1024 * 2;
 
 
         /// <summary>
@@ -42,35 +43,39 @@ namespace SurviveTheHuntShared.Core
         public Serialized Serialize()
         {
             // TODO: for now this will just choose the first loadout for each team
-            return new Serialized(WeaponLoadouts.Hunters[0], WeaponLoadouts.Hunted[0]);
+            return new Serialized(WeaponLoadouts.Hunters[0], WeaponLoadouts.Hunted[0], VehicleWhitelist);
         }
 
         public struct Deserialized
         {
             public Weapons.WeaponAmmo[] HuntersWeapons;
             public Weapons.WeaponAmmo[] HuntedWeapons;
+            public VehicleWhitelist VehicleWhitelist;
         }
 
         public struct Serialized
         {
             private readonly byte[] WeaponsHunted;
             private readonly byte[] WeaponsHunters;
+            private readonly string Vehicles;
 
             /// <summary>
             /// Creates a serialized representation of a weapons loadout config.
             /// </summary>
             /// <param name="huntersLoadout">Loadout for <see cref="Teams.Team.Hunters"/>.</param>
             /// <param name="huntedLoadout">Loadout for the <see cref="Teams.Team.Hunted"/>.</param>
-            public Serialized(TeamWeaponLoadouts.WeaponLoadout huntersLoadout, TeamWeaponLoadouts.WeaponLoadout huntedLoadout)
+            /// <param name="vehicleWhitelist">List of vehicle names that can be spawned for the hunt.</param>
+            public Serialized(TeamWeaponLoadouts.WeaponLoadout huntersLoadout, TeamWeaponLoadouts.WeaponLoadout huntedLoadout, VehicleWhitelist vehicleWhitelist)
             {
                 WeaponsHunters = huntersLoadout.Serialize();
                 WeaponsHunted = huntedLoadout.Serialize();
+                Vehicles = vehicleWhitelist.Serialize();
             }
 
             /// <summary>
             /// Serialized data to be passed as event parameters.
             /// </summary>
-            public object[] EventParams { get => new object[] { WeaponsHunters, WeaponsHunted }; }
+            public object[] EventParams { get => new object[] { WeaponsHunters, WeaponsHunted, Vehicles }; }
             
             /// <summary>
             /// Helper method to deserialize a byte array of weapon&ammo data into WeaponAmmo objects.
@@ -106,19 +111,22 @@ namespace SurviveTheHuntShared.Core
                 return output;
             }
 
-            public static Deserialized Deserialize(byte[] weaponsHunters, byte[] weaponsHunted)
+            public static Deserialized Deserialize(byte[] weaponsHunters, byte[] weaponsHunted, string vehicles)
             {
                 Weapons.WeaponAmmo[]
                     hunters = GetWeapons(weaponsHunters),
                     hunted = GetWeapons(weaponsHunted);
 
-                Deserialized desrialized = new Deserialized
+                string[] vehicleNames = vehicles.Split(';');
+
+                Deserialized deserialized = new Deserialized
                 {
                     HuntedWeapons = hunted,
-                    HuntersWeapons = hunters
+                    HuntersWeapons = hunters,
+                    VehicleWhitelist = new VehicleWhitelist() { Vehicles = vehicleNames[0] == vehicles ? new string[0] : vehicleNames }
                 };
 
-                return desrialized;
+                return deserialized;
             }
         }
     }
