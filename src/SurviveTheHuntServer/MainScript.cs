@@ -66,12 +66,23 @@ namespace SurviveTheHuntServer
 
                 Config = new Config();
                 BroadcastConfig(Config);
+                SyncVehicles(SpawnedVehicles);
             }
         }
 
         protected void PlayerDisconnected([FromSource] Player player, string reason)
         {
             HuntedPlayerQueue.RemovePlayer(player);
+
+            // FiveM docs don't seem to clearly communicate as to whether the player list is updated when this event fires,
+            // so let's check if there are 0 players (or 1 player and it's the one who just left).
+            int playerCount = GetNumPlayerIndices();
+            if (playerCount == 0 || (playerCount == 1 && Players[GetPlayerFromIndex(0)] == player))
+            {
+                // Clear the spawned cars list as they will be gone for good once all players have left.
+                Debug.WriteLine("All players have left, clearing vehicles!");
+                SpawnedVehicles.Clear();
+            }
         }
 
         protected void PlayerJoining([FromSource] Player player, string oldId)
