@@ -80,7 +80,7 @@ namespace SurviveTheHuntServer
 
         private void SyncVehicles(string vehicleNetIdsPacked)
         {
-            TriggerClientEvent("sth:recvSyncVehicles", vehicleNetIdsPacked);
+            TriggerClientEvent(Events.Client.ReceiveSyncedVehicles, vehicleNetIdsPacked);
         }
 
         [EventHandler(Events.Server.RequestDeleteVehicle)]
