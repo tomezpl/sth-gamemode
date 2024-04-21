@@ -3,6 +3,7 @@ using CitizenFX.Core;
 using SharedConstants = SurviveTheHuntShared.Constants;
 
 using static CitizenFX.Core.Native.API;
+using SurviveTheHuntShared.Core;
 
 namespace SurviveTheHuntClient
 {

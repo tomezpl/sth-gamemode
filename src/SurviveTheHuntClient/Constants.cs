@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntShared.Core;
 using SurviveTheHuntShared.Utils;
 using System.Collections.Generic;
 

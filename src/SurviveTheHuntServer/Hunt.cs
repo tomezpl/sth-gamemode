@@ -1,5 +1,6 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntServer.Helpers;
+using SurviveTheHuntShared.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;

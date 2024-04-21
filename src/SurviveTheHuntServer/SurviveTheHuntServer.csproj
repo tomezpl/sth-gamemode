@@ -54,7 +54,6 @@
     <Compile Include="Hunt.cs" />
     <Compile Include="MainScript.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Teams.cs" />
     <Compile Include="Utils\Config.cs" />
   </ItemGroup>
   <ItemGroup>

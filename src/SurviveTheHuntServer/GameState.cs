@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntShared.Core;
 using System;
 using SharedConstants = SurviveTheHuntShared.Constants;
 
