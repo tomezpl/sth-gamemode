@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using static CitizenFX.Core.Native.API;
-using static SurviveTheHuntClient.Teams;
+using static SurviveTheHuntShared.Core.Teams;
 
 namespace SurviveTheHuntClient
 {

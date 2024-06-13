@@ -1,6 +1,7 @@
 env:
   STH_CLIENT_SCRIPT: SurviveTheHuntClient.net.dll
   STH_SERVER_SCRIPT: SurviveTheHuntServer.net.dll
+  STH_SHARED_LIB: SurviveTheHuntShared.net.dll
   NEWTONSOFT_JSON_DLL: Newtonsoft.Json.dll
   CONFIG_DIR: ${{github.workspace}}/configs/*
 
@@ -36,9 +37,14 @@ jobs:
         name: Write new version number from tag
         run: |
             cd ./src
+            echo "Writing new version number to client script"
             cd SurviveTheHuntClient 
             ../../scripts/update-assembly-version.ps1 ${{inputs.version_number}}
+            echo "Writing new version number to server script"
             cd ../SurviveTheHuntServer
+            ../../scripts/update-assembly-version.ps1 ${{inputs.version_number}}
+            echo "Writing new version number to shared library"
+            cd ../SurviveTheHuntShared
             ../../scripts/update-assembly-version.ps1 ${{inputs.version_number}}
         shell: pwsh
       - 
@@ -56,6 +62,7 @@ jobs:
             copy fxmanifest.lua artifacts/fxmanifest.lua
             copy build/${{env.STH_CLIENT_SCRIPT}} artifacts/${{env.STH_CLIENT_SCRIPT}}
             copy build/${{env.STH_SERVER_SCRIPT}} artifacts/${{env.STH_SERVER_SCRIPT}}
+            copy build/${{env.STH_SHARED_LIB}} artifacts/${{env.STH_SHARED_LIB}}
             copy build/${{env.NEWTONSOFT_JSON_DLL}} artifacts/${{env.NEWTONSOFT_JSON_DLL}}
             copy ${{env.CONFIG_DIR}} artifacts/configs/
             Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{inputs.version_number}}.zip

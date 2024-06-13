@@ -1,3 +1,17 @@
+# 1.2.0
+## Features
+- Added spawnable vehicle list configuration. Modify [configs/vehicles.json](https://github.com/tomezpl/sth-gamemode/blob/develop/configs/vehicles.json) to add or remove vehicles from the list used by `/spawncars`. ([#34](https://github.com/tomezpl/sth-gamemode/issues/34))
+
+## Fixes
+- Fixed previous batch of vehicles not being deleted when using `/spawncars`. ([#44](https://github.com/tomezpl/sth-gamemode/issues/44))
+- Fixed some vehicles not spawning if they took too long to load.
+
+## Known issues
+- Due to how the fix for [#44](https://github.com/tomezpl/sth-gamemode/issues/44) is implemented, there is an additional 3.5s delay when using `/spawncars`.
+  - This is in order to allow the server to properly delete the existing vehicles.
+  - A fix to mitigate this will be introduced in a future version.
+- On rare occasions, some vehicles may fail to delete properly. The repro steps for this are currently unclear.
+
 # 1.1.0
 ## Features
 - Added player death markers on the radar. Use `setr sth_deathbliplifespan <seconds>` to override the number of seconds the marker stays on the map. Use `setr sth_globalPlayerDeathBlips true` to make hunter death blips visible to hunted players. ([#26](https://github.com/tomezpl/sth-gamemode/issues/26))  ([#32](https://github.com/tomezpl/sth-gamemode/issues/32)) 

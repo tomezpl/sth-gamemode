@@ -1,7 +1,9 @@
 ﻿using System;
 using CitizenFX.Core;
+using SharedConstants = SurviveTheHuntShared.Constants;
 
 using static CitizenFX.Core.Native.API;
+using SurviveTheHuntShared.Core;
 
 namespace SurviveTheHuntClient
 {
@@ -116,7 +118,7 @@ namespace SurviveTheHuntClient
                 }
 
                 // If the mugshot texture requires regeneration, unregister it.
-                if(HuntedPlayerMugshot != null && Utility.CurrentTime >= NextMugshotTime - Constants.MugshotGenerationTimeout)
+                if(HuntedPlayerMugshot != null && Utility.CurrentTime >= NextMugshotTime - SharedConstants.MugshotGenerationTimeout)
                 {
                     UnregisterPedheadshot(HuntedPlayerMugshot.Id);
                     HuntedPlayerMugshot = null;
@@ -152,7 +154,7 @@ namespace SurviveTheHuntClient
         /// <returns>true if player is out of bounds, false otherwise.</returns>
         public static bool IsPedTooFar(Ped ped)
         {
-            return ped.Position.Y >= Constants.OutOfBoundsYLimit;
+            return ped.Position.Y >= SharedConstants.OutOfBoundsYLimit;
         }
     }
 }

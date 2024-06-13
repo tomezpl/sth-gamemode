@@ -8,8 +8,14 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using CitizenFX.Core;
+using SurviveTheHuntShared.Utils;
+using Vector3 = SurviveTheHuntShared.Utils.Vector3;
+using CfxVector3 = CitizenFX.Core.Vector3;
 using SurviveTheHuntClient.Helpers;
 using static CitizenFX.Core.Native.API;
+using SharedConstants = SurviveTheHuntShared.Constants;
+using SurviveTheHuntShared.Core;
+using SurviveTheHuntShared;
 
 namespace SurviveTheHuntClient
 {
@@ -35,10 +41,19 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Vehicles spawned by the gamemode at the spawn area. This is used to delete vehicles on the next <see cref="SpawnCars"/> call.
         /// </summary>
-        /// <remarks>TODO: Move this to server-side so any player can spawn vehicles with the previous batch deleting properly?</remarks>
-        protected List<Vehicle> SpawnedVehicles = new List<Vehicle>();
+        protected List<SyncedVehicle> SpawnedVehicles = new List<SyncedVehicle>();
 
-        private Vector3 PlayerPos = Vector3.Zero;
+        /// <summary>
+        /// Do <see cref="SpawnedVehicles"/> need their netIDs being sent to the server?
+        /// </summary>
+        private bool SpawnedVehiclesNeedSync = false;
+
+        /// <summary>
+        /// Is the player currently spawning cars? Prevent the spawn cars command from being invoked before the previous one finished.
+        /// </summary>
+        private bool IsSpawningCars = false;
+
+        private CfxVector3 PlayerPos = CfxVector3.Zero;
 
         /// <summary>
         /// Blips used to represent player deaths on the radar.
@@ -57,7 +72,7 @@ namespace SurviveTheHuntClient
                 EventHandlers[$"sth:{ev.Key}"] += ev.Value;
             }
 
-            DeathBlips = new DeathBlips(GetConvarInt("sth_deathbliplifespan", Constants.DefaultDeathBlipLifespan));
+            DeathBlips = new DeathBlips(GetConvarInt("sth_deathbliplifespan", SharedConstants.DefaultDeathBlipLifespan));
         }
 
         protected void OnResourceStopping(string resourceName)
@@ -68,9 +83,13 @@ namespace SurviveTheHuntClient
                 return;
             }
 
-            foreach (Vehicle vehicleToDelete in SpawnedVehicles)
+            foreach (SyncedVehicle vehicleToDelete in SpawnedVehicles)
             {
-                vehicleToDelete.Delete();
+                Vehicle vehicle = vehicleToDelete.Vehicle;
+                if (vehicle != null && vehicle.Exists())
+                {
+                    vehicle.Delete();
+                }
             }
             SpawnedVehicles.Clear();
 
@@ -105,7 +124,7 @@ namespace SurviveTheHuntClient
         {
             // This event is fired for every client resource started.
             // We need to check that the resource name is sth-gamemode so we only perform init once!
-            if (resource == Constants.ResourceName)
+            if (resource == SharedConstants.ResourceName)
             {
                 RegisterCommand("respawn", new Action(() =>
                 {
@@ -115,28 +134,33 @@ namespace SurviveTheHuntClient
 
                 RegisterCommand("starthunt", new Action(() =>
                 {
-                    TriggerServerEvent("sth:startHunt");
+                    TriggerServerEvent(Events.Server.RequestStartHunt);
                 }), false);
 
-                RegisterCommand("spawncars", new Action(() =>
+                RegisterCommand("spawncars", new Action(async () =>
                 {
-                    SpawnCars();
+                    if (!IsSpawningCars)
+                    {
+                        IsSpawningCars = true;
+                        await SpawnCars();
+                        IsSpawningCars = false;
+                    }
                 }), false);
 
-                Vector3 spawn = Constants.DockSpawn;
+                Vector3 spawn = SharedConstants.DockSpawn;
                 ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
 
                 // Notify the server this client has started so the config can be sent down. This is needed for resource restarts etc.
-                TriggerServerEvent("sth:clientStarted");
+                TriggerServerEvent(Events.Server.ClientStarted);
             }
         }
 
         /// <summary>
         /// Spawns random cars (picked from <see cref="Constants.Vehicles"/>) in the start area.
         /// </summary>
-        protected void SpawnCars()
+        protected async Task SpawnCars()
         {
-            List<VehicleHash> carsToSpawn = new List<VehicleHash>(Constants.CarSpawnPoints.Length);
+            List<VehicleHash> carsToSpawn = new List<VehicleHash>(SharedConstants.CarSpawnPoints.Length);
 
             List<VehicleHash> spawnableCars = Constants.Vehicles.ToList();
 
@@ -149,10 +173,21 @@ namespace SurviveTheHuntClient
                 spawnableCars.RemoveAt(randomIndex);
             }
 
-            foreach(Vehicle vehicleToDelete in SpawnedVehicles)
+            foreach(SyncedVehicle vehicleToDelete in SpawnedVehicles)
             {
-                vehicleToDelete.Delete();
+                bool hasNetId = vehicleToDelete.NetId.HasValue;
+                int id = hasNetId ? vehicleToDelete.NetId.Value : vehicleToDelete.Handle.Value;
+                if (hasNetId || Vehicle.Exists(vehicleToDelete.Vehicle))
+                {
+                    Debug.WriteLine($"Requesting to delete vehicle with {(hasNetId ? "net ID" : "entity handle")} {id}");
+                    TriggerServerEvent(Events.Server.RequestDeleteVehicle, hasNetId ? id : VehToNet(id));
+                }
+                else
+                {
+                    Debug.WriteLine($"Vehicle with {(hasNetId ? "net ID" : "entity handle")} {id} doesn't exist!");
+                }
             }
+            await Delay(3500);
             SpawnedVehicles.Clear();
 
             int counter = 0;
@@ -163,13 +198,25 @@ namespace SurviveTheHuntClient
                     continue;
                 }
                 RequestModel((uint)vehicle);
-                Wait(50);
+                // Wait up to 1500ms (in 150ms intervals) for the model to load.
+                for (int i = 0; i < 10; i++)
+                {
+                    await Delay(150);
+                    if(HasModelLoaded((uint)vehicle))
+                    {
+                        break;
+                    }
+                }
 
-                Coord spawnPoint = Constants.CarSpawnPoints[counter];
+                Coord spawnPoint = SharedConstants.CarSpawnPoints[counter];
                 Vector3 spawnPos = spawnPoint.Position;
 
-                Vehicle spawnedVehicle = new Vehicle(CreateVehicle((uint)vehicle, spawnPos.X, spawnPos.Y, spawnPos.Z, spawnPoint.Heading, true, false));
-                SpawnedVehicles.Add(spawnedVehicle);
+                Vehicle spawnedVehicle = new Vehicle(CreateVehicle((uint)vehicle, spawnPos.X, spawnPos.Y, spawnPos.Z, spawnPoint.Heading, true, true));
+                SpawnedVehicles.Add(SyncedVehicle.FromHandle(spawnedVehicle.Handle));
+
+                SetEntityAsMissionEntity(spawnedVehicle.Handle, true, true);
+
+                SetVehicleModKit(spawnedVehicle.Handle, 0);
 
                 // Set all vehicle mods to maximum.
                 for (int i = 0; i < 50; i++)
@@ -177,7 +224,6 @@ namespace SurviveTheHuntClient
                     int nbMods = GetNumVehicleMods(spawnedVehicle.Handle, i);
                     if(nbMods > 0)
                     {
-                        SetVehicleModKit(spawnedVehicle.Handle, i);
                         SetVehicleMod(spawnedVehicle.Handle, i, nbMods - 1, false);
                     }
                 }
@@ -201,11 +247,12 @@ namespace SurviveTheHuntClient
 
                 counter++;
             }
+            SpawnedVehiclesNeedSync = true;
         }
 
         protected void AutoSpawnCallback()
         {
-            Vector3 spawnLoc = Constants.DockSpawn;
+            Vector3 spawnLoc = SharedConstants.DockSpawn;
 
             Exports["spawnmanager"].spawnPlayer(new { x = spawnLoc.X, y = spawnLoc.Y, z = spawnLoc.Z, model = "a_m_m_skater_01" });
         }
@@ -219,7 +266,7 @@ namespace SurviveTheHuntClient
             PlayerState.WeaponsGiven = false;
             PlayerState.ForcedUnarmed = false;
 
-            TriggerServerEvent("sth:cleanClothes", new { PlayerId = GetPlayerServerId(PlayerId()) });
+            TriggerServerEvent(Events.Server.RequestCleanClothes, new { PlayerId = GetPlayerServerId(PlayerId()) });
 
             // Enable friendly fire.
             NetworkSetFriendlyFireOption(true);
@@ -254,8 +301,28 @@ namespace SurviveTheHuntClient
             // Check and report player death to the server if needed.
             if(!Game.Player.IsAlive && !PlayerState.DeathReported)
             {
-                TriggerServerEvent("sth:playerDied", new { PlayerId = Game.Player.ServerId, PlayerPosX = PlayerPos.X, PlayerPosY = PlayerPos.Y, PlayerPosZ = PlayerPos.Z, PlayerTeam = PlayerState.Team });
+                TriggerServerEvent(Events.Server.PlayerDied, new { PlayerId = Game.Player.ServerId, PlayerPosX = PlayerPos.X, PlayerPosY = PlayerPos.Y, PlayerPosZ = PlayerPos.Z, PlayerTeam = PlayerState.Team });
                 PlayerState.DeathReported = true;
+            }
+
+            if (SpawnedVehiclesNeedSync)
+            {
+                string vehicleNetIdsPacked = "";
+                foreach(SyncedVehicle spawnedVehicle in SpawnedVehicles)
+                {
+                    Vehicle vehicle = spawnedVehicle.Vehicle;
+                    if (vehicle != null && vehicle.Exists())
+                    {
+                        vehicleNetIdsPacked += $"{vehicle.NetworkId};";
+                    }
+                }
+
+                if(vehicleNetIdsPacked.Length > 1)
+                {
+                    vehicleNetIdsPacked = vehicleNetIdsPacked.Remove(vehicleNetIdsPacked.Length - 1, 1);
+                    TriggerServerEvent(Events.Server.RequestSyncVehicles, vehicleNetIdsPacked);
+                    SpawnedVehiclesNeedSync = false;
+                }
             }
 
             GameOverCheck();
@@ -291,7 +358,12 @@ namespace SurviveTheHuntClient
         {
             foreach(Vehicle vehicle in World.GetAllVehicles())
             {
-                bool closeToSpawn = 50f >= (Constants.DockSpawn - vehicle.Position).Length();
+                CfxVector3 spawnToVehicleOffset = vehicle.Position;
+                spawnToVehicleOffset.X -= SharedConstants.DockSpawn.X;
+                spawnToVehicleOffset.Y -= SharedConstants.DockSpawn.Y;
+                spawnToVehicleOffset.Z -= SharedConstants.DockSpawn.Z;
+
+                bool closeToSpawn = 50f >= spawnToVehicleOffset.Length();
                 vehicle.IsInvincible = closeToSpawn;
                 if (closeToSpawn)
                 {
@@ -312,7 +384,7 @@ namespace SurviveTheHuntClient
             STHEvents = new Dictionary<string, Action<dynamic>>
             {
                 {
-                    "cleanClothesForPlayer", new Action<dynamic>(data =>
+                    Events.Client.ReceiveCleanClothes.EventName(), new Action<dynamic>(data =>
                     {
                         int playerId = data.PlayerId;
 
@@ -320,7 +392,7 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
-                    "notifyHuntedPlayer", new Action<dynamic>(data =>
+                    Events.Client.NotifyHuntedPlayer.EventName(), new Action<dynamic>(data =>
                     {
                         //Debug.WriteLine("I'm the hunted!");
                         GameState.Hunt.IsStarted = true;
@@ -334,7 +406,7 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
-                    "notifyHunters", new Action<dynamic>(data =>
+                    Events.Client.NotifyHunters.EventName(), new Action<dynamic>(data =>
                     {
                         string huntedPlayerName = data.HuntedPlayerName;
 
@@ -357,7 +429,7 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
-                    "notifyWinner", new Action<dynamic>(data =>
+                    Events.Client.NotifyWinner.EventName(), new Action<dynamic>(data =>
                     {
                         int winningTeam = data.WinningTeam;
                         GameState.Hunt.IsOver = true;
@@ -374,7 +446,7 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
-                    "huntStartedByServer", new Action<dynamic>(data =>
+                    Events.Client.HuntStartedByServer.EventName(), new Action<dynamic>(data =>
                     {
                         float secondsTillPing = data.NextNotification;
                         GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(secondsTillPing);
@@ -387,19 +459,19 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
-                    "showPingOnMap", new Action<dynamic>(data =>
+                    Events.Client.ShowPingOnMap.EventName(), new Action<dynamic>(data =>
                     {
                         string playerName = data.PlayerName;
                         HuntUI.CreateRadiusBlipForPlayer(Players[playerName], data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
                         if(playerName == Game.Player.Name)
                         {
-                            Vector3 position = GetEntityCoords(PlayerPedId(), false);
-                            TriggerServerEvent("sth:broadcastHuntedZone", new { Position = position });
+                            CfxVector3 position = GetEntityCoords(PlayerPedId(), false);
+                            TriggerServerEvent(Events.Server.BroadcastHuntedZone, new { Position = position });
                         }
                     })
                 },
                 {
-                    "notifyAboutHuntedZone", new Action<dynamic>(data =>
+                    Events.Client.NotifyAboutHuntedZone.EventName(), new Action<dynamic>(data =>
                     {
                         string playerName = data.PlayerName;
                         float nextNotificationTimeout = data.NextNotification;
@@ -408,7 +480,7 @@ namespace SurviveTheHuntClient
                     })
                 },
                 {
-                    "receiveTimeSync", new Action<dynamic>(data =>
+                    Events.Client.ReceiveTimeSync.EventName(), new Action<dynamic>(data =>
                     {
                         string currentServerTimeStr = data.CurrentServerTime;
                         DateTime currentServerTime = DateTime.ParseExact(currentServerTimeStr, "F", CultureInfo.InvariantCulture);
@@ -418,57 +490,63 @@ namespace SurviveTheHuntClient
             };
 
             // Event handler for gamemode config being sent by the server.
-            EventHandlers["sth:receiveConfig"] += new Action<byte[], byte[]>((weaponsHunters, weaponsHunted) =>
+            EventHandlers[Events.Client.ReceiveConfig] += new Action<byte[], byte[], string>((weaponsHunters, weaponsHunted, vehicleList) =>
             {
                 Debug.WriteLine("sth:receiveConfig received!");
 
-                // The weapons are sent as byte arrays, and therefore need to be deserialized into WeaponAmmo objects
-                Func<byte[], Weapons.WeaponAmmo[]> getWeapons = (weapons) =>
-                {
-                    Weapons.WeaponAmmo[] output = new Weapons.WeaponAmmo[weapons.Length / (sizeof(uint) + sizeof(ushort))];
-                 
-                    // Each weapon is uint hash followed by ushort ammo count.
-                    byte[] buffer = new byte[sizeof(uint) + sizeof(ushort)];
-                    using (MemoryStream ms = new MemoryStream(weapons, false))
-                    {
-                        while (ms.Position < ms.Length)
-                        {
-                            // Zero the buffer.
-                            Array.Clear(buffer, 0, buffer.Length);
+                Config.Deserialized deserialized = Config.Serialized.Deserialize(weaponsHunters, weaponsHunted, vehicleList);
 
-                            // Get the weapon index based on the position in the byte array.
-                            long index = ms.Position / (sizeof(uint) + sizeof(ushort));
+                Debug.WriteLine("parsed config!");
 
-                            // Read the weapon hash.
-                            ms.Read(buffer, 0, sizeof(uint));
-                            // Read the ammo count.
-                            ms.Read(buffer, sizeof(uint), sizeof(ushort));
-
-                            // Store the weapon hash and ammo count in a WeaponAmmo object.
-                            output[index] = new Weapons.WeaponAmmo(BitConverter.ToUInt32(buffer, 0), BitConverter.ToUInt16(buffer, sizeof(uint)));
-                        }
-                    }
-
-                    return output;
-                };
-
-                Weapons.WeaponAmmo[]
-                    hunters = getWeapons(weaponsHunters),
-                    hunted = getWeapons(weaponsHunted);
-
-                Debug.WriteLine("parsed weapons config!");
-
-                Constants.WeaponLoadouts[Teams.Team.Hunters] = hunters;
-                Constants.WeaponLoadouts[Teams.Team.Hunted] = hunted;
+                Constants.WeaponLoadouts[Teams.Team.Hunters] = deserialized.HuntersWeapons;
+                Constants.WeaponLoadouts[Teams.Team.Hunted] = deserialized.HuntedWeapons;
+                Constants.Vehicles = deserialized.VehicleWhitelist.Vehicles.Select((vehicleName) => (VehicleHash)GetHashKey(vehicleName)).ToArray();
             });
 
-            EventHandlers["sth:markPlayerDeath"] += new Action<float, float, float, Teams.Team>((deathPosX, deathPosY, deathPosZ, team) =>
+            EventHandlers[Events.Client.MarkPlayerDeath] += new Action<float, float, float, Teams.Team>((deathPosX, deathPosY, deathPosZ, team) =>
             {
                 if (team == PlayerState.Team || string.Equals(GetConvar("sth_globalPlayerDeathBlips", "false"), "true", StringComparison.OrdinalIgnoreCase))
                 {
                     DeathBlips.Add(deathPosX, deathPosY, deathPosZ);
                 }
             });
+        }
+
+        [EventHandler(Events.Client.ReceiveSyncedVehicles)]
+        public void SyncVehiclesReceived(string vehicleNetIdsPacked)
+        {
+            int validNetIdCount = 0;
+            int[] vehicleNetIds = vehicleNetIdsPacked.Split(';').Select((netIdStr) => {
+                if (int.TryParse(netIdStr, out int netId))
+                {
+                    validNetIdCount++;
+                    return netId;
+                }
+                else
+                {
+                    return -1;
+                }
+            }).Where((netId) => netId != -1).ToArray();
+
+            if (validNetIdCount > 0)
+            {
+                SpawnedVehicles.Clear();
+                SpawnedVehicles.AddRange(vehicleNetIds.Select((netId) => SyncedVehicle.FromNetId(netId)));
+            }
+        }
+
+        [EventHandler(Events.Client.ReceiveDeleteVehicle)]
+        public void DeleteVehicle(int vehicleNetId)
+        {
+            if(NetworkDoesNetworkIdExist(vehicleNetId) && Vehicle.Exists(Vehicle.FromNetworkId(vehicleNetId)))
+            {
+                SetEntityAsMissionEntity(NetToVeh(vehicleNetId), true, true);
+                Vehicle.FromNetworkId(vehicleNetId).Delete();
+            }
+            else
+            {
+                Debug.WriteLine($"vehicleNetId {vehicleNetId} doesn't exist");
+            }
         }
     }
 }

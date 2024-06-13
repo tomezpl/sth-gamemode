@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using SharedConstants = SurviveTheHuntShared.Constants;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 
@@ -29,7 +30,7 @@ namespace SurviveTheHuntClient.Helpers
         /// Creates the death blip helper with the specified lifetime for each death blip.
         /// </summary>
         /// <param name="blipLifetime">Lifetime of a death blip (in seconds)</param>
-        public DeathBlips(int blipLifetime = Constants.DefaultDeathBlipLifespan)
+        public DeathBlips(int blipLifetime = SharedConstants.DefaultDeathBlipLifespan)
         {
             _blipLifetime = (long)blipLifetime * 1000;
         }
