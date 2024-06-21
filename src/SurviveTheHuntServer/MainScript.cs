@@ -127,7 +127,7 @@ namespace SurviveTheHuntServer
                     TriggerClientEvent(Events.Client.ShowPingOnMap, new
                     {
                         CreationDate = GameState.Hunt.LastPingTime.ToString("F", CultureInfo.InvariantCulture),
-                        PlayerName = GameState.Hunt.HuntedPlayer.Name,
+                        PlayerServerId = GameState.Hunt.HuntedPlayer.Handle,
                         Radius = radius,
                         OffsetX = offsetX,
                         OffsetY = offsetY
@@ -168,7 +168,7 @@ namespace SurviveTheHuntServer
                         Console.WriteLine($"Player died: {GetPlayerName($"{playerId}")}");
 
                         // Did the hunted player die?
-                        if(Hunt.CheckPlayerDeath(Players[GetPlayerName($"{playerId}")], ref GameState))
+                        if(Hunt.CheckPlayerDeath(Players[playerId], ref GameState))
                         {
                             NotifyWinner();
                         }
@@ -185,7 +185,7 @@ namespace SurviveTheHuntServer
                         GameState.Hunt.LastHuntedPlayer = randomPlayer;
 
                         TriggerClientEvent(randomPlayer, Events.Client.NotifyHuntedPlayer);
-                        TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerName = randomPlayer.Name });
+                        TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerServerId = int.Parse(randomPlayer.Handle) });
 
                         GameState.Hunt.Begin(randomPlayer);
 
@@ -196,7 +196,7 @@ namespace SurviveTheHuntServer
                     Events.Server.BroadcastHuntedZone.EventName(), new Action<dynamic>(data =>
                     {
                         Vector3 pos = data.Position;
-                        TriggerClientEvent(Events.Client.NotifyAboutHuntedZone, new { PlayerName = GameState.Hunt.HuntedPlayer.Name, Position = pos, NextNotification = (float)SharedConstants.HuntedPingInterval.TotalSeconds });
+                        TriggerClientEvent(Events.Client.NotifyAboutHuntedZone, new { PlayerServerId = GameState.Hunt.HuntedPlayer.Handle, Position = pos, NextNotification = (float)SharedConstants.HuntedPingInterval.TotalSeconds });
                     })
                 }
             };

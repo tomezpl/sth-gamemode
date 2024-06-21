@@ -19,7 +19,7 @@ using SurviveTheHuntShared;
 
 namespace SurviveTheHuntClient
 {
-    public class MainScript : ClientScript
+    public partial class MainScript : ClientScript
     {
         /// <summary>
         /// Local player state maintained by the client script.
@@ -376,6 +376,35 @@ namespace SurviveTheHuntClient
             }
         }
 
+        private void NotifyTeam(Teams.Team playerTeam, Player huntedPlayer)
+        {
+            Ped playerPed = Game.PlayerPed;
+            GameState.Hunt.IsStarted = true;
+            GameState.Hunt.HuntedPlayer = huntedPlayer;
+
+            switch (playerTeam)
+            {
+                case Teams.Team.Hunters:
+                    // TODO: Shouldn't current objective technically be player state?
+                    GameState.CurrentObjective = " is the hunted! Track them down.";
+                    PlayerState.Team = Teams.Team.Hunters;
+                    break;
+                case Teams.Team.Hunted:
+                    GameState.CurrentObjective = "Survive";
+                    PlayerState.Team = Teams.Team.Hunted;
+                    break;
+            }
+
+            PlayerState.TakeAwayWeapons(ref playerPed);
+        }
+
+        private void HuntStartedByServer(float secondsTillPing, DateTime endTime)
+        {
+            GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(secondsTillPing);
+            GameState.Hunt.InitialEndTime = endTime;
+            HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+        }
+
         /// <summary>
         /// Populates <see cref="STHEvents"/> with gamemode-specific events used by the resource.
         /// </summary>
@@ -394,38 +423,21 @@ namespace SurviveTheHuntClient
                 {
                     Events.Client.NotifyHuntedPlayer.EventName(), new Action<dynamic>(data =>
                     {
-                        //Debug.WriteLine("I'm the hunted!");
-                        GameState.Hunt.IsStarted = true;
-                        GameState.Hunt.HuntedPlayer = Game.Player;
-
-                        GameState.CurrentObjective = "Survive";
-                        PlayerState.Team = Teams.Team.Hunted;
-
-                        Ped playerPed = Game.PlayerPed;
-                        PlayerState.TakeAwayWeapons(ref playerPed);
+                        NotifyTeam(Teams.Team.Hunted, Game.Player);
                     })
                 },
                 {
                     Events.Client.NotifyHunters.EventName(), new Action<dynamic>(data =>
                     {
-                        string huntedPlayerName = data.HuntedPlayerName;
+                        int huntedPlayerServerId = data.HuntedPlayerServerId;
 
                         // Since the event is sent out to everyone, make sure it is discarded by the hunted player.
-                        if(huntedPlayerName == Game.Player.Name)
+                        if(huntedPlayerServerId == Game.Player.ServerId)
                         {
                             return;
                         }
 
-                        Ped playerPed = Game.PlayerPed;
-
-                        GameState.Hunt.IsStarted = true;
-                        GameState.Hunt.HuntedPlayer = Players[huntedPlayerName];
-
-                        // TODO: Shouldn't current objective technically be player state?
-                        GameState.CurrentObjective = " is the hunted! Track them down.";
-                        PlayerState.Team = Teams.Team.Hunters;
-
-                        PlayerState.TakeAwayWeapons(ref playerPed);
+                        NotifyTeam(Teams.Team.Hunters, new Player(GetPlayerFromServerId(huntedPlayerServerId)));
                     })
                 },
                 {
@@ -449,21 +461,19 @@ namespace SurviveTheHuntClient
                     Events.Client.HuntStartedByServer.EventName(), new Action<dynamic>(data =>
                     {
                         float secondsTillPing = data.NextNotification;
-                        GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(secondsTillPing);
 
                         string endTimeStr = data.EndTime;
                         DateTime endTime = DateTime.ParseExact(endTimeStr, "F", CultureInfo.InvariantCulture);
-                        GameState.Hunt.InitialEndTime = endTime;
-                        HuntUI.DisplayObjective(ref GameState, ref PlayerState);
-                        Ped playerPed = Game.PlayerPed;
+
+                        HuntStartedByServer(secondsTillPing, endTime);
                     })
                 },
                 {
                     Events.Client.ShowPingOnMap.EventName(), new Action<dynamic>(data =>
                     {
-                        string playerName = data.PlayerName;
-                        HuntUI.CreateRadiusBlipForPlayer(Players[playerName], data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
-                        if(playerName == Game.Player.Name)
+                        int playerServerId = int.Parse(data.PlayerServerId);
+                        HuntUI.CreateRadiusBlipForPlayer(new Player(GetPlayerFromServerId(playerServerId)), data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
+                        if(playerServerId == Game.Player.ServerId)
                         {
                             CfxVector3 position = GetEntityCoords(PlayerPedId(), false);
                             TriggerServerEvent(Events.Server.BroadcastHuntedZone, new { Position = position });
@@ -473,10 +483,12 @@ namespace SurviveTheHuntClient
                 {
                     Events.Client.NotifyAboutHuntedZone.EventName(), new Action<dynamic>(data =>
                     {
-                        string playerName = data.PlayerName;
+                        int playerServerId = int.Parse(data.PlayerServerId);
+                        Player player = new Player(GetPlayerFromServerId(playerServerId));
+                        string playerName = player.Name;
                         float nextNotificationTimeout = data.NextNotification;
                         GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(nextNotificationTimeout);
-                        HuntUI.NotifyAboutHuntedZone(Players[playerName], data.Position, ref GameState);
+                        HuntUI.NotifyAboutHuntedZone(player, data.Position, ref GameState);
                     })
                 },
                 {

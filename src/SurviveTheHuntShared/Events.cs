@@ -49,6 +49,7 @@ namespace SurviveTheHuntShared
             public const string ShowPingOnMap = "sth:showPingOnMap";
             public const string NotifyAboutHuntedZone = "sth:notifyAboutHuntedZone";
             public const string ReceiveTimeSync = "sth:receiveTimeSync";
+            public const string ReceiveGameState = "sth:receiveGameState";
         }
 
         /// <summary>
