@@ -74,6 +74,13 @@ namespace SurviveTheHuntServer
         {
             HuntedPlayerQueue.RemovePlayer(player);
 
+            if (GameState.Hunt.IsStarted && player != null && GameState.Hunt.HuntedPlayer?.Handle == player.Handle)
+            {
+                Debug.WriteLine("Hunted player left, ending hunt.");
+                GameState.Hunt.End(Teams.Team.Hunters);
+                NotifyWinner();
+            }
+
             // FiveM docs don't seem to clearly communicate as to whether the player list is updated when this event fires,
             // so let's check if there are 0 players (or 1 player and it's the one who just left).
             int playerCount = GetNumPlayerIndices();
