@@ -513,6 +513,13 @@ namespace SurviveTheHuntClient
                 Constants.WeaponLoadouts[Teams.Team.Hunters] = deserialized.HuntersWeapons;
                 Constants.WeaponLoadouts[Teams.Team.Hunted] = deserialized.HuntedWeapons;
                 Constants.Vehicles = deserialized.VehicleWhitelist.Vehicles.Select((vehicleName) => (VehicleHash)GetHashKey(vehicleName)).ToArray();
+            
+                // In the event the player was already given weapons, remove them so that the new loadout can be applied.
+                if(Player.Local?.Character != null && PlayerState?.WeaponsGiven == true)
+                {
+                    Ped localPlayerPed = Player.Local.Character;
+                    PlayerState.TakeAwayWeapons(ref localPlayerPed);
+                }
             });
 
             EventHandlers[Events.Client.MarkPlayerDeath] += new Action<float, float, float, Teams.Team>((deathPosX, deathPosY, deathPosZ, team) =>
