@@ -29,6 +29,7 @@ namespace SurviveTheHuntServer
         public void ClientStarted([FromSource] Player player)
         {
             BroadcastConfig(player, Config);
+            SendGameState(player, GameState);
             SyncVehicles(SpawnedVehicles);
         }
 

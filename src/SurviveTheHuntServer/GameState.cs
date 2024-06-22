@@ -1,6 +1,7 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntShared.Core;
 using System;
+using static CitizenFX.Core.Native.API;
 using SharedConstants = SurviveTheHuntShared.Constants;
 
 namespace SurviveTheHuntServer
@@ -76,5 +77,13 @@ namespace SurviveTheHuntServer
         /// Details about the current hunt session.
         /// </summary>
         public HuntDetails Hunt { get; set; } = new HuntDetails();
+    }
+
+    public partial class MainScript
+    {
+        public void SendGameState(Player player, GameState gameState)
+        {
+            TriggerClientEvent(player, SurviveTheHuntShared.Events.Client.ReceiveGameState, gameState.Hunt.IsStarted, gameState.Hunt.HuntedPlayer != null ? int.Parse(gameState.Hunt.HuntedPlayer.Handle) : int.MinValue, gameState.Hunt.StartTime.Ticks, gameState.Hunt.EndTime.Ticks, gameState.Hunt.LastPingTime.Ticks);
+        }
     }
 }

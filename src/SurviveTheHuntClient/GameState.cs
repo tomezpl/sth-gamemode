@@ -157,4 +157,21 @@ namespace SurviveTheHuntClient
             return ped.Position.Y >= SharedConstants.OutOfBoundsYLimit;
         }
     }
+
+    public partial class MainScript
+    {
+        [EventHandler(SurviveTheHuntShared.Events.Client.ReceiveGameState)]
+        public void ReceiveGameState(bool isStarted, int huntedPlayerServerId, long startTimeTicks, long endTimeTicks, long lastPingTimeTicks)
+        {
+            Debug.WriteLine("Received game state");
+            if (huntedPlayerServerId != int.MinValue && NetworkIsPlayerConnected(GetPlayerFromServerId(huntedPlayerServerId)))
+            {
+                Player huntedPlayer = new Player(GetPlayerFromServerId(huntedPlayerServerId));
+                Debug.WriteLine($"Game state: isStarted={isStarted}, huntedPlayer={huntedPlayer.Name}, startTime={new DateTime(startTimeTicks)}, endTime={new DateTime(endTimeTicks)}, lastPingTime={new DateTime(lastPingTimeTicks)}");
+                float secondsTillPing = (float)((new DateTime(lastPingTimeTicks, DateTimeKind.Utc) + SharedConstants.HuntedPingInterval) - DateTime.UtcNow).TotalSeconds;
+                HuntStartedByServer(secondsTillPing, new DateTime(endTimeTicks, DateTimeKind.Utc));
+                NotifyTeam(huntedPlayer == Player.Local ? Teams.Team.Hunted : Teams.Team.Hunters, huntedPlayer);
+            }
+        }
+    }
 }
