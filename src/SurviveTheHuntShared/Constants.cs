@@ -199,5 +199,12 @@ namespace SurviveTheHuntShared
             new Coord() { Position = new Vector3(822.22f, -3143.73f, 5.9f), Heading = 0f }, // 25
             new Coord() { Position = new Vector3(818.22f, -3143.73f, 5.9f), Heading = 0f }  // 26
         };
+
+        /// <summary>
+        /// Default max health to set for a player ped.
+        /// 
+        /// Taken from https://gtaforums.com/topic/681401-weapons-information-by-game-files/
+        /// </summary>
+        public const ushort DefaultMaxHealth = 228;
     }
 }

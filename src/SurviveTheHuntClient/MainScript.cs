@@ -59,6 +59,11 @@ namespace SurviveTheHuntClient
         /// Blips used to represent player deaths on the radar.
         /// </summary>
         private readonly DeathBlips DeathBlips;
+        
+        /// <summary>
+        /// The local player's ped handle as of the previous tick. Used to track ped changes so max health can be applied correctly.
+        /// </summary>
+        private int PreviousTickPedHandle = 0;
 
         public MainScript()
         {
@@ -277,6 +282,24 @@ namespace SurviveTheHuntClient
                 Debug.WriteLine($"GameState: Hunt.IsInProgress: {GameState.Hunt.IsInProgress}, Hunt.IsEnding: {GameState.Hunt.IsEnding}");
                 HuntUI.DisplayObjective(ref GameState, ref PlayerState, GameState.Hunt.IsEnding);
             }
+
+            // Set the player's max health.
+            ApplyMaxHealth(true);
+        }
+
+        /// <summary>
+        /// Applies max health to the current player ped and optionally replenishes their health.
+        /// </summary>
+        /// <param name="restore">Should the player ped's health be replenished to max?</param>
+        protected void ApplyMaxHealth(bool restore = false)
+        {
+            int maxHealth = GetConvarInt("sth_maxHealth", SharedConstants.DefaultMaxHealth);
+            SetPedMaxHealth(PlayerPedId(), maxHealth);
+            
+            if (restore)
+            {
+                SetEntityHealth(PlayerPedId(), maxHealth);
+            }
         }
 
         protected async Task UpdateLoop()
@@ -330,6 +353,17 @@ namespace SurviveTheHuntClient
             FixCarsInSpawn();
 
             DeathBlips.ClearExpiredBlips();
+
+            if(Game.PlayerPed?.Exists() == true)
+            {
+                if(PreviousTickPedHandle != Game.PlayerPed.Handle)
+                {
+                    Debug.WriteLine("Ped changed, setting max health");
+                    ApplyMaxHealth();
+                }
+
+                PreviousTickPedHandle = Game.PlayerPed.Handle;
+            }
 
             Wait(0);
         }
