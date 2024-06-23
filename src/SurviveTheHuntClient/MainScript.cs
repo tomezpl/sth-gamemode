@@ -295,7 +295,11 @@ namespace SurviveTheHuntClient
         {
             int maxHealth = GetConvarInt("sth_maxHealth", SharedConstants.DefaultMaxHealth);
             SetPedMaxHealth(PlayerPedId(), maxHealth);
-            SetEntityHealth(PlayerPedId(), maxHealth);
+            
+            if (restore)
+            {
+                SetEntityHealth(PlayerPedId(), maxHealth);
+            }
         }
 
         protected async Task UpdateLoop()
