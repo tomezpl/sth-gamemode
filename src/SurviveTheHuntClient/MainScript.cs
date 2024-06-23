@@ -308,8 +308,6 @@ namespace SurviveTheHuntClient
             {
                 ResetPlayerStamina(PlayerId());
                 PlayerPos = Game.PlayerPed.Position;
-
-                Debug.WriteLine($"{GetEntityHealth(PlayerPedId())}");
             }
 
             GameState.Hunt.UpdateHuntedMugshot();
@@ -360,6 +358,7 @@ namespace SurviveTheHuntClient
             {
                 if(PreviousTickPedHandle != Game.PlayerPed.Handle)
                 {
+                    Debug.WriteLine("Ped changed, setting max health");
                     ApplyMaxHealth();
                 }
 
