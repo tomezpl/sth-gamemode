@@ -194,9 +194,16 @@ namespace SurviveTheHuntServer
                         TriggerClientEvent(randomPlayer, Events.Client.NotifyHuntedPlayer);
                         TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerServerId = int.Parse(randomPlayer.Handle) });
 
-                        GameState.Hunt.Begin(randomPlayer);
+                        ulong prepPhaseSeconds = (ulong)GetConvarInt("sth_prepPhaseDuration", SharedConstants.DefaultPrepPhaseSeconds);
 
-                        TriggerClientEvent(Events.Client.HuntStartedByServer, new { EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture), NextNotification = (float)SharedConstants.HuntedPingInterval.TotalSeconds });
+                        GameState.Hunt.Begin(randomPlayer, prepPhaseSeconds);
+
+                        TriggerClientEvent(Events.Client.HuntStartedByServer, new 
+                        { 
+                            EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture), 
+                            NextNotification = (float)prepPhaseSeconds + (float)SharedConstants.HuntedPingInterval.TotalSeconds,
+                            PrepPhaseDuration = prepPhaseSeconds
+                        });
                     })
                 },
                 {

@@ -206,5 +206,15 @@ namespace SurviveTheHuntShared
         /// Taken from https://gtaforums.com/topic/681401-weapons-information-by-game-files/
         /// </summary>
         public const ushort DefaultMaxHealth = 228;
+
+        /// <summary>
+        /// Default safe zone radius measured from spawn point - this will be used to prevent players from attacking each other before prep phase ends.
+        /// </summary>
+        public const float DefaultSpawnSafeZoneRadius = 40f;
+
+        /// <summary>
+        /// Default number of seconds to allow for the prep phase.
+        /// </summary>
+        public const ushort DefaultPrepPhaseSeconds = 60;
     }
 }
