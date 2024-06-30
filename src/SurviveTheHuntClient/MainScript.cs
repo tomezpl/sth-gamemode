@@ -383,8 +383,9 @@ namespace SurviveTheHuntClient
                 : false;
             bool isPrepPhase = (GameState.Hunt.IsStarted && GameState.Hunt.IsPrepPhase);
             bool shouldProtectionsApply = isPrepPhase || inSafeZone;
-            ApplySafeZoneProtection(shouldProtectionsApply);
-            if(isPrepPhase)
+            bool canLeaveSpawn = !isPrepPhase || PlayerState.Team == Teams.Team.Hunted;
+            ApplySafeZoneProtection(shouldProtectionsApply, canLeaveSpawn, spawnPos, SharedConstants.DefaultSpawnSafeZoneRadius);
+            if(!canLeaveSpawn)
             {
                 Vector3 spawn = SharedConstants.DockSpawn;
                 if(Player.Local?.Character?.Position != null && Player.Local.Character.Position.DistanceToSquared(spawnPos) > safeZoneRadiusSqr * 0.9f)
@@ -416,11 +417,60 @@ namespace SurviveTheHuntClient
             Wait(0);
         }
 
-        void ApplySafeZoneProtection(bool protectionActive = true)
+        void ApplySafeZoneProtection(bool protectionActive, bool canLeaveSpawn, CfxVector3 safeZoneOrigin, float safeZoneRadius)
         {
             SetPlayerInvincible(PlayerId(), protectionActive);
 
+            if (!canLeaveSpawn)
+            {
+                if (Game.PlayerPed?.Exists() == true)
+                {
+                    CfxVector3 offset = Game.PlayerPed.Position - safeZoneOrigin;
+                    float magnitudeSqr = offset.LengthSquared();
+                    float radiusSqr = safeZoneRadius * safeZoneRadius;
+                    bool isOut = magnitudeSqr > radiusSqr;
 
+                    if (isOut)
+                    {
+                        // Get a unit-length direction vector (from the spawn point to the player's current pos)
+                        CfxVector3 dir = offset;
+                        dir.Normalize();
+
+                        int entityId = Game.PlayerPed.IsInVehicle() ? Game.PlayerPed.CurrentVehicle.Handle : PlayerPedId();
+
+                        CfxVector3 velocity = GetEntityVelocity(entityId);
+
+                        // Get the relation between our current velocity and the direction vector (dot product of the two).
+                        CfxVector3 normVel = velocity;
+                        normVel.Normalize();
+                        float dot = normVel.X * dir.X + normVel.Y * dir.Y + normVel.Z * dir.Z;
+
+                        // Remove any velocity that points away from the spawn.
+                        if (dot >= 0f && velocity.LengthSquared() > 0f)
+                        {
+                            float mult = Math.Max(-dot, 0f);
+                            SetEntityVelocity(entityId, velocity.X * mult, velocity.Y * mult, velocity.Z * mult);
+                        }
+
+                        bool needsTeleport = magnitudeSqr > radiusSqr * 1.2f;
+
+                        if (needsTeleport)
+                        {
+                            if (!IsScreenFadingOut())
+                            {
+                                DoScreenFadeOut(500);
+                            }
+
+                            if (IsScreenFadedOut())
+                            {
+                                SetEntityCoordsNoOffset(entityId, safeZoneOrigin.X, safeZoneOrigin.Y, safeZoneOrigin.Z, true, false, false);
+                                DoScreenFadeIn(500);
+                                HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
