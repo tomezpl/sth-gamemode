@@ -178,7 +178,7 @@ namespace SurviveTheHuntClient
                 // Notify the server this client has started so the config can be sent down. This is needed for resource restarts etc.
                 TriggerServerEvent(Events.Server.ClientStarted);
 
-                SafeZoneRadiusBlipHandle = AddBlipForRadius(SharedConstants.DockSpawn.X, SharedConstants.DockSpawn.Y, SharedConstants.DefaultSpawnSafeZoneRadius, SharedConstants.DefaultSpawnSafeZoneRadius);
+                SafeZoneRadiusBlipHandle = AddBlipForRadius(SharedConstants.DockSpawn.X, SharedConstants.DockSpawn.Y, SharedConstants.DockSpawn.Z, SharedConstants.DefaultSpawnSafeZoneRadius);
                 SetBlipColour(SafeZoneRadiusBlipHandle, 69);
                 SetBlipAlpha(SafeZoneRadiusBlipHandle, 128);
                 SetBlipDisplay(SafeZoneRadiusBlipHandle, 6);
