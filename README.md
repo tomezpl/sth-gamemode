@@ -37,6 +37,7 @@ Survive the Hunt exposes the following convars:
 | `sth_maxHealth` | The amount of health the player spawns with | 228 |
 | `sth_globalPlayerDeathBlips` | Should player death blips be visible to players from the enemy team? | false | 
 | `sth_deathbliplifespan` | The number of seconds a player's death blip is visible for on the map. | 5 |
+| `sth_prepPhaseDuration` | The number of seconds dedicated to a prep phase before the hunt. This is added to the total round time. | 60 |
 
 These are supposed to be server-replicated, so you'll want to use the `setr` command, like so: `setr sth_globalPlayerDeathBlips false`, `setr sth_deathbliplifespan 5` etc.
 

@@ -65,6 +65,21 @@ namespace SurviveTheHuntClient
         /// </summary>
         private int PreviousTickPedHandle = 0;
 
+        /// <summary>
+        /// Was prep phase active during the last tick?
+        /// </summary>
+        private bool DidProtectionsApplyLastFrame = false;
+
+        /// <summary>
+        /// Handle to the blip displaying the safe zone radius.
+        /// </summary>
+        private int SafeZoneRadiusBlipHandle = 0;
+
+        /// <summary>
+        /// Has the player already spawned at least once?
+        /// </summary>
+        private bool SpawnedOnce = false;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -86,6 +101,11 @@ namespace SurviveTheHuntClient
             if(GetCurrentResourceName() != resourceName)
             {
                 return;
+            }
+
+            if(DoesBlipExist(SafeZoneRadiusBlipHandle))
+            {
+                RemoveBlip(ref SafeZoneRadiusBlipHandle);
             }
 
             foreach (SyncedVehicle vehicleToDelete in SpawnedVehicles)
@@ -157,6 +177,11 @@ namespace SurviveTheHuntClient
 
                 // Notify the server this client has started so the config can be sent down. This is needed for resource restarts etc.
                 TriggerServerEvent(Events.Server.ClientStarted);
+
+                SafeZoneRadiusBlipHandle = AddBlipForRadius(SharedConstants.DockSpawn.X, SharedConstants.DockSpawn.Y, SharedConstants.DockSpawn.Z, SharedConstants.DefaultSpawnSafeZoneRadius);
+                SetBlipColour(SafeZoneRadiusBlipHandle, 69);
+                SetBlipAlpha(SafeZoneRadiusBlipHandle, 128);
+                SetBlipDisplay(SafeZoneRadiusBlipHandle, 6);
             }
         }
 
@@ -260,10 +285,14 @@ namespace SurviveTheHuntClient
             Vector3 spawnLoc = SharedConstants.DockSpawn;
 
             Exports["spawnmanager"].spawnPlayer(new { x = spawnLoc.X, y = spawnLoc.Y, z = spawnLoc.Z, model = "a_m_m_skater_01" });
+
+            DidProtectionsApplyLastFrame = false;
         }
 
         protected void PlayerSpawnedCallback()
         {
+            SpawnedOnce = true;
+
             // Refresh player's death state.
             PlayerState.DeathReported = false;
 
@@ -310,6 +339,10 @@ namespace SurviveTheHuntClient
                 PlayerPos = Game.PlayerPed.Position;
             }
 
+            bool wasHuntStartedLastFrame = !GameState.Hunt.WasHuntInProgressLastFrame && GameState.Hunt.IsStarted;
+
+            GameState.Hunt.Tick();
+
             GameState.Hunt.UpdateHuntedMugshot();
             HuntUI.SetBigmap(ref PlayerState);
             HuntUI.DrawRemainingTime(ref GameState);
@@ -352,6 +385,40 @@ namespace SurviveTheHuntClient
 
             FixCarsInSpawn();
 
+            CfxVector3 spawnPos = new CfxVector3(SharedConstants.DockSpawn.X, SharedConstants.DockSpawn.Y, SharedConstants.DockSpawn.Z);
+            float safeZoneRadiusSqr = (SharedConstants.DefaultSpawnSafeZoneRadius * SharedConstants.DefaultSpawnSafeZoneRadius);
+
+            // Apply spawn safe zone protections if the prep phase hasn't ended yet.
+            bool inSafeZone = Player.Local?.Character?.Position != null
+                ? Player.Local.Character.Position.DistanceToSquared(spawnPos) < safeZoneRadiusSqr
+                : false;
+            bool isPrepPhase = (GameState.Hunt.IsStarted && GameState.Hunt.IsPrepPhase);
+            bool shouldProtectionsApply = isPrepPhase || inSafeZone;
+
+            if (wasHuntStartedLastFrame && !inSafeZone)
+            {
+                PlayerState.WaitingToTeleportToSpawn = true;
+            }
+
+            bool canLeaveSpawn = (!isPrepPhase || PlayerState.Team == Teams.Team.Hunted) && !PlayerState.WaitingToTeleportToSpawn;
+
+            ApplySafeZoneProtection(shouldProtectionsApply, canLeaveSpawn, spawnPos, SharedConstants.DefaultSpawnSafeZoneRadius);
+            if(!canLeaveSpawn)
+            {
+                Vector3 spawn = SharedConstants.DockSpawn;
+                if(Player.Local?.Character?.Position != null && Player.Local.Character.Position.DistanceToSquared(spawnPos) > safeZoneRadiusSqr * 0.9f)
+                {
+                    DrawSphere(spawn.X, spawn.Y, spawn.Z, SharedConstants.DefaultSpawnSafeZoneRadius, 206, 191, 78, 0.5f);
+                }
+            }
+            if(!isPrepPhase && shouldProtectionsApply != DidProtectionsApplyLastFrame)
+            {
+                BeginTextCommandThefeedPost("STRING");
+                AddTextComponentSubstringPlayerName(inSafeZone ? "Safe zone protections active." : "Exited safe zone.");
+                EndTextCommandThefeedPostTicker(true, true);
+            }
+            DidProtectionsApplyLastFrame = shouldProtectionsApply;
+
             DeathBlips.ClearExpiredBlips();
 
             if(Game.PlayerPed?.Exists() == true)
@@ -366,6 +433,66 @@ namespace SurviveTheHuntClient
             }
 
             Wait(0);
+        }
+
+        void ApplySafeZoneProtection(bool protectionActive, bool canLeaveSpawn, CfxVector3 safeZoneOrigin, float safeZoneRadius)
+        {
+            SetPlayerInvincible(PlayerId(), protectionActive);
+
+            // It's CRITICAL that you ensure this statement only runs if SpawnedOnce is true.
+            // Otherwise, players joining in progress will get softlocked without an error because the game will attempt to teleport them
+            // before they've fully loaded in.
+            if (SpawnedOnce && !canLeaveSpawn)
+            {
+                if (Game.PlayerPed?.Exists() == true)
+                {
+                    CfxVector3 offset = Game.PlayerPed.Position - safeZoneOrigin;
+                    float magnitudeSqr = offset.LengthSquared();
+                    float radiusSqr = safeZoneRadius * safeZoneRadius;
+                    bool isOut = magnitudeSqr > radiusSqr;
+
+                    if (isOut)
+                    {
+                        // Get a unit-length direction vector (from the spawn point to the player's current pos)
+                        CfxVector3 dir = offset;
+                        dir.Normalize();
+
+                        int entityId = Game.PlayerPed.IsInVehicle() ? Game.PlayerPed.CurrentVehicle.Handle : PlayerPedId();
+
+                        CfxVector3 velocity = GetEntityVelocity(entityId);
+
+                        // Get the relation between our current velocity and the direction vector (dot product of the two).
+                        CfxVector3 normVel = velocity;
+                        normVel.Normalize();
+                        float dot = normVel.X * dir.X + normVel.Y * dir.Y + normVel.Z * dir.Z;
+
+                        // Remove any velocity that points away from the spawn.
+                        if (dot >= 0f && velocity.LengthSquared() > 0f)
+                        {
+                            float mult = Math.Max(-dot, 0f);
+                            SetEntityVelocity(entityId, velocity.X * mult, velocity.Y * mult, velocity.Z * mult);
+                        }
+
+                        bool needsTeleport = PlayerState.WaitingToTeleportToSpawn || magnitudeSqr > radiusSqr * 1.2f;
+
+                        if (needsTeleport)
+                        {
+                            if (!IsScreenFadingOut())
+                            {
+                                DoScreenFadeOut(500);
+                            }
+
+                            if (IsScreenFadedOut())
+                            {
+                                SetEntityCoordsNoOffset(entityId, safeZoneOrigin.X, safeZoneOrigin.Y, safeZoneOrigin.Z, true, false, false);
+                                PlayerState.WaitingToTeleportToSpawn = false;
+                                DoScreenFadeIn(500);
+                                HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -432,10 +559,16 @@ namespace SurviveTheHuntClient
             PlayerState.TakeAwayWeapons(ref playerPed);
         }
 
-        private void HuntStartedByServer(float secondsTillPing, DateTime endTime)
+        private void HuntStartedByServer(float secondsTillPing, DateTime endTime, TimeSpan? prepPhase = null)
         {
+            if (!prepPhase.HasValue)
+            {
+                prepPhase = TimeSpan.Zero;
+            }
+
             GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(secondsTillPing);
             GameState.Hunt.InitialEndTime = endTime;
+            GameState.Hunt.PrepPhaseEndTime = Utility.CurrentTime + prepPhase.Value;
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
         }
 
@@ -499,7 +632,9 @@ namespace SurviveTheHuntClient
                         string endTimeStr = data.EndTime;
                         DateTime endTime = DateTime.ParseExact(endTimeStr, "F", CultureInfo.InvariantCulture);
 
-                        HuntStartedByServer(secondsTillPing, endTime);
+                        ulong prepPhaseDuration = (ulong)data.PrepPhaseDuration;
+
+                        HuntStartedByServer(secondsTillPing, endTime, TimeSpan.FromSeconds(prepPhaseDuration));
                     })
                 },
                 {

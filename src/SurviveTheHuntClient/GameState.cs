@@ -47,6 +47,11 @@ namespace SurviveTheHuntClient
             public bool CanBeStarted { get { return !IsInProgress && !IsEnding; } }
 
             /// <summary>
+            /// Is the prep phase still active?
+            /// </summary>
+            public bool IsPrepPhase { get { return Utility.CurrentTime < PrepPhaseEndTime; } }
+
+            /// <summary>
             /// Currently hunted player.
             /// </summary>
             public Player HuntedPlayer { get; set; } = null;
@@ -78,6 +83,24 @@ namespace SurviveTheHuntClient
             public DateTime InitialEndTime { get; set; } = new DateTime();
 
             /// <summary>
+            /// Time when the prep phase is already over.
+            /// </summary>
+            /// <remarks>
+            /// Note: this does not always refer to the actual hunt start time. For a player joining in progress,
+            /// this value will be equal to <see cref="Utility.CurrentTime"/>, as we only need to know
+            /// how much longer the prep phase is going to last.
+            /// </remarks>
+            public DateTime PrepPhaseEndTime { get; set; } = new DateTime();
+
+            private bool _wasHuntInProgressLastFrame = false;
+
+            /// <summary>
+            /// Was <see cref="IsStarted"/> true last frame?
+            /// This can be used for checking if the hunt has only just started.
+            /// </summary>
+            public bool WasHuntInProgressLastFrame { get => _wasHuntInProgressLastFrame; }
+
+            /// <summary>
             /// Ends the hunt and resets the state so that it can be started again.
             /// </summary>
             /// <param name="playerState"></param>
@@ -105,6 +128,14 @@ namespace SurviveTheHuntClient
                 // Reset the player's weapons.
                 Ped playerPed = Game.PlayerPed;
                 playerState.TakeAwayWeapons(ref playerPed);
+            }
+
+            /// <summary>
+            /// Logic tick - needs to be called on every script update!
+            /// </summary>
+            public void Tick()
+            {
+                _wasHuntInProgressLastFrame = IsStarted;
             }
 
             /// <summary>
@@ -161,15 +192,17 @@ namespace SurviveTheHuntClient
     public partial class MainScript
     {
         [EventHandler(SurviveTheHuntShared.Events.Client.ReceiveGameState)]
-        public void ReceiveGameState(bool isStarted, int huntedPlayerServerId, long startTimeTicks, long endTimeTicks, long lastPingTimeTicks)
+        public void ReceiveGameState(bool isStarted, int huntedPlayerServerId, long startTimeTicks, long endTimeTicks, long lastPingTimeTicks, long prepPhaseEndTicks)
         {
             Debug.WriteLine("Received game state");
             if (huntedPlayerServerId != int.MinValue && NetworkIsPlayerConnected(GetPlayerFromServerId(huntedPlayerServerId)))
             {
                 Player huntedPlayer = new Player(GetPlayerFromServerId(huntedPlayerServerId));
                 Debug.WriteLine($"Game state: isStarted={isStarted}, huntedPlayer={huntedPlayer.Name}, startTime={new DateTime(startTimeTicks)}, endTime={new DateTime(endTimeTicks)}, lastPingTime={new DateTime(lastPingTimeTicks)}");
+                
+                // TODO: shouldn't this use Utility.CurrentTime instead of DateTime.UtcNow?
                 float secondsTillPing = (float)((new DateTime(lastPingTimeTicks, DateTimeKind.Utc) + SharedConstants.HuntedPingInterval) - DateTime.UtcNow).TotalSeconds;
-                HuntStartedByServer(secondsTillPing, new DateTime(endTimeTicks, DateTimeKind.Utc));
+                HuntStartedByServer(secondsTillPing, new DateTime(endTimeTicks, DateTimeKind.Utc), new DateTime(prepPhaseEndTicks, DateTimeKind.Utc) - Utility.CurrentTime);
                 NotifyTeam(huntedPlayer == Player.Local ? Teams.Team.Hunted : Teams.Team.Hunters, huntedPlayer);
             }
         }
