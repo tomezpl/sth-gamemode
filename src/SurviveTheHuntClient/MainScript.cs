@@ -80,6 +80,13 @@ namespace SurviveTheHuntClient
         /// </summary>
         private bool SpawnedOnce = false;
 
+        /// <summary>
+        /// Clipset to apply to the player ped.
+        /// </summary>
+        private string TargetClipset = "";
+
+        private bool IsTargetClipsetLoaded = false;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -284,7 +291,16 @@ namespace SurviveTheHuntClient
         {
             Vector3 spawnLoc = SharedConstants.DockSpawn;
 
-            Exports["spawnmanager"].spawnPlayer(new { x = spawnLoc.X, y = spawnLoc.Y, z = spawnLoc.Z, model = "a_m_m_skater_01" });
+            int randomPedIndex = RNG.Next(0, SharedConstants.DefaultPlayerPeds.Length);
+            string randomPed = SharedConstants.DefaultPlayerPeds[randomPedIndex];
+
+            Exports["spawnmanager"].spawnPlayer(new { x = spawnLoc.X, y = spawnLoc.Y, z = spawnLoc.Z, model = randomPed });
+
+            // Pick a random GTAO character clipset.
+            bool isFemale = randomPed.StartsWith("a_f");
+            string[] clipsets = isFemale ? SharedConstants.DefaultFemaleClipsets : SharedConstants.DefaultMaleClipsets;
+            TargetClipset = clipsets[RNG.Next(0, clipsets.Length)];
+            IsTargetClipsetLoaded = false;
 
             DidProtectionsApplyLastFrame = false;
         }
@@ -314,6 +330,12 @@ namespace SurviveTheHuntClient
 
             // Set the player's max health.
             ApplyMaxHealth(true);
+
+            if (SharedConstants.DefaultPlayerPeds.Any(modelName => GetHashKey(modelName) == Player.Local.Character.Model.Hash))
+            {
+                SetPedRandomComponentVariation(Player.Local.Character.Handle, false);
+                SetPedRandomProps(Player.Local.Character.Handle);
+            }
         }
 
         /// <summary>
@@ -337,6 +359,18 @@ namespace SurviveTheHuntClient
             {
                 ResetPlayerStamina(PlayerId());
                 PlayerPos = Game.PlayerPed.Position;
+
+                // Wait for the random clipset to load and apply it once it's loaded.
+                bool wasClipsetLoadedLastFrame = IsTargetClipsetLoaded;
+                if(!wasClipsetLoadedLastFrame)
+                {
+                    RequestClipSet(TargetClipset);
+                }
+                IsTargetClipsetLoaded = HasClipSetLoaded(TargetClipset);
+                if (!wasClipsetLoadedLastFrame && IsTargetClipsetLoaded)
+                {
+                    SetPedMovementClipset(PlayerPedId(), TargetClipset, 1f);
+                }
             }
 
             bool wasHuntStartedLastFrame = !GameState.Hunt.WasHuntInProgressLastFrame && GameState.Hunt.IsStarted;
