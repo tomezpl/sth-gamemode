@@ -75,6 +75,11 @@ namespace SurviveTheHuntClient
         /// </summary>
         private int SafeZoneRadiusBlipHandle = 0;
 
+        /// <summary>
+        /// Has the player already spawned at least once?
+        /// </summary>
+        private bool SpawnedOnce = false;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -286,6 +291,8 @@ namespace SurviveTheHuntClient
 
         protected void PlayerSpawnedCallback()
         {
+            SpawnedOnce = true;
+
             // Refresh player's death state.
             PlayerState.DeathReported = false;
 
@@ -331,6 +338,10 @@ namespace SurviveTheHuntClient
                 ResetPlayerStamina(PlayerId());
                 PlayerPos = Game.PlayerPed.Position;
             }
+
+            bool wasHuntStartedLastFrame = !GameState.Hunt.WasHuntInProgressLastFrame && GameState.Hunt.IsStarted;
+
+            GameState.Hunt.Tick();
 
             GameState.Hunt.UpdateHuntedMugshot();
             HuntUI.SetBigmap(ref PlayerState);
@@ -383,7 +394,14 @@ namespace SurviveTheHuntClient
                 : false;
             bool isPrepPhase = (GameState.Hunt.IsStarted && GameState.Hunt.IsPrepPhase);
             bool shouldProtectionsApply = isPrepPhase || inSafeZone;
-            bool canLeaveSpawn = !isPrepPhase || PlayerState.Team == Teams.Team.Hunted;
+
+            if (wasHuntStartedLastFrame && !inSafeZone)
+            {
+                PlayerState.WaitingToTeleportToSpawn = true;
+            }
+
+            bool canLeaveSpawn = (!isPrepPhase || PlayerState.Team == Teams.Team.Hunted) && !PlayerState.WaitingToTeleportToSpawn;
+
             ApplySafeZoneProtection(shouldProtectionsApply, canLeaveSpawn, spawnPos, SharedConstants.DefaultSpawnSafeZoneRadius);
             if(!canLeaveSpawn)
             {
@@ -421,7 +439,10 @@ namespace SurviveTheHuntClient
         {
             SetPlayerInvincible(PlayerId(), protectionActive);
 
-            if (!canLeaveSpawn)
+            // It's CRITICAL that you ensure this statement only runs if SpawnedOnce is true.
+            // Otherwise, players joining in progress will get softlocked without an error because the game will attempt to teleport them
+            // before they've fully loaded in.
+            if (SpawnedOnce && !canLeaveSpawn)
             {
                 if (Game.PlayerPed?.Exists() == true)
                 {
@@ -452,7 +473,7 @@ namespace SurviveTheHuntClient
                             SetEntityVelocity(entityId, velocity.X * mult, velocity.Y * mult, velocity.Z * mult);
                         }
 
-                        bool needsTeleport = magnitudeSqr > radiusSqr * 1.2f;
+                        bool needsTeleport = PlayerState.WaitingToTeleportToSpawn || magnitudeSqr > radiusSqr * 1.2f;
 
                         if (needsTeleport)
                         {
@@ -464,6 +485,7 @@ namespace SurviveTheHuntClient
                             if (IsScreenFadedOut())
                             {
                                 SetEntityCoordsNoOffset(entityId, safeZoneOrigin.X, safeZoneOrigin.Y, safeZoneOrigin.Z, true, false, false);
+                                PlayerState.WaitingToTeleportToSpawn = false;
                                 DoScreenFadeIn(500);
                                 HuntUI.DisplayObjective(ref GameState, ref PlayerState);
                             }

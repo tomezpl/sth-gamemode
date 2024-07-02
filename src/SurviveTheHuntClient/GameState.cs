@@ -92,6 +92,14 @@ namespace SurviveTheHuntClient
             /// </remarks>
             public DateTime PrepPhaseEndTime { get; set; } = new DateTime();
 
+            private bool _wasHuntInProgressLastFrame = false;
+
+            /// <summary>
+            /// Was <see cref="IsStarted"/> true last frame?
+            /// This can be used for checking if the hunt has only just started.
+            /// </summary>
+            public bool WasHuntInProgressLastFrame { get => _wasHuntInProgressLastFrame; }
+
             /// <summary>
             /// Ends the hunt and resets the state so that it can be started again.
             /// </summary>
@@ -120,6 +128,14 @@ namespace SurviveTheHuntClient
                 // Reset the player's weapons.
                 Ped playerPed = Game.PlayerPed;
                 playerState.TakeAwayWeapons(ref playerPed);
+            }
+
+            /// <summary>
+            /// Logic tick - needs to be called on every script update!
+            /// </summary>
+            public void Tick()
+            {
+                _wasHuntInProgressLastFrame = IsStarted;
             }
 
             /// <summary>
