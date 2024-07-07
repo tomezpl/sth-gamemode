@@ -216,5 +216,41 @@ namespace SurviveTheHuntShared
         /// Default number of seconds to allow for the prep phase.
         /// </summary>
         public const ushort DefaultPrepPhaseSeconds = 60;
+
+        /// <summary>
+        /// Default player models to spawn as.
+        /// </summary>
+        public static readonly string[] DefaultPlayerPeds =
+        {
+            "a_f_y_carclub_01",
+            "a_m_y_carclub_01",
+            "a_f_y_clubcust_01",
+            "a_m_y_clubcust_01",
+            "a_f_y_clubcust_02",
+            "a_m_y_clubcust_02",
+            "a_f_y_clubcust_03",
+            "a_m_y_clubcust_03",
+            "a_f_y_clubcust_04",
+            "a_m_y_clubcust_04",
+            "ig_moodyman_02"
+        };
+
+        public static readonly string[] DefaultFemaleClipsets =
+        {
+            "MOVE_F@FEMME@",
+            "MOVE_F@GANGSTER@NG",
+            "MOVE_F@POSH@",
+            "MOVE_F@TOUGH_GUY@",
+            "move_f@multiplayer"
+        };
+
+        public static readonly string[] DefaultMaleClipsets =
+        {
+            "MOVE_M@FEMME@",
+            "MOVE_M@GANGSTER@NG",
+            "MOVE_M@POSH@",
+            "MOVE_M@TOUGH_GUY@",
+            "move_m@multiplayer"
+        };
     }
 }
