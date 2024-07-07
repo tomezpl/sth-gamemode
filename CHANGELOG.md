@@ -1,3 +1,4 @@
+# 1.3.0
 ## Features
 - Added support for joining matches in progress. ([#15](https://github.com/tomezpl/sth-gamemode/issues/15))
 - Added the `sth_maxHealth` convar to allow tweaking players' max health. ([#51](https://github.com/tomezpl/sth-gamemode/issues/51))
