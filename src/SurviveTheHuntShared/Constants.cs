@@ -199,5 +199,58 @@ namespace SurviveTheHuntShared
             new Coord() { Position = new Vector3(822.22f, -3143.73f, 5.9f), Heading = 0f }, // 25
             new Coord() { Position = new Vector3(818.22f, -3143.73f, 5.9f), Heading = 0f }  // 26
         };
+
+        /// <summary>
+        /// Default max health to set for a player ped.
+        /// 
+        /// Taken from https://gtaforums.com/topic/681401-weapons-information-by-game-files/
+        /// </summary>
+        public const ushort DefaultMaxHealth = 228;
+
+        /// <summary>
+        /// Default safe zone radius measured from spawn point - this will be used to prevent players from attacking each other before prep phase ends.
+        /// </summary>
+        public const float DefaultSpawnSafeZoneRadius = 40f;
+
+        /// <summary>
+        /// Default number of seconds to allow for the prep phase.
+        /// </summary>
+        public const ushort DefaultPrepPhaseSeconds = 60;
+
+        /// <summary>
+        /// Default player models to spawn as.
+        /// </summary>
+        public static readonly string[] DefaultPlayerPeds =
+        {
+            "a_f_y_carclub_01",
+            "a_m_y_carclub_01",
+            "a_f_y_clubcust_01",
+            "a_m_y_clubcust_01",
+            "a_f_y_clubcust_02",
+            "a_m_y_clubcust_02",
+            "a_f_y_clubcust_03",
+            "a_m_y_clubcust_03",
+            "a_f_y_clubcust_04",
+            "a_m_y_clubcust_04",
+            "ig_moodyman_02"
+        };
+
+        public static readonly string[] DefaultFemaleClipsets =
+        {
+            "MOVE_F@FEMME@",
+            "MOVE_F@GANGSTER@NG",
+            "MOVE_F@POSH@",
+            "MOVE_F@TOUGH_GUY@",
+            "move_f@multiplayer"
+        };
+
+        public static readonly string[] DefaultMaleClipsets =
+        {
+            "MOVE_M@FEMME@",
+            "MOVE_M@GANGSTER@NG",
+            "MOVE_M@POSH@",
+            "MOVE_M@TOUGH_GUY@",
+            "move_m@multiplayer"
+        };
     }
 }

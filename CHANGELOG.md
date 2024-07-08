@@ -1,3 +1,15 @@
+# 1.3.0
+## Features
+- Added support for joining matches in progress. ([#15](https://github.com/tomezpl/sth-gamemode/issues/15))
+- Added the `sth_maxHealth` convar to allow tweaking players' max health. ([#51](https://github.com/tomezpl/sth-gamemode/issues/51))
+- Added a safe zone at the Terminal spawn.  ([#52](https://github.com/tomezpl/sth-gamemode/issues/52))
+- Added a prep phase during which the hunted player is invincible and hunters can't leave the spawn.  ([#52](https://github.com/tomezpl/sth-gamemode/issues/52))
+  - The prep phase duration can be set with the `sth_prepPhaseDuration` convar.
+- Added more varied default characters.  ([#56](https://github.com/tomezpl/sth-gamemode/issues/56))
+
+## Fixes
+- Fixed matches not ending if the hunted player has disconnected.
+
 # 1.2.0
 ## Features
 - Added spawnable vehicle list configuration. Modify [configs/vehicles.json](https://github.com/tomezpl/sth-gamemode/blob/develop/configs/vehicles.json) to add or remove vehicles from the list used by `/spawncars`. ([#34](https://github.com/tomezpl/sth-gamemode/issues/34))

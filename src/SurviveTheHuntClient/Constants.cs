@@ -13,12 +13,12 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// How long the hunted player's radius stays at max. opacity on the radar (in seconds).
         /// </summary>
-        public static readonly float HuntedBlipLifespan = 50f;
+        public const float HuntedBlipLifespan = 50f;
 
         /// <summary>
         /// How long it takes for the hunted player's radius to fade from max opacity to 0 (in seconds).
         /// </summary>
-        public static readonly float HuntedBlipFadeoutTime = 5f;
+        public const float HuntedBlipFadeoutTime = 5f;
 
         /// <summary>
         /// How long each feed post message stays on the screen (in seconds) assuming the duration multiplier of 1.
@@ -26,7 +26,7 @@ namespace SurviveTheHuntClient
         /// <remarks>
         /// This was manually measured in gameplay.
         /// </remarks>
-        public static readonly float FeedPostMessageDuration = 15f;
+        public const float FeedPostMessageDuration = 15f;
 
         /// <summary>
         /// Weapon loadouts for each team.

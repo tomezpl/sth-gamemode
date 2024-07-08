@@ -175,6 +175,8 @@ namespace SurviveTheHuntClient
                 return;
             }
 
+            string header = "TIME LEFT";
+
             // Format the time string.
             string timeStr = "";
             try
@@ -185,7 +187,17 @@ namespace SurviveTheHuntClient
                 }
                 else
                 {
-                    TimeSpan remainingTime = gameState.Hunt.InitialEndTime - Utility.CurrentTime;
+                    TimeSpan remainingTime;
+                    if (!gameState.Hunt.IsPrepPhase)
+                    {
+                        remainingTime = gameState.Hunt.InitialEndTime - Utility.CurrentTime;
+                    }
+                    else
+                    {
+                        remainingTime = gameState.Hunt.PrepPhaseEndTime - Utility.CurrentTime;
+                        header = "PREP PHASE";
+                    }
+
                     timeStr = $"{remainingTime.Minutes.ToString("00", CultureInfo.InvariantCulture)}:{remainingTime.Seconds.ToString("00", CultureInfo.InvariantCulture)}";
                 }
             }
@@ -197,7 +209,7 @@ namespace SurviveTheHuntClient
             // Get rect width to fit the text.
             SetTextScale(0f, 0.55f);
             BeginTextCommandWidth("STRING");
-            AddTextComponentString("TIME LEFT  00:00");
+            AddTextComponentString($"{header}  00:00");
             float timebarWidth = EndTextCommandGetWidth(true);
 
             // Load and draw the timerbar using the rect width we've measured.
@@ -213,7 +225,7 @@ namespace SurviveTheHuntClient
             EndTextCommandDisplayText(0.94f, 0.835f);
             SetTextScale(0, 0.35f);
             BeginTextCommandDisplayText("STRING");
-            AddTextComponentString("TIME LEFT");
+            AddTextComponentString(header);
             EndTextCommandDisplayText(0.94f - timebarWidth / 2.35f, 0.845f);
             SetTextScale(0, 1f);
         }
@@ -310,21 +322,31 @@ namespace SurviveTheHuntClient
         /// <param name="gameState">Most up-to-date game state.</param>
         public static void NotifyAboutHuntedZone(Player player, Vector3 position, ref GameState gameState)
         {
-            string zoneName = GetLabelText(GetNameOfZone(position.X, position.Y, position.Z));
-            string message = $"{player.Name} is somewhere in {zoneName} right now.";
-            BeginTextCommandThefeedPost("STRING");
-            if (gameState.Hunt.HuntedPlayerMugshot.IsValid)
+            if (position != null)
             {
-                // Attach the hunted player's mugshot texture if it is ready.
-                AddTextComponentSubstringPlayerName(message);
-                string txd = gameState.Hunt.HuntedPlayerMugshot.Name;
-                EndTextCommandThefeedPostMessagetextTu(txd, txd, true, 0, player.Name, "Hunted Suspect", (Constants.HuntedBlipLifespan + Constants.HuntedBlipFadeoutTime) / Constants.FeedPostMessageDuration);
+                string playerName = "The Hunted";
+
+                if (!string.IsNullOrWhiteSpace(player?.Name))
+                {
+                    playerName = player.Name;
+                }
+
+                string zoneName = GetLabelText(GetNameOfZone(position.X, position.Y, position.Z));
+                string message = $"{playerName} is somewhere in {zoneName} right now.";
+                BeginTextCommandThefeedPost("STRING");
+                if (gameState?.Hunt?.HuntedPlayerMugshot?.IsValid == true)
+                {
+                    // Attach the hunted player's mugshot texture if it is ready.
+                    AddTextComponentSubstringPlayerName(message);
+                    string txd = gameState.Hunt.HuntedPlayerMugshot.Name;
+                    EndTextCommandThefeedPostMessagetextTu(txd, txd, true, 0, playerName, "Hunted Suspect", (Constants.HuntedBlipLifespan + Constants.HuntedBlipFadeoutTime) / Constants.FeedPostMessageDuration);
+                }
+                else
+                {
+                    AddTextComponentString(message);
+                }
+                EndTextCommandThefeedPostTicker(true, true);
             }
-            else
-            {
-                AddTextComponentString(message);
-            }
-            EndTextCommandThefeedPostTicker(true, true);
         }
 
         /// <summary>

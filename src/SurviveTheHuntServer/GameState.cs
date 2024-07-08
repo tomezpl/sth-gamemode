@@ -1,6 +1,7 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntShared.Core;
 using System;
+using static CitizenFX.Core.Native.API;
 using SharedConstants = SurviveTheHuntShared.Constants;
 
 namespace SurviveTheHuntServer
@@ -40,7 +41,7 @@ namespace SurviveTheHuntServer
             /// <summary>
             /// UTC time when the hunt session should end (it could end before that).
             /// </summary>
-            public DateTime EndTime { get { return StartTime + SharedConstants.HuntDuration; } }
+            public DateTime EndTime { get { return StartTime + SharedConstants.HuntDuration + EndTimeOffset; } }
 
             /// <summary>
             /// UTC time of last time the hunted player was pinged on the map.
@@ -48,16 +49,28 @@ namespace SurviveTheHuntServer
             public DateTime LastPingTime { get; set; } = DateTime.UtcNow;
 
             /// <summary>
+            /// UTC time of when the prep phase is supposed to end and the actual hunt begins.
+            /// </summary>
+            public DateTime PrepPhaseEndTime { get; set; } = DateTime.UtcNow;
+
+            /// <summary>
+            /// Any extra time that needs to be added to the round duration (e.g. prep phase, or whatever modifiers affect the end time).
+            /// </summary>
+            public TimeSpan EndTimeOffset { get; set; } = TimeSpan.Zero;
+
+            /// <summary>
             /// Starts the hunt for a given player.
             /// </summary>
             /// <param name="huntedPlayer"></param>
-            public void Begin(Player huntedPlayer)
+            public void Begin(Player huntedPlayer, ulong prepPhaseSeconds = 0)
             {
                 IsStarted = true;
                 HuntedPlayer = huntedPlayer;
                 WinningTeam = Teams.Team.Hunted;
                 StartTime = DateTime.UtcNow;
-                LastPingTime = DateTime.UtcNow;
+                LastPingTime = DateTime.UtcNow + TimeSpan.FromSeconds(prepPhaseSeconds) - SharedConstants.HuntedPingInterval;
+                PrepPhaseEndTime = StartTime + TimeSpan.FromSeconds(prepPhaseSeconds);
+                EndTimeOffset = TimeSpan.FromSeconds(prepPhaseSeconds);
             }
 
             /// <summary>
@@ -76,5 +89,22 @@ namespace SurviveTheHuntServer
         /// Details about the current hunt session.
         /// </summary>
         public HuntDetails Hunt { get; set; } = new HuntDetails();
+    }
+
+    public partial class MainScript
+    {
+        public void SendGameState(Player player, GameState gameState)
+        {
+            TriggerClientEvent
+            (
+                player, 
+                SurviveTheHuntShared.Events.Client.ReceiveGameState, 
+                gameState.Hunt.IsStarted, 
+                gameState.Hunt.HuntedPlayer != null ? int.Parse(gameState.Hunt.HuntedPlayer.Handle) : int.MinValue, 
+                gameState.Hunt.StartTime.Ticks, gameState.Hunt.EndTime.Ticks, 
+                gameState.Hunt.LastPingTime.Ticks, 
+                gameState.Hunt.PrepPhaseEndTime.Ticks
+            );
+        }
     }
 }

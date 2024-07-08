@@ -25,6 +25,22 @@ Below are all commands made available by this script:
 * `/respawn`
   * Respawns the local player at the starting point.
 
+### Convars
+[Convars](https://docs.fivem.net/docs/scripting-reference/convars/) are FiveM's way of configuring variables that can be used by the resource (in this case, the gamemode itself).
+
+You can provide your own values for these convars in your `server.cfg` file.
+
+Survive the Hunt exposes the following convars:
+
+| Convar | Description | Default value |
+| --- | --- | --- |
+| `sth_maxHealth` | The amount of health the player spawns with | 228 |
+| `sth_globalPlayerDeathBlips` | Should player death blips be visible to players from the enemy team? | false | 
+| `sth_deathbliplifespan` | The number of seconds a player's death blip is visible for on the map. | 5 |
+| `sth_prepPhaseDuration` | The number of seconds dedicated to a prep phase before the hunt. This is added to the total round time. | 60 |
+
+These are supposed to be server-replicated, so you'll want to use the `setr` command, like so: `setr sth_globalPlayerDeathBlips false`, `setr sth_deathbliplifespan 5` etc.
+
 ### Setup
 #### Building
 **You don't have to build binaries from source. I provide pre-compiled binaries as a release. Skip to the "Installation" section if that's what you're here for.**

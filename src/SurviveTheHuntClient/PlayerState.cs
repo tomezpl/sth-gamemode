@@ -37,6 +37,11 @@ namespace SurviveTheHuntClient
         public Teams.Team Team { get; set; } = Teams.Team.Hunters;
 
         /// <summary>
+        /// Is the player currently waiting to be teleported to spawn because of the hunt starting?
+        /// </summary>
+        public bool WaitingToTeleportToSpawn { get; set; } = false;
+
+        /// <summary>
         /// Manages the state of the bigmap widget on the HUD.
         /// </summary>
         public class BigmapState
