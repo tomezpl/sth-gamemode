@@ -50,6 +50,8 @@ namespace SurviveTheHuntShared
             public const string NotifyAboutHuntedZone = "sth:notifyAboutHuntedZone";
             public const string ReceiveTimeSync = "sth:receiveTimeSync";
             public const string ReceiveGameState = "sth:receiveGameState";
+
+            public const string CharCreatorPedChanged = "lbg-char-neo:pedChanged";
         }
 
         /// <summary>

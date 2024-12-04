@@ -87,6 +87,14 @@ namespace SurviveTheHuntClient
 
         private bool IsTargetClipsetLoaded = false;
 
+        private ushort AmmoCheckTimer = 0;
+
+        private const ushort AmmoCheckInterval = 500;
+
+        private Weapons.WeaponAmmo[] AmmoState = new Weapons.WeaponAmmo[0];
+
+        private int? HealthState = null;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -466,6 +474,25 @@ namespace SurviveTheHuntClient
                 PreviousTickPedHandle = Game.PlayerPed.Handle;
             }
 
+            AmmoCheckTimer += (ushort)Math.Round(GetFrameTime() * 1000f);
+            if(AmmoCheckTimer >= AmmoCheckInterval)
+            {
+                Weapons.WeaponAmmo[] selectedLoadout = Constants.WeaponLoadouts[PlayerState.Team];
+
+                AmmoState = new Weapons.WeaponAmmo[selectedLoadout.Length];
+
+                int playerPed = PlayerPedId();
+
+                for(int i = 0; i < AmmoState.Length; i++)
+                {
+                    AmmoState[i] = new Weapons.WeaponAmmo(selectedLoadout[i].Hash, (ushort)GetAmmoInPedWeapon(playerPed, selectedLoadout[i].Hash));
+                }
+
+                AmmoCheckTimer = 0;
+
+                HealthState = GetEntityHealth(playerPed);
+            }
+
             Wait(0);
         }
 
@@ -768,6 +795,29 @@ namespace SurviveTheHuntClient
             else
             {
                 Debug.WriteLine($"vehicleNetId {vehicleNetId} doesn't exist");
+            }
+        }
+
+        [EventHandler(Events.Client.CharCreatorPedChanged)]
+        public void PedChanged()
+        {
+            Debug.WriteLine("Ped model changed by lbg-char");
+            int playerPed = PlayerPedId();
+
+            RemoveAllPedWeapons(playerPed, false);
+            // Restore ammo
+            foreach(Weapons.WeaponAmmo weapon in AmmoState)
+            {
+                Debug.WriteLine($"Setting {weapon.Hash} to have {weapon.Ammo} ammo");
+                GiveWeaponToPed(playerPed, weapon.Hash, weapon.Ammo, false, false);
+            }
+
+            // Restore health
+            ApplyMaxHealth();
+            if(HealthState != null && !IsPedDeadOrDying(playerPed, true))
+            {
+                Debug.WriteLine("Resetting health");
+                SetEntityHealth(playerPed, HealthState.Value);
             }
         }
     }
