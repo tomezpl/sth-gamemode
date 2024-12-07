@@ -95,6 +95,8 @@ namespace SurviveTheHuntClient
 
         private int? HealthState = null;
 
+        private long? LastSpawnTime = null;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -344,6 +346,8 @@ namespace SurviveTheHuntClient
                 SetPedRandomComponentVariation(Player.Local.Character.Handle, false);
                 SetPedRandomProps(Player.Local.Character.Handle);
             }
+
+            LastSpawnTime = DateTime.UtcNow.Ticks;
         }
 
         /// <summary>
@@ -804,12 +808,29 @@ namespace SurviveTheHuntClient
             Debug.WriteLine("Ped model changed by lbg-char");
             int playerPed = PlayerPedId();
 
-            RemoveAllPedWeapons(playerPed, false);
-            // Restore ammo
-            foreach(Weapons.WeaponAmmo weapon in AmmoState)
+            // If we've just spawned and the script changed our ped model shortly after spawn, reset the loadout
+            // TODO: this is gash and might be super flaky  because we're just using ticks here but it'll work for now
+            if (LastSpawnTime == null || DateTime.UtcNow.Ticks - LastSpawnTime.Value <= Math.Pow(10, 7))
             {
-                Debug.WriteLine($"Setting {weapon.Hash} to have {weapon.Ammo} ammo");
-                GiveWeaponToPed(playerPed, weapon.Hash, weapon.Ammo, false, false);
+                Debug.WriteLine("Resetting weapons");
+                Ped playerPedObj = Game.PlayerPed;
+                PlayerState.TakeAwayWeapons(ref playerPedObj);
+                PlayerState.UpdateWeapons(playerPedObj);
+            }
+            else
+            {
+                if(LastSpawnTime != null)
+                {
+                    Debug.WriteLine($"It has been ${DateTime.UtcNow.Ticks - LastSpawnTime.Value} ticks since last spawn");
+                }
+
+                RemoveAllPedWeapons(playerPed, false);
+                // Restore ammo to latest state
+                foreach (Weapons.WeaponAmmo weapon in AmmoState)
+                {
+                    Debug.WriteLine($"Setting {weapon.Hash} to have {weapon.Ammo} ammo");
+                    GiveWeaponToPed(playerPed, weapon.Hash, weapon.Ammo, false, false);
+                }
             }
 
             // Restore health
