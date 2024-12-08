@@ -50,8 +50,12 @@ namespace SurviveTheHuntShared
             public const string NotifyAboutHuntedZone = "sth:notifyAboutHuntedZone";
             public const string ReceiveTimeSync = "sth:receiveTimeSync";
             public const string ReceiveGameState = "sth:receiveGameState";
+            public const string ReceiveHuntedClock = "sth:receiveHuntedClock";
 
             public const string CharCreatorPedChanged = "lbg-char-neo:pedChanged";
+            public const string CharCreatorForceExit = "lbg-char-neo:forceExit";
+            public const string CharCreatorCreatorExited = "lbg-char-neo:creatorExited";
+            public const string CharCreatorCreatorEntered = "lbg-char-neo:creatorEntered";
         }
 
         /// <summary>
@@ -66,6 +70,7 @@ namespace SurviveTheHuntShared
             public const string RequestSyncVehicles = "sth:reqSyncVehicles";
             public const string ClientStarted = "sth:clientStarted";
             public const string RequestStartHunt = "sth:startHunt";
+            public const string ReceiveHuntedClock = "sth:receiveClockFromHuntedPlayer";
         }
     }
 }

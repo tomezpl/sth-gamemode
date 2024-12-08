@@ -148,6 +148,7 @@ namespace SurviveTheHuntServer
         /// </summary>
         private void NotifyWinner()
         {
+            SetConvarReplicated(SharedConstants.CharCreatorBlockCreatorConvar, "false");
             TriggerClientEvent(Events.Client.NotifyWinner, new { WinningTeam = (int)GameState.Hunt.WinningTeam });
         }
 
@@ -195,6 +196,8 @@ namespace SurviveTheHuntServer
                         TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerServerId = int.Parse(randomPlayer.Handle) });
 
                         ulong prepPhaseSeconds = (ulong)GetConvarInt("sth_prepPhaseDuration", SharedConstants.DefaultPrepPhaseSeconds);
+
+                        SetConvarReplicated(SharedConstants.CharCreatorBlockCreatorConvar, "true");
 
                         GameState.Hunt.Begin(randomPlayer, prepPhaseSeconds);
 

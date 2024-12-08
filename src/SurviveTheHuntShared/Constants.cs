@@ -252,5 +252,7 @@ namespace SurviveTheHuntShared
             "MOVE_M@TOUGH_GUY@",
             "move_m@multiplayer"
         };
+
+        public const string CharCreatorBlockCreatorConvar = "lbg-char-neo_blockCreator";
     }
 }

@@ -97,5 +97,11 @@ namespace SurviveTheHuntServer
                 Debug.WriteLine($"Couldn't delete vehicle: {ex.ToString()}");
             }
         }
+
+        [EventHandler(Events.Server.ReceiveHuntedClock)]
+        public void SyncHuntedClock(int hours, int minutes, int seconds)
+        {
+            TriggerClientEvent(Events.Client.ReceiveHuntedClock, hours, minutes, seconds);
+        }
     }
 }

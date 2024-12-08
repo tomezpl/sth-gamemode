@@ -160,6 +160,8 @@ namespace SurviveTheHuntClient
             EventHandlers["playerSpawned"] += new Action(PlayerSpawnedCallback);
 
             Tick += UpdateLoop;
+
+            SetWeatherOwnedByNetwork(true);
         }
 
         private void OnClientResourceStart(string resource)
@@ -538,7 +540,8 @@ namespace SurviveTheHuntClient
                             SetEntityVelocity(entityId, velocity.X * mult, velocity.Y * mult, velocity.Z * mult);
                         }
 
-                        bool needsTeleport = PlayerState.WaitingToTeleportToSpawn || magnitudeSqr > radiusSqr * 1.2f;
+                        bool isInCreator = PlayerState.IsInCharacterCreator;
+                        bool needsTeleport = !isInCreator && (PlayerState.WaitingToTeleportToSpawn || magnitudeSqr > radiusSqr * 1.2f);
 
                         if (needsTeleport)
                         {
@@ -626,6 +629,8 @@ namespace SurviveTheHuntClient
 
         private void HuntStartedByServer(float secondsTillPing, DateTime endTime, TimeSpan? prepPhase = null)
         {
+            TriggerEvent(Events.Client.CharCreatorForceExit);
+
             if (!prepPhase.HasValue)
             {
                 prepPhase = TimeSpan.Zero;
@@ -635,6 +640,12 @@ namespace SurviveTheHuntClient
             GameState.Hunt.InitialEndTime = endTime;
             GameState.Hunt.PrepPhaseEndTime = Utility.CurrentTime + prepPhase.Value;
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+
+            // Sync time
+            if(PlayerState.Team == Teams.Team.Hunted)
+            {
+                TriggerServerEvent(Events.Server.ReceiveHuntedClock, GetClockHours(), GetClockMinutes(), GetClockSeconds());
+            }
         }
 
         /// <summary>
@@ -840,6 +851,24 @@ namespace SurviveTheHuntClient
                 Debug.WriteLine("Resetting health");
                 SetEntityHealth(playerPed, HealthState.Value);
             }
+        }
+
+        [EventHandler(Events.Client.CharCreatorCreatorExited)]
+        public void CreatorExited()
+        {
+            PlayerState.IsInCharacterCreator = false;
+        }
+
+        [EventHandler(Events.Client.CharCreatorCreatorEntered)]
+        public void CreatorEntered()
+        {
+            PlayerState.IsInCharacterCreator = true;
+        }
+
+        [EventHandler(Events.Client.ReceiveHuntedClock)]
+        public void SyncClock(int hours, int minutes, int seconds)
+        {
+            SetClockTime(hours, minutes, seconds);
         }
     }
 }
