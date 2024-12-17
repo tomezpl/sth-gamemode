@@ -16,6 +16,7 @@ using static CitizenFX.Core.Native.API;
 using SharedConstants = SurviveTheHuntShared.Constants;
 using SurviveTheHuntShared.Core;
 using SurviveTheHuntShared;
+using System.Text.RegularExpressions;
 
 namespace SurviveTheHuntClient
 {
@@ -642,7 +643,7 @@ namespace SurviveTheHuntClient
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
 
             // Sync time
-            if(PlayerState.Team == Teams.Team.Hunted)
+            if (PlayerState.Team == Teams.Team.Hunted && ConvarHelper.GetBoolean(GetConvar(SharedConstants.SyncTimeOnHuntStartConvar, "true")))
             {
                 TriggerServerEvent(Events.Server.ReceiveHuntedClock, GetClockHours(), GetClockMinutes(), GetClockSeconds());
             }
@@ -816,11 +817,16 @@ namespace SurviveTheHuntClient
         [EventHandler(Events.Client.CharCreatorPedChanged)]
         public void PedChanged()
         {
+            if(!ConvarHelper.GetBoolean(GetConvar(SharedConstants.CharCreationIntegrationEnabledConvar, "true")))
+            {
+                return;
+            }
+
             Debug.WriteLine("Ped model changed by lbg-char");
             int playerPed = PlayerPedId();
 
             // If we've just spawned and the script changed our ped model shortly after spawn, reset the loadout
-            // TODO: this is gash and might be super flaky  because we're just using ticks here but it'll work for now
+            // TODO: this is gash and might be super flaky because we're just using ticks here but it'll work for now
             if (LastSpawnTime == null || DateTime.UtcNow.Ticks - LastSpawnTime.Value <= Math.Pow(10, 7))
             {
                 Debug.WriteLine("Resetting weapons");
@@ -846,7 +852,7 @@ namespace SurviveTheHuntClient
 
             // Restore health
             ApplyMaxHealth();
-            if(HealthState != null && !IsPedDeadOrDying(playerPed, true))
+            if(HealthState != null && !IsPedDeadOrDying(playerPed, true) && HealthState.Value != 0)
             {
                 Debug.WriteLine("Resetting health");
                 SetEntityHealth(playerPed, HealthState.Value);
@@ -868,7 +874,10 @@ namespace SurviveTheHuntClient
         [EventHandler(Events.Client.ReceiveHuntedClock)]
         public void SyncClock(int hours, int minutes, int seconds)
         {
+            Debug.WriteLine($"Setting time to {hours.ToString().PadLeft(2, '0')}:{minutes.ToString().PadLeft(2, '0')}:{seconds.ToString().PadLeft(2, '0')}");
             SetClockTime(hours, minutes, seconds);
+            NetworkOverrideClockTime(hours, minutes, seconds);
+            Debug.WriteLine($"Time is {GetClockHours().ToString().PadLeft(2, '0')}:{GetClockMinutes().ToString().PadLeft(2, '0')}:{GetClockSeconds().ToString().PadLeft(2, '0')}");
         }
     }
 }

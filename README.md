@@ -38,6 +38,8 @@ Survive the Hunt exposes the following convars:
 | `sth_globalPlayerDeathBlips` | Should player death blips be visible to players from the enemy team? | false | 
 | `sth_deathbliplifespan` | The number of seconds a player's death blip is visible for on the map. | 5 |
 | `sth_prepPhaseDuration` | The number of seconds dedicated to a prep phase before the hunt. This is added to the total round time. | 60 |
+| `sth_charCreatorIntegration` | Should the [lbg-char-neo](https://github.com/tomezpl/lbg-char-neo) character creator integration be enabled? | true |
+| `sth_syncTimeOnHuntStart` | Should the hunters' in-game clocks be synced to the hunted player's in-game time when the hunt starts? | true |
 
 These are supposed to be server-replicated, so you'll want to use the `setr` command, like so: `setr sth_globalPlayerDeathBlips false`, `setr sth_deathbliplifespan 5` etc.
 
@@ -52,24 +54,27 @@ The project uses CitizenFX NuGet packages. Some C# development knowledge should 
 2. Extract the .zip file.
 3. In your FiveM's server `server-data\resources\[gamemodes]`, create a new folder called `sth-gamemode`.
 4. Copy the extracted .zip file contents to the newly created folder, so that `fxmanifest.lua` ends up located at `server-data\resources\[gamemodes]\sth-gamemode\fxmanifest.lua`.
-5. Enable `sth-gamemode` in your `server.cfg` - you need to add the following lines:
-   * ```
-     setr vmenu_use_permissions false
-     setr vmenu_enable_dynamic_weather false
-     setr vmenu_enable_weather_sync true
-     setr vmenu_enable_time_sync true
-     ```
-   * ```
-     ensure vMenu
-     ensure sth-gamemode
-     ```
+5. Enable `sth-gamemode` in your `server.cfg` - you need to add the following line: `ensure sth-gamemode`
 
-**IMPORTANT: Before you play, you WILL NEED vMenu - it is used to provide character customisation which is very important to enjoy this gamemode properly. 
-More specifically, you will need my specific fork of vMenu which cuts out some incompatible features. It's available [here](https://github.com/tomezpl/vMenu) but is created by Tom Grobbe - I only adapted it to use with my gamemode.**
+##### Other resources
+###### Character customisation
+In order to properly enjoy this gamemode, you will need some means of character customisation. Feel free to install my [lbg-char-neo resource](https://github.com/tomezpl/lbg-char-neo), which Survive the Hunt officially supports.
+
+###### A note on vMenu
+If you are using vMenu, you may find some of its features are incompatible with this gamemode. You can use [my fork of vMenu](https://github.com/tomezpl/vMenu) that cuts out most incompatible features.
+
+Regardless, you will need the following convars:
+
+```
+setr vmenu_use_permissions false
+setr vmenu_enable_dynamic_weather false
+setr vmenu_enable_weather_sync true
+setr vmenu_enable_time_sync true
+```
 
 ## License
 Survive the Hunt is an open-source FiveM implementation of a community-made unofficial gamemode, made popular by FailRace's videos.
 
-This implementation has been developed by Tomasz Zajac (2020-2022).
+This implementation has been developed by Tomasz Zajac (2020-2024).
 
 You are free to use my work, with or without changes, for non-commercial purposes. Do not resell this work or claim it as yours. No warranty provided.

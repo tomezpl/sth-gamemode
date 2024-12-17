@@ -254,5 +254,18 @@ namespace SurviveTheHuntShared
         };
 
         public const string CharCreatorBlockCreatorConvar = "lbg-char-neo_blockCreator";
+
+        /// <summary>
+        /// If true, enables support for lbg-char-neo.
+        /// </summary>
+        /// <remarks>
+        /// <see href="https://github.com/tomezpl/lbg-char-neo"/>
+        /// </remarks>
+        public const string CharCreationIntegrationEnabledConvar = "sth_charCreatorIntegration";
+
+        /// <summary>
+        /// If true, the hunter players' in-game clocks will be synced with the hunted player's in-game time when the hunt starts.
+        /// </summary>
+        public const string SyncTimeOnHuntStartConvar = "sth_syncTimeOnHuntStart";
     }
 }

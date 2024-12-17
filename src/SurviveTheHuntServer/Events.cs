@@ -101,6 +101,7 @@ namespace SurviveTheHuntServer
         [EventHandler(Events.Server.ReceiveHuntedClock)]
         public void SyncHuntedClock(int hours, int minutes, int seconds)
         {
+            Debug.WriteLine($"Sending {Events.Client.ReceiveHuntedClock} with {hours.ToString().PadLeft(2, '0')}:{minutes.ToString().PadLeft(2, '0')}:{seconds.ToString().PadLeft(2, '0')}");
             TriggerClientEvent(Events.Client.ReceiveHuntedClock, hours, minutes, seconds);
         }
     }
