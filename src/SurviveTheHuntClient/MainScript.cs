@@ -16,7 +16,6 @@ using static CitizenFX.Core.Native.API;
 using SharedConstants = SurviveTheHuntShared.Constants;
 using SurviveTheHuntShared.Core;
 using SurviveTheHuntShared;
-using System.Text.RegularExpressions;
 
 namespace SurviveTheHuntClient
 {
@@ -88,16 +87,6 @@ namespace SurviveTheHuntClient
 
         private bool IsTargetClipsetLoaded = false;
 
-        private ushort AmmoCheckTimer = 0;
-
-        private const ushort AmmoCheckInterval = 500;
-
-        private Weapons.WeaponAmmo[] AmmoState = new Weapons.WeaponAmmo[0];
-
-        private int? HealthState = null;
-
-        private long? LastSpawnTime = null;
-
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -162,6 +151,8 @@ namespace SurviveTheHuntClient
 
             Tick += UpdateLoop;
 
+            // #63: Previously this used to be controlled by vMenu, but now the gamemode is decoupled from that,
+            // so we're just letting FiveM manage the weather. (In testing it seems to work reliably well)
             SetWeatherOwnedByNetwork(true);
         }
 
@@ -481,24 +472,7 @@ namespace SurviveTheHuntClient
                 PreviousTickPedHandle = Game.PlayerPed.Handle;
             }
 
-            AmmoCheckTimer += (ushort)Math.Round(GetFrameTime() * 1000f);
-            if(AmmoCheckTimer >= AmmoCheckInterval)
-            {
-                Weapons.WeaponAmmo[] selectedLoadout = Constants.WeaponLoadouts[PlayerState.Team];
-
-                AmmoState = new Weapons.WeaponAmmo[selectedLoadout.Length];
-
-                int playerPed = PlayerPedId();
-
-                for(int i = 0; i < AmmoState.Length; i++)
-                {
-                    AmmoState[i] = new Weapons.WeaponAmmo(selectedLoadout[i].Hash, (ushort)GetAmmoInPedWeapon(playerPed, selectedLoadout[i].Hash));
-                }
-
-                AmmoCheckTimer = 0;
-
-                HealthState = GetEntityHealth(playerPed);
-            }
+            TickLbgCharNeoIntegration();
 
             Wait(0);
         }
