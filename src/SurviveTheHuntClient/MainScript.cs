@@ -183,6 +183,14 @@ namespace SurviveTheHuntClient
                     }
                 }), false);
 
+                RegisterCommand("heal", new Action(() =>
+                {
+                    if(!GameState.Hunt.IsStarted)
+                    {
+                        ApplyMaxHealth(true);
+                    }
+                }), false);
+
                 Vector3 spawn = SharedConstants.DockSpawn;
                 ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
 
@@ -615,6 +623,9 @@ namespace SurviveTheHuntClient
             GameState.Hunt.InitialEndTime = endTime;
             GameState.Hunt.PrepPhaseEndTime = Utility.CurrentTime + prepPhase.Value;
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+
+            // Heal the player when the hunt is started.
+            ApplyMaxHealth(true);
 
             // Sync time
             if (PlayerState.Team == Teams.Team.Hunted && ConvarHelper.GetBoolean(GetConvar(SharedConstants.SyncTimeOnHuntStartConvar, "true")))
