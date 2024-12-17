@@ -150,6 +150,10 @@ namespace SurviveTheHuntClient
             EventHandlers["playerSpawned"] += new Action(PlayerSpawnedCallback);
 
             Tick += UpdateLoop;
+
+            // #63: Previously this used to be controlled by vMenu, but now the gamemode is decoupled from that,
+            // so we're just letting FiveM manage the weather. (In testing it seems to work reliably well)
+            SetWeatherOwnedByNetwork(true);
         }
 
         private void OnClientResourceStart(string resource)
@@ -336,6 +340,8 @@ namespace SurviveTheHuntClient
                 SetPedRandomComponentVariation(Player.Local.Character.Handle, false);
                 SetPedRandomProps(Player.Local.Character.Handle);
             }
+
+            LastSpawnTime = DateTime.UtcNow.Ticks;
         }
 
         /// <summary>
@@ -466,6 +472,8 @@ namespace SurviveTheHuntClient
                 PreviousTickPedHandle = Game.PlayerPed.Handle;
             }
 
+            TickLbgCharNeoIntegration();
+
             Wait(0);
         }
 
@@ -507,7 +515,8 @@ namespace SurviveTheHuntClient
                             SetEntityVelocity(entityId, velocity.X * mult, velocity.Y * mult, velocity.Z * mult);
                         }
 
-                        bool needsTeleport = PlayerState.WaitingToTeleportToSpawn || magnitudeSqr > radiusSqr * 1.2f;
+                        bool isInCreator = PlayerState.IsInCharacterCreator;
+                        bool needsTeleport = !isInCreator && (PlayerState.WaitingToTeleportToSpawn || magnitudeSqr > radiusSqr * 1.2f);
 
                         if (needsTeleport)
                         {
@@ -595,6 +604,8 @@ namespace SurviveTheHuntClient
 
         private void HuntStartedByServer(float secondsTillPing, DateTime endTime, TimeSpan? prepPhase = null)
         {
+            TriggerEvent(Events.Client.CharCreatorForceExit);
+
             if (!prepPhase.HasValue)
             {
                 prepPhase = TimeSpan.Zero;
@@ -604,6 +615,12 @@ namespace SurviveTheHuntClient
             GameState.Hunt.InitialEndTime = endTime;
             GameState.Hunt.PrepPhaseEndTime = Utility.CurrentTime + prepPhase.Value;
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+
+            // Sync time
+            if (PlayerState.Team == Teams.Team.Hunted && ConvarHelper.GetBoolean(GetConvar(SharedConstants.SyncTimeOnHuntStartConvar, "true")))
+            {
+                TriggerServerEvent(Events.Server.ReceiveHuntedClock, GetClockHours(), GetClockMinutes(), GetClockSeconds());
+            }
         }
 
         /// <summary>
@@ -769,6 +786,72 @@ namespace SurviveTheHuntClient
             {
                 Debug.WriteLine($"vehicleNetId {vehicleNetId} doesn't exist");
             }
+        }
+
+        [EventHandler(Events.Client.CharCreatorPedChanged)]
+        public void PedChanged()
+        {
+            if(!ConvarHelper.GetBoolean(GetConvar(SharedConstants.CharCreationIntegrationEnabledConvar, "true")))
+            {
+                return;
+            }
+
+            Debug.WriteLine("Ped model changed by lbg-char");
+            int playerPed = PlayerPedId();
+
+            // If we've just spawned and the script changed our ped model shortly after spawn, reset the loadout
+            // TODO: this is gash and might be super flaky because we're just using ticks here but it'll work for now
+            if (LastSpawnTime == null || DateTime.UtcNow.Ticks - LastSpawnTime.Value <= Math.Pow(10, 7))
+            {
+                Debug.WriteLine("Resetting weapons");
+                Ped playerPedObj = Game.PlayerPed;
+                PlayerState.TakeAwayWeapons(ref playerPedObj);
+                PlayerState.UpdateWeapons(playerPedObj);
+            }
+            else
+            {
+                if(LastSpawnTime != null)
+                {
+                    Debug.WriteLine($"It has been ${DateTime.UtcNow.Ticks - LastSpawnTime.Value} ticks since last spawn");
+                }
+
+                RemoveAllPedWeapons(playerPed, false);
+                // Restore ammo to latest state
+                foreach (Weapons.WeaponAmmo weapon in AmmoState)
+                {
+                    Debug.WriteLine($"Setting {weapon.Hash} to have {weapon.Ammo} ammo");
+                    GiveWeaponToPed(playerPed, weapon.Hash, weapon.Ammo, false, false);
+                }
+            }
+
+            // Restore health
+            ApplyMaxHealth();
+            if(HealthState != null && !IsPedDeadOrDying(playerPed, true) && HealthState.Value != 0)
+            {
+                Debug.WriteLine("Resetting health");
+                SetEntityHealth(playerPed, HealthState.Value);
+            }
+        }
+
+        [EventHandler(Events.Client.CharCreatorCreatorExited)]
+        public void CreatorExited()
+        {
+            PlayerState.IsInCharacterCreator = false;
+        }
+
+        [EventHandler(Events.Client.CharCreatorCreatorEntered)]
+        public void CreatorEntered()
+        {
+            PlayerState.IsInCharacterCreator = true;
+        }
+
+        [EventHandler(Events.Client.ReceiveHuntedClock)]
+        public void SyncClock(int hours, int minutes, int seconds)
+        {
+            Debug.WriteLine($"Setting time to {hours.ToString().PadLeft(2, '0')}:{minutes.ToString().PadLeft(2, '0')}:{seconds.ToString().PadLeft(2, '0')}");
+            SetClockTime(hours, minutes, seconds);
+            NetworkOverrideClockTime(hours, minutes, seconds);
+            Debug.WriteLine($"Time is {GetClockHours().ToString().PadLeft(2, '0')}:{GetClockMinutes().ToString().PadLeft(2, '0')}:{GetClockSeconds().ToString().PadLeft(2, '0')}");
         }
     }
 }

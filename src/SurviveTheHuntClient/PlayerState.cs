@@ -42,6 +42,11 @@ namespace SurviveTheHuntClient
         public bool WaitingToTeleportToSpawn { get; set; } = false;
 
         /// <summary>
+        /// Is the player currently in a character creator screen? This allows the creator resource to gracefully exit the screen before triggering the teleport etc.
+        /// </summary>
+        public bool IsInCharacterCreator = false;
+
+        /// <summary>
         /// Manages the state of the bigmap widget on the HUD.
         /// </summary>
         public class BigmapState
