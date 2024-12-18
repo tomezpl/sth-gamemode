@@ -1,4 +1,6 @@
 # Survive the Hunt
+[Overview](#overview) | [Features](#features) | [Installation](#installation) | [Usage](#commands) | [Configuration](#convars) | [Recommended resources](#other-resources) | [Compiling from source](#building)
+
 ## Overview
 This is a FiveM gamemode resource that attempts to recreate [FailRace's "Survive the Hunt" series of videos](https://www.youtube.com/playlist?list=PLHw7hcztgbtslirPWPBL4G_8r4XPlp_vr).
 
