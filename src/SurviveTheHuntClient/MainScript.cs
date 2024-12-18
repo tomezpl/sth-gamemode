@@ -183,6 +183,21 @@ namespace SurviveTheHuntClient
                     }
                 }), false);
 
+                RegisterCommand("heal", new Action(() =>
+                {
+                    if (!GameState.Hunt.IsStarted)
+                    {
+                        ApplyMaxHealth(true);
+                    }
+                    else
+                    {
+                        const string helpText = "HealNotAvailableDueToHuntStarted";
+                        AddTextEntry(helpText, "You cannot heal once the round has started.");
+                        BeginTextCommandDisplayHelp(helpText);
+                        EndTextCommandDisplayHelp(0, false, true, 5000);
+                    }
+                }), false);
+
                 Vector3 spawn = SharedConstants.DockSpawn;
                 ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
 
@@ -348,14 +363,37 @@ namespace SurviveTheHuntClient
         /// Applies max health to the current player ped and optionally replenishes their health.
         /// </summary>
         /// <param name="restore">Should the player ped's health be replenished to max?</param>
-        protected void ApplyMaxHealth(bool restore = false)
+        /// <param name="onlyPed">Should only the player ped be healed? If false, the player's current vehicle will be healed too.</param>
+        protected void ApplyMaxHealth(bool restore = false, bool onlyPed = false)
         {
             int maxHealth = GetConvarInt("sth_maxHealth", SharedConstants.DefaultMaxHealth);
-            SetPedMaxHealth(PlayerPedId(), maxHealth);
+            int playerPed = PlayerPedId();
+            SetPedMaxHealth(playerPed, maxHealth);
             
             if (restore)
             {
-                SetEntityHealth(PlayerPedId(), maxHealth);
+                SetEntityHealth(playerPed, maxHealth);
+
+                if(!onlyPed)
+                {
+                    int vehicle = GetVehiclePedIsIn(playerPed, false);
+                    if(vehicle != 0)
+                    {
+                        SetVehicleBodyHealth(vehicle, 1000f);
+                        SetVehicleEngineHealth(vehicle, 1000f);
+                        SetVehicleFixed(vehicle);
+                        SetVehiclePetrolTankHealth(vehicle, 1000f);
+                        short wheelCount = (short)GetVehicleNumberOfWheels(vehicle);
+                        for(short i = 0; i < wheelCount; i++)
+                        {
+                            SetVehicleWheelHealth(vehicle, i, 1000f);
+                            SetTyreHealth(vehicle, i, 1000f);
+                            SetVehicleTyreFixed(vehicle, i);
+                            SetVehicleTyreBurst(vehicle, i, false, 0f);
+                        }
+                        ResetVehicleWheels(vehicle, true);
+                    }
+                }
             }
         }
 
@@ -615,6 +653,13 @@ namespace SurviveTheHuntClient
             GameState.Hunt.InitialEndTime = endTime;
             GameState.Hunt.PrepPhaseEndTime = Utility.CurrentTime + prepPhase.Value;
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+
+            // Heal the player when the hunt is started.
+            const string huntStartedHealthRestoredString = "HuntStartedHealthRestoredString";
+            AddTextEntry(huntStartedHealthRestoredString, "Your health has been restored due to the round starting.");
+            ApplyMaxHealth(true);
+            BeginTextCommandDisplayHelp(huntStartedHealthRestoredString);
+            EndTextCommandDisplayHelp(0, false, true, 5000);
 
             // Sync time
             if (PlayerState.Team == Teams.Team.Hunted && ConvarHelper.GetBoolean(GetConvar(SharedConstants.SyncTimeOnHuntStartConvar, "true")))
