@@ -216,18 +216,8 @@ namespace SurviveTheHuntClient
         /// </summary>
         protected async Task SpawnCars()
         {
-            List<VehicleHash> carsToSpawn = new List<VehicleHash>(SharedConstants.CarSpawnPoints.Length);
-
-            List<VehicleHash> spawnableCars = Constants.Vehicles.ToList();
-
-            for(int i = 0; i < carsToSpawn.Capacity; i++)
-            {
-                int randomIndex = RNG.Next(0, spawnableCars.Count);
-                VehicleHash randomVehicle = spawnableCars[randomIndex];
-                carsToSpawn.Add(randomVehicle);
-
-                spawnableCars.RemoveAt(randomIndex);
-            }
+            // Need to build a list of vehicles that SHOULD be deleted, ie. empty vehicles
+            List<SyncedVehicle> deletedVehicles = new List<SyncedVehicle>(SpawnedVehicles.Count);
 
             foreach(SyncedVehicle vehicleToDelete in SpawnedVehicles)
             {
@@ -235,8 +225,38 @@ namespace SurviveTheHuntClient
                 int id = hasNetId ? vehicleToDelete.NetId.Value : vehicleToDelete.Handle.Value;
                 if (hasNetId || Vehicle.Exists(vehicleToDelete.Vehicle))
                 {
-                    Debug.WriteLine($"Requesting to delete vehicle with {(hasNetId ? "net ID" : "entity handle")} {id}");
-                    TriggerServerEvent(Events.Server.RequestDeleteVehicle, hasNetId ? id : VehToNet(id));
+                    int vehicleHandle = 0;
+                    if(hasNetId && NetworkDoesNetworkIdExist(id))
+                    {
+                        vehicleHandle = NetToVeh(id);
+                    }
+                    else if(!hasNetId && DoesEntityExist(id))
+                    {
+                        vehicleHandle = id;
+                    }
+
+                    // Check that the vehicle is in fact empty
+                    bool hasPed = false;
+                    if (vehicleHandle != 0 && DoesEntityExist(vehicleHandle))
+                    {
+                        int vehicleSeats = GetVehicleModelNumberOfSeats((uint)GetEntityModel(vehicleHandle));
+                        for (int i = -1; !hasPed && i < vehicleSeats; i++)
+                        {
+                            hasPed = GetPedInVehicleSeat(vehicleHandle, i) != 0;
+                        }
+                    }
+
+                    // Mark the vehicle for deletion if it was empty
+                    if (!hasPed)
+                    {
+                        Debug.WriteLine($"Requesting to delete vehicle with {(hasNetId ? "net ID" : "entity handle")} {id}");
+                        TriggerServerEvent(Events.Server.RequestDeleteVehicle, hasNetId ? id : VehToNet(id));
+                        deletedVehicles.Add(vehicleToDelete);
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"Vehicle with {(hasNetId ? "net ID" : "entity handle")} {id} could not be removed as it is not empty.");
+                    }
                 }
                 else
                 {
@@ -244,7 +264,30 @@ namespace SurviveTheHuntClient
                 }
             }
             await Delay(3500);
-            SpawnedVehicles.Clear();
+
+            // Only remove empty vehicles
+            foreach(SyncedVehicle deletedVehicle in deletedVehicles)
+            {
+                SpawnedVehicles.Remove(deletedVehicle);
+            }
+
+            // Ignore non-empty vehicles so that there are only ever 26 vehicles spawned at a time,
+            // and that we don't lose vehicle handles when spawning new cars.
+            int maxNewCarCount = SharedConstants.CarSpawnPoints.Length - SpawnedVehicles.Count;
+            List<VehicleHash> carsToSpawn = new List<VehicleHash>(maxNewCarCount);
+
+            Debug.WriteLine($"{maxNewCarCount} new cars will be created");
+
+            List<VehicleHash> spawnableCars = Constants.Vehicles.ToList();
+
+            for (int i = 0; i < maxNewCarCount; i++)
+            {
+                int randomIndex = RNG.Next(0, spawnableCars.Count);
+                VehicleHash randomVehicle = spawnableCars[randomIndex];
+                carsToSpawn.Add(randomVehicle);
+
+                spawnableCars.RemoveAt(randomIndex);
+            }
 
             int counter = 0;
             foreach(VehicleHash vehicle in carsToSpawn)
