@@ -35,7 +35,7 @@ namespace SurviveTheHuntClient.Helpers
                 }
             }
 
-            float maxRadarDistanceSqr = IsBigmapActive() ? 750f : 350f;
+            float maxRadarDistanceSqr = IsBigmapActive() ? 750f : 400f;
             maxRadarDistanceSqr *= maxRadarDistanceSqr;
 
             float a = x - playerPos.Value.X;
@@ -43,6 +43,7 @@ namespace SurviveTheHuntClient.Helpers
             float b = y - playerPos.Value.Y;
             b *= b;
             float c = z - playerPos.Value.Z;
+            c *= c;
 
             return (a + b + c) <= maxRadarDistanceSqr;
         }
