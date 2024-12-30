@@ -399,6 +399,8 @@ namespace SurviveTheHuntClient
                 SetPedRandomProps(Player.Local.Character.Handle);
             }
 
+            WantedLevelHelper.DisableWantedLevel();
+
             LastSpawnTime = DateTime.UtcNow.Ticks;
         }
 
@@ -472,9 +474,6 @@ namespace SurviveTheHuntClient
 
             PlayerState.UpdateWeapons(Game.PlayerPed);
 
-            // Make sure the player can't get cops.
-            ClearPlayerWantedLevel(PlayerId());
-
             // Check and report player death to the server if needed.
             if(!Game.Player.IsAlive && !PlayerState.DeathReported)
             {
@@ -542,20 +541,26 @@ namespace SurviveTheHuntClient
 
             DeathBlips.ClearExpiredBlips();
 
-            if(Game.PlayerPed?.Exists() == true)
-            {
-                if(PreviousTickPedHandle != Game.PlayerPed.Handle)
-                {
-                    Debug.WriteLine("Ped changed, setting max health");
-                    ApplyMaxHealth();
-                }
-
-                PreviousTickPedHandle = Game.PlayerPed.Handle;
-            }
+            RunPedChangedChecks();
 
             TickLbgCharNeoIntegration();
 
             Wait(0);
+        }
+
+        private void RunPedChangedChecks()
+        {
+            if (Game.PlayerPed?.Exists() == true)
+            {
+                if (PreviousTickPedHandle != Game.PlayerPed.Handle)
+                {
+                    Debug.WriteLine("Ped changed, setting max health");
+                    ApplyMaxHealth();
+                    WantedLevelHelper.DisableWantedLevel();
+                }
+
+                PreviousTickPedHandle = Game.PlayerPed.Handle;
+            }
         }
 
         void ApplySafeZoneProtection(bool protectionActive, bool canLeaveSpawn, CfxVector3 safeZoneOrigin, float safeZoneRadius)
@@ -919,6 +924,8 @@ namespace SurviveTheHuntClient
                 Debug.WriteLine("Resetting health");
                 SetEntityHealth(playerPed, HealthState.Value);
             }
+
+            WantedLevelHelper.DisableWantedLevel();
         }
 
         [EventHandler(Events.Client.CharCreatorCreatorExited)]
