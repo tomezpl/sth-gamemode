@@ -11,25 +11,35 @@ namespace SurviveTheHuntServer
 {
     internal static class TeamPluginState
     {
+        /// <summary>
+        /// Lists of teams each player belongs to (key is player ID, value is list of teams they belong to).
+        /// 
+        /// Typically a player will only belong to one team but keeping it as a list might come in handy in the future.
+        /// </summary>
         public static Dictionary<int, List<Teams.Team>> PlayerTeams = new Dictionary<int, List<Teams.Team>>();
-        public static Dictionary<int, Action<Player, string>> PlayerCleanupActions = new Dictionary<int, Action<Player, string>>();
     }
 
     public partial class MainScript
     {
-        private void CleanupPlayerTeams([FromSource] Player player, string reason)
+        /// <summary>
+        /// Event handler that updates the <see cref="TeamPluginState"/> when a player leaves.
+        /// </summary>
+        /// <param name="player"></param>
+        /// <param name="reason"></param>
+        [EventHandler("playerDropped")]
+        public void CleanupPlayerTeams([FromSource] Player player, string reason)
         {
             if (int.TryParse(player.Handle, out int droppedPlayerId))
             {
+                // If the player belonged to any teams, run the "leave" plugin(s) for each of them (e.g. team chat) and remove the player's entry from the state.
                 if (TeamPluginState.PlayerTeams.TryGetValue(droppedPlayerId, out List<Teams.Team> playerTeams))
                 {
+                    Debug.WriteLine($"Removing {player.Name} from all {playerTeams.Count} team(s) they belonged to");
                     foreach (Teams.Team team in playerTeams)
                     {
                         LeaveTeam(player, team, false);
                     }
                     TeamPluginState.PlayerTeams.Remove(droppedPlayerId);
-                    EventHandlers["playerDropped"] -= TeamPluginState.PlayerCleanupActions[droppedPlayerId];
-                    TeamPluginState.PlayerCleanupActions.Remove(droppedPlayerId);
                 }
             }
         }
@@ -44,27 +54,15 @@ namespace SurviveTheHuntServer
             Debug.WriteLine($"Adding player {player.Name} to team {team}");
 
             TriggerEvent("chat-hook-teams:joinTeam", team, playerId);
-            bool createCleanupAction = true;
+
+            // Record the player's new team in the state.
             if(TeamPluginState.PlayerTeams.TryGetValue(playerId, out List<Teams.Team> playerTeams))
             {
                 playerTeams.Add(team);
-                createCleanupAction = false;
             }
             else
             {
                 TeamPluginState.PlayerTeams.Add(playerId, new List<Teams.Team>() { team });
-            }
-
-            if(createCleanupAction)
-            {
-                Action<Player, string> playerCleanupAction = new Action<Player, string>(CleanupPlayerTeams);
-
-                EventHandlers["playerDropped"] += playerCleanupAction;
-                TeamPluginState.PlayerCleanupActions.Add(playerId, playerCleanupAction);
-            }
-            else
-            {
-                Debug.WriteLine($"Player {player.Name} is already in a team, so no cleanup action is being created.");
             }
         }
 
@@ -78,6 +76,7 @@ namespace SurviveTheHuntServer
             TriggerEvent("chat-hook-teams:unjoinTeam", team, playerId);
             Debug.WriteLine($"Removed player {player.Name} from team {team}");
 
+            // Remove the player's team membership from the state.
             if (updateState && TeamPluginState.PlayerTeams.TryGetValue(playerId, out List<Teams.Team> playerTeams))
             {
                 playerTeams.RemoveAll(playerTeam => team == playerTeam);
@@ -88,12 +87,8 @@ namespace SurviveTheHuntServer
         {
             TriggerEvent("chat-hook-teams:resetTeams");
 
-            foreach(Action<Player, string> cleanupAction in TeamPluginState.PlayerCleanupActions.Values)
-            {
-                EventHandlers["playerDropped"] -= cleanupAction;
-            }
-
-            TeamPluginState.PlayerCleanupActions.Clear();
+            // Remove all players' teams.
+            TeamPluginState.PlayerTeams.Clear();
         }
     }
 }
