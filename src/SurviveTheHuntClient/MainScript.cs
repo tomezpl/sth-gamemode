@@ -369,6 +369,12 @@ namespace SurviveTheHuntClient
 
         protected void PlayerSpawnedCallback()
         {
+            if(!SpawnedOnce)
+            {
+                // If this is our first-spawn, try syncing the in-game clock just in case we're joining a hunt in progress.
+                TriggerLatentServerEvent(Events.Server.HuntedClockSyncRequested, 1);
+            }
+
             SpawnedOnce = true;
 
             // Refresh player's death state.

@@ -104,5 +104,15 @@ namespace SurviveTheHuntServer
             Debug.WriteLine($"Sending {Events.Client.ReceiveHuntedClock} with {hours.ToString().PadLeft(2, '0')}:{minutes.ToString().PadLeft(2, '0')}:{seconds.ToString().PadLeft(2, '0')}");
             TriggerClientEvent(Events.Client.ReceiveHuntedClock, hours, minutes, seconds);
         }
+
+        [EventHandler(Events.Server.HuntedClockSyncRequested)]
+        public void RequestHuntedClockResync()
+        {
+            if (GameState.Hunt?.IsStarted == true && GameState.Hunt?.HuntedPlayer != null)
+            {
+                Debug.WriteLine($"Requesting in-game clock to be re-synced from the hunted player");
+                TriggerLatentClientEvent(GameState.Hunt.HuntedPlayer, Events.Client.ReceiveClockSyncRequest, 1);
+            }
+        }
     }
 }
