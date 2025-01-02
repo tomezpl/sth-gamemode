@@ -78,6 +78,7 @@ namespace SurviveTheHuntServer
             {
                 Debug.WriteLine("Hunted player left, ending hunt.");
                 GameState.Hunt.End(Teams.Team.Hunters);
+                ResetTeams();
                 NotifyWinner();
             }
 
@@ -120,6 +121,7 @@ namespace SurviveTheHuntServer
                 if (GameState.Hunt.EndTime <= DateTime.UtcNow)
                 {
                     GameState.Hunt.End(Teams.Team.Hunted);
+                    ResetTeams();
                     NotifyWinner();
                 }
 
@@ -179,6 +181,7 @@ namespace SurviveTheHuntServer
                         if(Hunt.CheckPlayerDeath(Players[playerId], ref GameState))
                         {
                             NotifyWinner();
+                            ResetTeams();
                         }
 
                         // Mark the player's death location with a blip for everyone.
@@ -207,6 +210,11 @@ namespace SurviveTheHuntServer
                             NextNotification = (float)prepPhaseSeconds + (float)SharedConstants.HuntedPingInterval.TotalSeconds,
                             PrepPhaseDuration = prepPhaseSeconds
                         });
+
+                        foreach(Player player in Players)
+                        {
+                            JoinTeam(player, player.Handle == randomPlayer.Handle ? Teams.Team.Hunted : Teams.Team.Hunters);
+                        }
                     })
                 },
                 {

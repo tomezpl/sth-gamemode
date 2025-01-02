@@ -105,6 +105,11 @@ namespace SurviveTheHuntServer
                 gameState.Hunt.LastPingTime.Ticks, 
                 gameState.Hunt.PrepPhaseEndTime.Ticks
             );
+
+            if(gameState.Hunt.IsStarted)
+            {
+                JoinTeam(player, Teams.Team.Hunters);
+            }
         }
     }
 }
