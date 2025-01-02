@@ -2,10 +2,6 @@
 using SurviveTheHuntShared.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static SurviveTheHuntShared.Core.Teams;
 
 namespace SurviveTheHuntServer
 {
@@ -44,6 +40,11 @@ namespace SurviveTheHuntServer
             }
         }
 
+        /// <summary>
+        /// Notifies plugins to add a <paramref name="player"/> to a <paramref name="team"/>.
+        /// </summary>
+        /// <param name="player"></param>
+        /// <param name="team"></param>
         private void JoinTeam(Player player, Teams.Team team)
         {
             if(!int.TryParse(player.Handle, out int playerId))
@@ -66,6 +67,11 @@ namespace SurviveTheHuntServer
             }
         }
 
+        /// <summary>
+        /// Notifies plugins to remove a <paramref name="player"/> from a <paramref name="team"/>.
+        /// </summary>
+        /// <param name="player"></param>
+        /// <param name="team"></param>
         private void LeaveTeam(Player player, Teams.Team team, bool updateState = true)
         {
             if (!int.TryParse(player.Handle, out int playerId))
@@ -83,6 +89,9 @@ namespace SurviveTheHuntServer
             }
         }
 
+        /// <summary>
+        /// Notifies plugins to reset their team state(s).
+        /// </summary>
         private void ResetTeams()
         {
             TriggerEvent("chat-hook-teams:resetTeams");

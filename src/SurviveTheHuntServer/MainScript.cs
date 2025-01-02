@@ -213,14 +213,7 @@ namespace SurviveTheHuntServer
 
                         foreach(Player player in Players)
                         {
-                            if(player.Handle == randomPlayer.Handle)
-                            {
-                                JoinTeam(player, Teams.Team.Hunted);
-                            }
-                            else
-                            {
-                                JoinTeam(player, Teams.Team.Hunters);
-                            }
+                            JoinTeam(player, player.Handle == randomPlayer.Handle ? Teams.Team.Hunted : Teams.Team.Hunters);
                         }
                     })
                 },
