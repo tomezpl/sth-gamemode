@@ -99,5 +99,11 @@ namespace SurviveTheHuntClient
             VehicleHash.Zentorno,
             VehicleHash.ZType
         };
+
+        public static class RelationshipGroups
+        {
+            public const string Hunters = "hunter_group";
+            public const string Hunted = "hunted_group";
+        }
     }
 }
