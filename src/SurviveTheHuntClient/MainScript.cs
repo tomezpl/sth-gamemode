@@ -87,6 +87,9 @@ namespace SurviveTheHuntClient
 
         private bool IsTargetClipsetLoaded = false;
 
+        private uint? HunterGroupHash = null;
+        private uint? HuntedGroupHash = null;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -197,6 +200,17 @@ namespace SurviveTheHuntClient
                         EndTextCommandDisplayHelp(0, false, true, 5000);
                     }
                 }), false);
+
+                // Add relationship groups so enemy players can attack each other without friendly fire.
+                uint hunterGroupHash = 0, huntedGroupHash = 0;
+                AddRelationshipGroup(Constants.RelationshipGroups.Hunters, ref hunterGroupHash);
+                AddRelationshipGroup(Constants.RelationshipGroups.Hunted, ref huntedGroupHash);
+
+                SetRelationshipBetweenGroups(5, huntedGroupHash, hunterGroupHash);
+                SetRelationshipBetweenGroups(5, hunterGroupHash, huntedGroupHash);
+
+                HuntedGroupHash = huntedGroupHash;
+                HunterGroupHash = hunterGroupHash;
 
                 Vector3 spawn = SharedConstants.DockSpawn;
                 ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
@@ -387,8 +401,7 @@ namespace SurviveTheHuntClient
             TriggerServerEvent(Events.Server.RequestCleanClothes, new { PlayerId = GetPlayerServerId(PlayerId()) });
 
             // Enable friendly fire.
-            NetworkSetFriendlyFireOption(true);
-            SetCanAttackFriendly(PlayerPedId(), true, true);
+            NetworkSetFriendlyFireOption(false);
 
             if(GameState.Hunt.IsInProgress || GameState.Hunt.IsEnding)
             {
@@ -550,6 +563,8 @@ namespace SurviveTheHuntClient
             RunPedChangedChecks();
 
             TickLbgCharNeoIntegration();
+
+            UpdateRelationships();
 
             Wait(0);
         }
@@ -953,6 +968,55 @@ namespace SurviveTheHuntClient
             SetClockTime(hours, minutes, seconds);
             NetworkOverrideClockTime(hours, minutes, seconds);
             Debug.WriteLine($"Time is {GetClockHours().ToString().PadLeft(2, '0')}:{GetClockMinutes().ToString().PadLeft(2, '0')}:{GetClockSeconds().ToString().PadLeft(2, '0')}");
+        }
+
+        public float TimeSinceLastRelationshipGroupUpdate = 0;
+
+        /// <summary>
+        /// Sets each player's ped's relationship group based on game state
+        /// </summary>
+        public void UpdateRelationships()
+        {
+            TimeSinceLastRelationshipGroupUpdate += GetFrameTime();
+            if(TimeSinceLastRelationshipGroupUpdate > 1.5f)
+            {
+                TimeSinceLastRelationshipGroupUpdate = 0f;
+            }
+            else
+            {
+                return;
+            }
+
+            NetworkSetFriendlyFireOption(false);
+
+            if (DoesEntityExist(PlayerPedId()))
+            {
+                SetCanAttackFriendly(PlayerPedId(), false, false);
+            }
+
+            if (HunterGroupHash.HasValue && HuntedGroupHash.HasValue)
+            {
+                if (GameState.Hunt?.IsInProgress == true)
+                {
+                    foreach (Player player in Players)
+                    {
+                        if (player.Character.Exists())
+                        {
+                            SetPedRelationshipGroupHash(player.Character.Handle, GameState.Hunt.HuntedPlayer.Handle == player.Handle ? HuntedGroupHash.Value : HunterGroupHash.Value);
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (Player player in Players)
+                    {
+                        if (player.Character.Exists())
+                        {
+                            SetPedRelationshipGroupHash(player.Character.Handle, HunterGroupHash.Value);
+                        }
+                    }
+                }
+            }
         }
     }
 }
