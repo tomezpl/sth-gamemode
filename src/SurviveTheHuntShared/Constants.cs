@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace SurviveTheHuntShared
 {
-    public static class Constants
+    public static partial class Constants
     {
         /// <summary>
         /// Expected resource name for the gamemode on the server & client.

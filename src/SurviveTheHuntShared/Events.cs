@@ -61,6 +61,8 @@ namespace SurviveTheHuntShared
             /// The hunted player's client should receive this event before relaying the current in-game clock to a newly joined player via the server.
             /// </summary>
             public const string ReceiveClockSyncRequest = "sth:receiveHuntedClockSyncRequest";
+
+            public const string DisplayKill = "sth:displayKill";
         }
 
         /// <summary>

@@ -26,6 +26,8 @@ namespace SurviveTheHuntClient
         /// </summary>
         public bool DeathReported { get; set; } = false;
 
+        public bool ReportDeathNextTick = false;
+
         /// <summary>
         /// Last weapon the player had equipped.
         /// </summary>
