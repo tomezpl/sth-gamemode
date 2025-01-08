@@ -45,15 +45,26 @@ namespace SurviveTheHuntClient
 
             int numTokens = KillFeedLabel.CountPlayerNames(labelText);
             Debug.WriteLine($"label has {numTokens} tokens");
+            bool error = false;
             if(numTokens != 0)
             {
-                AddTextComponentSubstringPlayerName(GetPlayerName(GetPlayerFromServerId(int.Parse(isAttacker ? payload.KillInfo.VictimServerId : payload.KillInfo.AttackerServerId))));
-                Debug.WriteLine($"Added {(isAttacker ? "victim" : "attacker")} server ID");
+                if (int.TryParse(isAttacker || string.IsNullOrEmpty(payload.KillInfo.AttackerServerId) ? payload.KillInfo.VictimServerId : payload.KillInfo.AttackerServerId, out int firstPlayerId))
+                {
+                    AddTextComponentSubstringPlayerName(GetPlayerName(GetPlayerFromServerId(firstPlayerId)));
+                    Debug.WriteLine($"Added {(isAttacker ? "victim" : "attacker")} server ID");
+                }
+                else
+                {
+                    error = true;
+                }
             }
-            if(numTokens == 2)
+            if(numTokens == 2 && !error)
             {
-                AddTextComponentSubstringPlayerName(GetPlayerName(GetPlayerFromServerId(int.Parse(isAttacker ? payload.KillInfo.AttackerServerId : payload.KillInfo.VictimServerId))));
-                Debug.WriteLine($"Added {(!isAttacker ? "victim" : "attacker")} server ID");
+                if (int.TryParse(isAttacker ? payload.KillInfo.AttackerServerId : payload.KillInfo.VictimServerId, out int secondPlayerId))
+                {
+                    AddTextComponentSubstringPlayerName(GetPlayerName(GetPlayerFromServerId(secondPlayerId)));
+                    Debug.WriteLine($"Added {(!isAttacker ? "victim" : "attacker")} server ID");
+                }
             }
 
             EndTextCommandThefeedPostMpticker(true, true);
