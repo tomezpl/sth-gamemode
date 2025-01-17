@@ -21,6 +21,10 @@ namespace SurviveTheHuntServer.Helpers
                 {
                     payload.Label = SharedConstants.KillFeedMessages.HuntedKillLabel;
                 }
+                else if(killInfo.VictimServerId == killInfo.AttackerServerId)
+                {
+                    payload.Label = SharedConstants.KillFeedMessages.SelfKillLabel;
+                }
                 else
                 {
                     int randomMessage = rng.Next(SharedConstants.KillFeedMessages.RegularLabels.Length);
