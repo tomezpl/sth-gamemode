@@ -171,24 +171,6 @@ namespace SurviveTheHuntServer
                     })
                 },
                 {
-                    Events.Server.PlayerDied.EventName(), new Action<dynamic>(data =>
-                    {
-                        int playerId = data.PlayerId;
-
-                        Console.WriteLine($"Player died: {GetPlayerName($"{playerId}")}");
-
-                        // Did the hunted player die?
-                        if(Hunt.CheckPlayerDeath(Players[playerId], ref GameState))
-                        {
-                            NotifyWinner();
-                            ResetTeams();
-                        }
-
-                        // Mark the player's death location with a blip for everyone.
-                        TriggerClientEvent(Events.Client.MarkPlayerDeath, data.PlayerPosX, data.PlayerPosY, data.PlayerPosZ, data.PlayerTeam);
-                    })
-                },
-                {
                     Events.Server.RequestStartHunt.EventName(), new Action<dynamic>(data =>
                     {
                         Player randomPlayer = Hunt.ChooseRandomPlayer(Players, ref GameState);

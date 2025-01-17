@@ -16,6 +16,7 @@ using static CitizenFX.Core.Native.API;
 using SharedConstants = SurviveTheHuntShared.Constants;
 using SurviveTheHuntShared.Core;
 using SurviveTheHuntShared;
+using System.Xml;
 
 namespace SurviveTheHuntClient
 {
@@ -421,6 +422,8 @@ namespace SurviveTheHuntClient
             WantedLevelHelper.DisableWantedLevel();
 
             LastSpawnTime = DateTime.UtcNow.Ticks;
+
+            KillTracker.Reset();
         }
 
         /// <summary>
@@ -494,10 +497,24 @@ namespace SurviveTheHuntClient
             PlayerState.UpdateWeapons(Game.PlayerPed);
 
             // Check and report player death to the server if needed.
+            if(PlayerState.ReportDeathNextTick)
+            {
+                TriggerServerEvent(Events.Server.PlayerDied, PlayerDiedPayload.Serialize(new PlayerDiedPayload
+                {
+                    PlayerId = Game.Player.ServerId,
+                    PlayerPosX = PlayerPos.X,
+                    PlayerPosY = PlayerPos.Y,
+                    PlayerPosZ = PlayerPos.Z,
+                    PlayerTeam = PlayerState.Team,
+                    KillInfo = KillTracker.GetKillInfo()
+                }));
+                PlayerState.DeathReported = true;
+                PlayerState.ReportDeathNextTick = false;
+            }
             if(!Game.Player.IsAlive && !PlayerState.DeathReported)
             {
-                TriggerServerEvent(Events.Server.PlayerDied, new { PlayerId = Game.Player.ServerId, PlayerPosX = PlayerPos.X, PlayerPosY = PlayerPos.Y, PlayerPosZ = PlayerPos.Z, PlayerTeam = PlayerState.Team });
-                PlayerState.DeathReported = true;
+                // Instead of reporting immediately, defer it for the next tick, so the KillTracker can tick to build the KillInfo.
+                PlayerState.ReportDeathNextTick = true;
             }
 
             if (SpawnedVehiclesNeedSync)
@@ -565,6 +582,8 @@ namespace SurviveTheHuntClient
             TickLbgCharNeoIntegration();
 
             UpdateRelationships();
+
+            KillTracker.Tick();
 
             Wait(0);
         }

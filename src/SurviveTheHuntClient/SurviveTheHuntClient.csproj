@@ -32,7 +32,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CitizenFX.Core.Client, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\CitizenFX.Core.Client.1.0.6370\lib\net45\CitizenFX.Core.Client.dll</HintPath>
+      <HintPath>..\..\packages\CitizenFX.Core.Client.1.0.10230\lib\net45\CitizenFX.Core.Client.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -48,6 +48,7 @@
     <Compile Include="Events.cs" />
     <Compile Include="GameState.cs" />
     <Compile Include="Helpers\DeathBlips.cs" />
+    <Compile Include="Helpers\KillTracker.cs" />
     <Compile Include="Helpers\MinimapHelper.cs" />
     <Compile Include="Helpers\SyncedVehicle.cs" />
     <Compile Include="Helpers\WantedLevelHelper.cs" />
@@ -60,13 +61,13 @@
     <Compile Include="Utility.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\SurviveTheHuntShared\SurviveTheHuntShared.csproj">
       <Project>{a49f7ac5-2652-4c94-930c-950f8c80283a}</Project>
       <Name>SurviveTheHuntShared</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

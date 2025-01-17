@@ -27,6 +27,11 @@ namespace SurviveTheHuntClient
         public bool DeathReported { get; set; } = false;
 
         /// <summary>
+        /// Should the player's death be reported to the server?
+        /// </summary>
+        public bool ReportDeathNextTick = false;
+
+        /// <summary>
         /// Last weapon the player had equipped.
         /// </summary>
         public uint LastWeaponEquipped = (uint)WeaponHash.Unarmed;
