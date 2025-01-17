@@ -513,6 +513,7 @@ namespace SurviveTheHuntClient
             }
             if(!Game.Player.IsAlive && !PlayerState.DeathReported)
             {
+                // Instead of reporting immediately, defer it for the next tick, so the KillTracker can tick to build the KillInfo.
                 PlayerState.ReportDeathNextTick = true;
             }
 

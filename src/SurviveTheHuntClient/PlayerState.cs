@@ -26,6 +26,9 @@ namespace SurviveTheHuntClient
         /// </summary>
         public bool DeathReported { get; set; } = false;
 
+        /// <summary>
+        /// Should the player's death be reported to the server?
+        /// </summary>
         public bool ReportDeathNextTick = false;
 
         /// <summary>

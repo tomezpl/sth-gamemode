@@ -62,6 +62,9 @@ namespace SurviveTheHuntShared
             /// </summary>
             public const string ReceiveClockSyncRequest = "sth:receiveHuntedClockSyncRequest";
 
+            /// <summary>
+            /// A client-side event that will run the UI functions to display a notification about a player's death.
+            /// </summary>
             public const string DisplayKill = "sth:displayKill";
         }
 
