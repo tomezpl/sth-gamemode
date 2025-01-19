@@ -30,7 +30,7 @@ namespace SurviveTheHuntServer
 
         private readonly HuntedQueue HuntedPlayerQueue = null;
 
-        private Config Config;
+        private ServerConfig Config;
 
         public MainScript()
         {

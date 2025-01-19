@@ -53,6 +53,7 @@
     <Compile Include="Helpers\HuntedQueue.cs" />
     <Compile Include="Extensions\TeamPlugins.cs" />
     <Compile Include="Helpers\KillFeedDispatcher.cs" />
+    <Compile Include="Helpers\WeaponLoadout.cs" />
     <Compile Include="Hunt.cs" />
     <Compile Include="MainScript.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

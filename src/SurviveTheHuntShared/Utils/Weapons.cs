@@ -23,15 +23,18 @@ namespace SurviveTheHuntShared.Utils
             /// </summary>
             public ushort Ammo;
 
+            public string[] Attachments;
+
             /// <summary>
             /// Creates a new <see cref="WeaponAmmo"/> for the weapon with the given <paramref name="hash"/> and amount of <paramref name="ammo"/>.
             /// </summary>
             /// <param name="hash">Weapon hash</param>
             /// <param name="ammo">Ammo count</param>
-            public WeaponAmmo(uint hash, ushort ammo)
+            public WeaponAmmo(uint hash, ushort ammo, IEnumerable<string> attachments)
             {
                 Hash = hash;
                 Ammo = ammo;
+                Attachments = attachments.ToArray();
             }
         }
     }
