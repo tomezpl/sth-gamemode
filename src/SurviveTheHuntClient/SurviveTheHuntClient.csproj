@@ -52,6 +52,7 @@
     <Compile Include="Helpers\MinimapHelper.cs" />
     <Compile Include="Helpers\SyncedVehicle.cs" />
     <Compile Include="Helpers\WantedLevelHelper.cs" />
+    <Compile Include="Helpers\WeaponAttachments.cs" />
     <Compile Include="HuntUI.cs" />
     <Compile Include="Integrations\LbgCharNeo.cs" />
     <Compile Include="MainScript.cs" />

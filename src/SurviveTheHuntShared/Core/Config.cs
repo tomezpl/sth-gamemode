@@ -95,20 +95,19 @@ namespace SurviveTheHuntShared.Core
                         List<string> attachments = new List<string>(numAttachments);
                         if (numAttachments > 0)
                         {
+                            string attachmentListString = "";
                             char lastChar = (char)0;
-                            while (lastChar != ';' && attachments.Count < numAttachments)
+                            
+                            for(uint i = 0; lastChar != ';' && attachments.Count <= numAttachments && ms.Position < ms.Length; i += 2)
                             {
-                                string currentAttachment = "";
-                                while (lastChar != ',')
+                                lastChar = EncodingHelper.CharFromUnicode((byte)ms.ReadByte(), (byte)ms.ReadByte());
+                                if(lastChar != ';')
                                 {
-                                    lastChar = (char)ms.ReadByte();
-                                    if (lastChar != ',' && lastChar != ';')
-                                    {
-                                        currentAttachment += lastChar;
-                                    }
+                                    attachmentListString += lastChar;
                                 }
-                                attachments.Add(currentAttachment);
                             }
+
+                            attachments.AddRange(attachmentListString.Split(','));
                         }
 
                         // Store the weapon hash and ammo count in a WeaponAmmo object.

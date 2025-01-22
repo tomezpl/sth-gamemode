@@ -132,9 +132,9 @@ namespace SurviveTheHuntServer.Helpers
                             {
                                 commaSeparated += $",{weapon.Value.Attachments[i]}";
                             }
-                            byte[] attachmentStringBytes = Encoding.ASCII.GetBytes(commaSeparated);
+                            commaSeparated += ";";
+                            byte[] attachmentStringBytes = Encoding.Unicode.GetBytes(commaSeparated);
                             ms.Write(attachmentStringBytes, 0, attachmentStringBytes.Length);
-                            ms.WriteByte((byte)';');
                         }
                     }
 

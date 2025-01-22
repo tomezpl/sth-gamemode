@@ -55,6 +55,7 @@
     <Compile Include="Utils\ConfigSerializable.cs" />
     <Compile Include="Utils\ConvarHelper.cs" />
     <Compile Include="Utils\Coord.cs" />
+    <Compile Include="Utils\EncodingHelper.cs" />
     <Compile Include="Utils\Vector3.cs" />
     <Compile Include="Utils\Weapons.cs" />
   </ItemGroup>
