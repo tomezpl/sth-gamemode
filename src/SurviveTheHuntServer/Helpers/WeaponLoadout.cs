@@ -36,13 +36,14 @@ namespace SurviveTheHuntServer.Helpers
             /// <summary>
             /// A map of weapons and ammo,
             /// ie. each key is a human-readable weapon ID (as seen in the keys for <see cref="Constants.WeaponHashes"/>)
-            /// and each value is the ammo count to give for that weapon.
+            /// and each value is the ammo count and attachment names to give for that weapon.
             /// </summary>
-            //[JsonProperty("weaponAmmo")]
-            //[JsonIgnore]
             [JsonConverter(typeof(WeaponAmmoConverter))]
             public Dictionary<string, WeaponInfo> WeaponAmmo = new Dictionary<string, WeaponInfo>();
 
+            /// <summary>
+            /// Custom JSON converter to allow values to be either an integer (ammo count, no attachments) or object (ammo count & attachments)
+            /// </summary>
             public class WeaponAmmoConverter : JsonConverter<Dictionary<string, WeaponInfo>>
             {
                 public override Dictionary<string, WeaponInfo> ReadJson(JsonReader reader, Type objectType, Dictionary<string, WeaponInfo> existingValue, bool hasExistingValue, JsonSerializer serializer)
@@ -55,6 +56,7 @@ namespace SurviveTheHuntServer.Helpers
                     {
                         try
                         {
+                            // If the value is an integer, create an object with an empty attachment array
                             if (kvp.Value.GetType().Name.StartsWith("Int") || kvp.Value.GetType().Name.StartsWith("UInt"))
                             {
                                 JToken value = JValue.FromObject(kvp.Value);
@@ -63,7 +65,9 @@ namespace SurviveTheHuntServer.Helpers
                                     Ammo = value.ToObject<ushort>(),
                                     Attachments = new string[0]
                                 });
-                            } else
+                            }
+                            // Otherwise parse the object as a dictionary of WeaponInfos
+                            else
                             {
                                 JToken obj = JValue.FromObject(kvp.Value);
                                 parsed.Add(kvp.Key, obj.ToObject<WeaponInfo>());
@@ -72,11 +76,6 @@ namespace SurviveTheHuntServer.Helpers
                         {
                             Debug.WriteLine(ex.ToString());
                         }
-                    }
-
-                    foreach(WeaponInfo key in parsed.Values)
-                    {
-                        Debug.WriteLine(key.Ammo.ToString());
                     }
 
                     return parsed;
@@ -95,12 +94,6 @@ namespace SurviveTheHuntServer.Helpers
 
                 [JsonProperty("attachments")]
                 public string[] Attachments { get; set; }
-            }
-
-            [OnSerialized]
-            internal void OnSerialized(StreamingContext context)
-            {
-                
             }
 
             /// <summary>

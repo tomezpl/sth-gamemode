@@ -68,7 +68,7 @@ namespace SurviveTheHuntShared.Core
             private static Weapons.WeaponAmmo[] GetWeapons(byte[] weapons)
             {
                 // Each weapon is uint hash followed by ushort ammo count, followed by a byte indicating how many attachments are included.
-                // The weapon can then include those up to 255 comma-separated ASCII strings of attachment names.
+                // The weapon can then include those up to 255 comma-separated UTF-16 strings of attachment names.
                 const uint minWeaponSize = sizeof(uint) + sizeof(ushort) + sizeof(byte);
                 Weapons.WeaponAmmo[] output = null;
 
