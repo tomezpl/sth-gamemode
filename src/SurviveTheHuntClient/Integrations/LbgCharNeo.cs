@@ -29,7 +29,7 @@ namespace SurviveTheHuntClient
 
                 for (int i = 0; i < AmmoState.Length; i++)
                 {
-                    AmmoState[i] = new Weapons.WeaponAmmo(selectedLoadout[i].Hash, (ushort)GetAmmoInPedWeapon(playerPed, selectedLoadout[i].Hash));
+                    AmmoState[i] = new Weapons.WeaponAmmo(selectedLoadout[i].Hash, (ushort)GetAmmoInPedWeapon(playerPed, selectedLoadout[i].Hash), selectedLoadout[i].Attachments);
                 }
 
                 AmmoCheckTimer = 0;

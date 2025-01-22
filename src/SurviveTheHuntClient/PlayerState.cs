@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Helpers;
 using SurviveTheHuntShared.Core;
 using SurviveTheHuntShared.Utils;
 using System;
@@ -121,6 +122,11 @@ namespace SurviveTheHuntClient
             {
                 bool equip = weapon.Hash == LastWeaponEquipped;
                 GiveWeaponToPed(playerPed.Handle, weapon.Hash, weapon.Ammo, false, equip);
+                
+                foreach(string attachment in weapon.Attachments)
+                {
+                    WeaponAttachments.ApplyAttachment(weapon.Hash, attachment);
+                }
             }
 
             WeaponsGiven = true;
