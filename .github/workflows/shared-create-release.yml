@@ -1,5 +1,6 @@
 env:
   STH_CLIENT_SCRIPT: SurviveTheHuntClient.net.dll
+  STH_CLIENT_UI_SCRIPT: SurviveTheHuntClient.UI.net.dll
   STH_SERVER_SCRIPT: SurviveTheHuntServer.net.dll
   STH_SHARED_LIB: SurviveTheHuntShared.net.dll
   NEWTONSOFT_JSON_DLL: Newtonsoft.Json.dll
@@ -46,6 +47,8 @@ jobs:
             echo "Writing new version number to shared library"
             cd ../SurviveTheHuntShared
             ../../scripts/update-assembly-version.ps1 ${{inputs.version_number}}
+            cd ../SurviveTheHuntClient.UI
+            ../../scripts/update-assembly-version.ps1 ${{inputs.version_number}}
         shell: pwsh
       - 
         name: Build
@@ -53,6 +56,7 @@ jobs:
         run: |
             mkdir artifacts
             mkdir artifacts/configs
+            mkdir artifacts/sth-ui
             mkdir build
             msbuild.exe sth-gamemode.sln /p:platform="Any CPU" /p:configuration="Release" /p:OutputPath=..\..\build
       -
@@ -60,9 +64,12 @@ jobs:
         shell: pwsh
         run: |
             copy fxmanifest.lua artifacts/fxmanifest.lua
+            copy uimanifest.lua artifacts/sth-ui/fxmanifest.lua
             copy build/${{env.STH_CLIENT_SCRIPT}} artifacts/${{env.STH_CLIENT_SCRIPT}}
             copy build/${{env.STH_SERVER_SCRIPT}} artifacts/${{env.STH_SERVER_SCRIPT}}
             copy build/${{env.STH_SHARED_LIB}} artifacts/${{env.STH_SHARED_LIB}}
+            copy build/${{env.STH_SHARED_LIB}} artifacts/sth-ui/${{env.STH_SHARED_LIB}}
+            copy build/${{env.STH_CLIENT_UI_SCRIPT}} artifacts/sth-ui/${{env.STH_CLIENT_UI_SCRIPT}}
             copy build/${{env.NEWTONSOFT_JSON_DLL}} artifacts/${{env.NEWTONSOFT_JSON_DLL}}
             copy ${{env.CONFIG_DIR}} artifacts/configs/
             Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
