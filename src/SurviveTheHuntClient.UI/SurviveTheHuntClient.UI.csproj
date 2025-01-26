@@ -76,6 +76,6 @@
   </Target>
   <Target Name="ILMerge">
     <!-- the ILMergePath property points to the location of ILMerge.exe console application -->
-    <Exec Command="$(ILMergeConsolePath) /out:$(ProjectDir)..\..\build\SurviveTheHuntClient.UI.net.dll $(ProjectDir)..\..\SurviveTheHuntClient.UI.net.dll $(ProjectDir)..\..\LemonUI.FiveM.dll" />
+    <Exec Command="$(ILMergeConsolePath) /out:$(ProjectDir)..\..\build\SurviveTheHuntClient.UI.net.dll $(ProjectDir)obj\Release\SurviveTheHuntClient.UI.net.dll $(ProjectDir)obj\Release\LemonUI.FiveM.dll" />
   </Target>
 </Project>
