@@ -173,6 +173,12 @@ namespace SurviveTheHuntServer
                 {
                     Events.Server.RequestStartHunt.EventName(), new Action<dynamic>(data =>
                     {
+                        // Prevent the next hunt from being started too quick.
+                        if(GameState.Hunt.NextHuntStartTime != null && GameState.Hunt.NextHuntStartTime > DateTime.UtcNow)
+                        {
+                            return;
+                        }
+
                         Player randomPlayer = Hunt.ChooseRandomPlayer(Players, ref GameState);
 
                         GameState.Hunt.LastHuntedPlayer = randomPlayer;

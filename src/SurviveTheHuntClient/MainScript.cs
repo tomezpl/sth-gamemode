@@ -726,6 +726,7 @@ namespace SurviveTheHuntClient
             }
 
             PlayerState.TakeAwayWeapons(ref playerPed);
+            AmmoCheckTimer = 0;
         }
 
         private void HuntStartedByServer(float secondsTillPing, DateTime endTime, TimeSpan? prepPhase = null)
@@ -953,7 +954,7 @@ namespace SurviveTheHuntClient
                 foreach (Weapons.WeaponAmmo weapon in AmmoState)
                 {
                     Debug.WriteLine($"Setting {weapon.Hash} to have {weapon.Ammo} ammo");
-                    GiveWeaponToPed(playerPed, weapon.Hash, weapon.Ammo, false, false);
+                    NativeHelpers.GivePedWeapon(playerPed, weapon);
                 }
             }
 
