@@ -1,6 +1,7 @@
 env:
   STH_CLIENT_SCRIPT: SurviveTheHuntClient.net.dll
   STH_CLIENT_UI_SCRIPT: SurviveTheHuntClient.UI.net.dll
+  LEMONUI_DLL: LemonUI.FiveM.dll
   STH_SERVER_SCRIPT: SurviveTheHuntServer.net.dll
   STH_SHARED_LIB: SurviveTheHuntShared.net.dll
   NEWTONSOFT_JSON_DLL: Newtonsoft.Json.dll
@@ -70,6 +71,7 @@ jobs:
             copy build/${{env.STH_SHARED_LIB}} artifacts/${{env.STH_SHARED_LIB}}
             copy build/${{env.STH_SHARED_LIB}} artifacts/sth-ui/${{env.STH_SHARED_LIB}}
             copy build/${{env.STH_CLIENT_UI_SCRIPT}} artifacts/sth-ui/${{env.STH_CLIENT_UI_SCRIPT}}
+            copy build/${{env.LEMONUI_DLL}} artifacts/sth-ui/${{env.LEMONUI_DLL}}
             copy build/${{env.NEWTONSOFT_JSON_DLL}} artifacts/${{env.NEWTONSOFT_JSON_DLL}}
             copy ${{env.CONFIG_DIR}} artifacts/configs/
             Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
