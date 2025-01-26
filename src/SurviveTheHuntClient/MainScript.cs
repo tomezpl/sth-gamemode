@@ -95,7 +95,7 @@ namespace SurviveTheHuntClient
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientResourceStart);
-            EventHandlers["onResourceStopping"] += new Action<string>(OnResourceStopping);
+            EventHandlers["onResourceStop"] += new Action<string>(OnResourceStopping);
 
             CreateEvents();
             foreach(KeyValuePair<string, Action<dynamic>> ev in STHEvents)
