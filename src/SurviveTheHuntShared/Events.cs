@@ -66,6 +66,10 @@ namespace SurviveTheHuntShared
             /// A client-side event that will run the UI functions to display a notification about a player's death.
             /// </summary>
             public const string DisplayKill = "sth:displayKill";
+
+            public const string SpawnCars = "sth:spawnCars";
+            public const string Heal = "sth:heal";
+            public const string Respawn = "sth:respawn";
         }
 
         /// <summary>

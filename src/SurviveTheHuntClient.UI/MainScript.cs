@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
 using LemonUI;
 using LemonUI.Menus;
+using SurviveTheHuntShared;
 
 namespace SurviveTheHuntClient.UI
 {
@@ -19,6 +20,13 @@ namespace SurviveTheHuntClient.UI
         private NativeItem CharacterButton;
         private NativeItem SpawnCarsButton;
         private NativeItem AboutButton;
+        
+        private NativeMenu PlayerMenu;
+        private NativeSubmenuItem PlayerMenuItem;
+        private NativeItem HealButton;
+        private NativeMenu RespawnMenu;
+        private NativeSubmenuItem RespawnMenuItem;
+        private NativeItem RespawnConfirmButton;
 
         private bool Shown = false;
 
@@ -27,19 +35,19 @@ namespace SurviveTheHuntClient.UI
 
         }
 
-        [EventHandler("onResourceStart")]
-        public void OnResourceStarted(string resourceName)
+        [EventHandler("onClientResourceStart")]
+        public void OnClientResourceStarted(string resourceName)
         {
-            if(resourceName == "sth-ui")
+            if(resourceName == GetCurrentResourceName())
             {
                 Debug.WriteLine("HI THIS IS UI!!!!");
+
+                InitUI();
+
+                RegisterCommand("_sthmenukeybind", new Action(MenuKeybindAction), false);
+
+                Tick += Update;
             }
-
-            InitUI();
-
-            RegisterCommand("_sthmenukeybind", new Action(MenuKeybindAction), false);
-
-            Tick += Update;
         }
 
         private void MenuKeybindAction()
@@ -55,19 +63,75 @@ namespace SurviveTheHuntClient.UI
             ObjectPool = new ObjectPool();
 
             MainMenu = new NativeMenu("Survive the Hunt", "Main menu");
+            PlayerMenu = new NativeMenu("Player Options", "Player Options", "Restore your health, respawn etc.");
+            RespawnMenu = new NativeMenu("Are you sure?", "Respawn", "Respawn immediately. Keep in mind you will lose the round if you are the hunted player.");
+
 
             ObjectPool.Add(MainMenu);
+            ObjectPool.Add(PlayerMenu);
+            ObjectPool.Add(RespawnMenu);
 
             StartHuntButton = new NativeItem("Start", "Start a new round of Survive the Hunt.");
             CharacterButton = new NativeItem("Appearance", "Change your character's appearance.");
             SpawnCarsButton = new NativeItem("Spawn cars", "Request a fresh batch of rides.");
-            AboutButton = new NativeItem("About", $"Survive the Hunt v{typeof(MainScript).Assembly.GetName().Version}\n\nBased on FailRace's YouTube videos. Developed by Tomeztos (tomezpl).\nSpecial thanks for QA:\n- happygrowls\n- rollschuh2282\n- SpiderVice");
-
+            PlayerMenuItem = new NativeSubmenuItem(PlayerMenu, MainMenu);
+            AboutButton = new NativeItem("About", $"Survive the Hunt v{typeof(MainScript).Assembly.GetName().Version}\n\nBased on FailRace's YouTube videos. Developed by Tomeztos (tomezpl).\n\nSpecial thanks for QA:\n- happygrowls\n- rollschuh2282\n- SpiderVice");
 
             MainMenu.Add(StartHuntButton);
             MainMenu.Add(CharacterButton);
             MainMenu.Add(SpawnCarsButton);
+            MainMenu.Add(PlayerMenuItem);
+
+            HealButton = new NativeItem("Heal", "Restore your health immediately. You cannot heal during an active hunt.");
+            RespawnMenuItem = new NativeSubmenuItem(RespawnMenu, PlayerMenu);
+            RespawnConfirmButton = new NativeItem("Confirm respawn", "Kill your character and respawn at Terminal.");
+            PlayerMenu.Add(HealButton);
+            PlayerMenu.Add(RespawnMenuItem);
+            RespawnMenu.Add(RespawnConfirmButton);
+            RespawnConfirmButton.Activated += RespawnConfirmed;
+            HealButton.Activated += HealButtonClicked;
+
+            StartHuntButton.Activated += StartHuntClicked;
+            CharacterButton.Activated += CharacterMenuClicked;
+            SpawnCarsButton.Activated += SpawnCarsClicked;
+
+            MainMenu.Closing += MainMenuClosing;
+
             MainMenu.Add(AboutButton);
+        }
+
+        private void MainMenuClosing(object sender, CancelEventArgs e)
+        {
+            Shown = false;
+        }
+
+        private void HealButtonClicked(object sender, EventArgs e)
+        {
+            TriggerEvent(Events.Client.Heal);
+        }
+
+        private void RespawnConfirmed(object sender, EventArgs e)
+        {
+            RespawnMenu.Visible = false;
+            TriggerEvent(Events.Client.Respawn);
+        }
+
+        private void CharacterMenuClicked(object sender, EventArgs e)
+        {
+            MainMenu.Visible = false;
+            TriggerEvent("lbg-openChar");
+        }
+
+        private void StartHuntClicked(object sender, EventArgs e)
+        {
+            TriggerServerEvent(Events.Server.RequestStartHunt);
+            MainMenu.Visible = false;
+        }
+
+        private void SpawnCarsClicked(object sender, EventArgs e)
+        {
+            MainMenu.Visible = false;
+            TriggerEvent(Events.Client.SpawnCars);
         }
 
         private void ToggleUI()
