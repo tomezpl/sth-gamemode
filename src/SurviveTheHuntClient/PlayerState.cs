@@ -121,12 +121,7 @@ namespace SurviveTheHuntClient
             foreach(Weapons.WeaponAmmo weapon in Constants.WeaponLoadouts[Team])
             {
                 bool equip = weapon.Hash == LastWeaponEquipped;
-                GiveWeaponToPed(playerPed.Handle, weapon.Hash, weapon.Ammo, false, equip);
-                
-                foreach(string attachment in weapon.Attachments)
-                {
-                    WeaponAttachments.ApplyAttachment(weapon.Hash, attachment);
-                }
+                NativeHelpers.GivePedWeapon(playerPed.Handle, weapon, equip);
             }
 
             WeaponsGiven = true;

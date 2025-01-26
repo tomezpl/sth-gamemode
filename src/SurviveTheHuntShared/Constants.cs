@@ -267,5 +267,11 @@ namespace SurviveTheHuntShared
         /// If true, the hunter players' in-game clocks will be synced with the hunted player's in-game time when the hunt starts.
         /// </summary>
         public const string SyncTimeOnHuntStartConvar = "sth_syncTimeOnHuntStart";
+
+
+        /// <summary>
+        /// Number of milliseconds to wait before allowing a hunt to be started again.
+        /// </summary>
+        public const ushort HuntStartCooldown = 10 * 1000;
     }
 }
