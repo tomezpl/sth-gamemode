@@ -65,7 +65,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>"$(DevEnvDir)..\..\MSBuild\Current\Bin\MSBuild.exe" "$(ProjectPath)" /t:ILMerge /p:configuration="Release"
+    <PostBuildEvent>MSBuild.exe "$(ProjectPath)" /t:ILMerge /p:configuration="Release"
 </PostBuildEvent>
   </PropertyGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
