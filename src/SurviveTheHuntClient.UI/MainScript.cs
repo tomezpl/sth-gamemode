@@ -30,6 +30,9 @@ namespace SurviveTheHuntClient.UI
 
         private bool Shown = false;
 
+        private bool HoldingInteractionMenuPadButton = false;
+        private float TimeHoldingInteractionMenu = 0f;
+
         public MainScript()
         {
 
@@ -40,7 +43,7 @@ namespace SurviveTheHuntClient.UI
         {
             if(resourceName == GetCurrentResourceName())
             {
-                Debug.WriteLine("HI THIS IS UI!!!!");
+                Debug.WriteLine($"[sth-ui]: Client resource started");
 
                 InitUI();
 
@@ -143,6 +146,35 @@ namespace SurviveTheHuntClient.UI
 
         public async Task Update()
         {
+            if(HoldingInteractionMenuPadButton && TimeHoldingInteractionMenu >= 0.25f)
+            {
+                ToggleUI();
+                TimeHoldingInteractionMenu = 0f;
+                HoldingInteractionMenuPadButton = false;
+                EnableControlAction(0, 0, true);
+            }
+
+            if(IsControlPressed(0, 244))
+            {
+                HoldingInteractionMenuPadButton = true;
+                TimeHoldingInteractionMenu += GetFrameTime();
+                DisableControlAction(0, 0, true);
+            } else if (IsControlJustReleased(0, 244))
+            {
+                EnableControlAction(0, 0, true);
+                TimeHoldingInteractionMenu = 0f;
+                HoldingInteractionMenuPadButton = false;
+            }
+
+            if (ObjectPool.AreAnyVisible)
+            {
+                // Disable sprint on controller if the menu is open
+                DisableControlAction(0, 21, true);
+            } else
+            {
+                EnableControlAction(0, 21, true);
+            }
+
             ObjectPool.Process();
         }
     }
