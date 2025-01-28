@@ -35,10 +35,9 @@ namespace SurviveTheHuntClient.UI
 
         public MainScript()
         {
-
+            EventHandlers["onClientResourceStart"] += new Action<string>(OnClientGameTypeStart);
         }
 
-        [EventHandler("onClientGameTypeStart")]
         public void OnClientGameTypeStart(string resourceName)
         {
             if(resourceName == GetCurrentResourceName())
@@ -68,7 +67,6 @@ namespace SurviveTheHuntClient.UI
             MainMenu = new NativeMenu("Survive the Hunt", "Main menu");
             PlayerMenu = new NativeMenu("Player Options", "Player Options", "Restore your health, respawn etc.");
             RespawnMenu = new NativeMenu("Are you sure?", "Respawn", "Respawn immediately. Keep in mind you will lose the round if you are the hunted player.");
-
 
             ObjectPool.Add(MainMenu);
             ObjectPool.Add(PlayerMenu);
