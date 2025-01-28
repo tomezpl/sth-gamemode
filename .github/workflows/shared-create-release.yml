@@ -56,7 +56,8 @@ jobs:
         # Supposedly OutputPath is meant to be relative to the PROJECT file, not cwd or even solution file. https://stackoverflow.com/a/4965607
         run: |
             mkdir artifacts
-            mkdir artifacts/configs
+            mkdir artifacts/sth-gamemode
+            mkdir artifacts/sth-gamemode/configs
             mkdir artifacts/sth-ui
             mkdir build
             msbuild.exe sth-gamemode.sln /p:platform="Any CPU" /p:configuration="Release" /p:OutputPath=..\..\build
@@ -64,16 +65,16 @@ jobs:
         name: Prepare artifacts
         shell: pwsh
         run: |
-            copy fxmanifest.lua artifacts/fxmanifest.lua
+            copy fxmanifest.lua artifacts/sth-gamemode/fxmanifest.lua
             copy uimanifest.lua artifacts/sth-ui/fxmanifest.lua
-            copy build/${{env.STH_CLIENT_SCRIPT}} artifacts/${{env.STH_CLIENT_SCRIPT}}
-            copy build/${{env.STH_SERVER_SCRIPT}} artifacts/${{env.STH_SERVER_SCRIPT}}
-            copy build/${{env.STH_SHARED_LIB}} artifacts/${{env.STH_SHARED_LIB}}
+            copy build/${{env.STH_CLIENT_SCRIPT}} artifacts/sth-gamemode/${{env.STH_CLIENT_SCRIPT}}
+            copy build/${{env.STH_SERVER_SCRIPT}} artifacts/sth-gamemode/${{env.STH_SERVER_SCRIPT}}
+            copy build/${{env.STH_SHARED_LIB}} artifacts/sth-gamemode/${{env.STH_SHARED_LIB}}
             copy build/${{env.STH_SHARED_LIB}} artifacts/sth-ui/${{env.STH_SHARED_LIB}}
             copy build/${{env.STH_CLIENT_UI_SCRIPT}} artifacts/sth-ui/${{env.STH_CLIENT_UI_SCRIPT}}
             copy build/${{env.LEMONUI_DLL}} artifacts/sth-ui/${{env.LEMONUI_DLL}}
-            copy build/${{env.NEWTONSOFT_JSON_DLL}} artifacts/${{env.NEWTONSOFT_JSON_DLL}}
-            copy ${{env.CONFIG_DIR}} artifacts/configs/
+            copy build/${{env.NEWTONSOFT_JSON_DLL}} artifacts/sth-gamemode/${{env.NEWTONSOFT_JSON_DLL}}
+            copy ${{env.CONFIG_DIR}} artifacts/sth-gamemode/configs/
             Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
       -
         if: ${{!inputs.prerelease}}
