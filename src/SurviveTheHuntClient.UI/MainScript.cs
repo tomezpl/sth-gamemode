@@ -38,8 +38,8 @@ namespace SurviveTheHuntClient.UI
 
         }
 
-        [EventHandler("onClientResourceStart")]
-        public void OnClientResourceStarted(string resourceName)
+        [EventHandler("onClientGameTypeStart")]
+        public void OnClientGameTypeStart(string resourceName)
         {
             if(resourceName == GetCurrentResourceName())
             {
