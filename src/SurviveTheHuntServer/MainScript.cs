@@ -174,7 +174,7 @@ namespace SurviveTheHuntServer
                     Events.Server.RequestStartHunt.EventName(), new Action<dynamic>(data =>
                     {
                         // Prevent the next hunt from being started too quick.
-                        if(GameState.Hunt.NextHuntStartTime != null && GameState.Hunt.NextHuntStartTime > DateTime.UtcNow)
+                        if(GameState.Hunt.IsStarted || (GameState.Hunt.NextHuntStartTime != null && GameState.Hunt.NextHuntStartTime > DateTime.UtcNow))
                         {
                             return;
                         }
