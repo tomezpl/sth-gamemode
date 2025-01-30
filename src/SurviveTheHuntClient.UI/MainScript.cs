@@ -7,6 +7,7 @@ using static CitizenFX.Core.Native.API;
 using LemonUI;
 using LemonUI.Menus;
 using SurviveTheHuntShared;
+using System.Collections.Generic;
 
 namespace SurviveTheHuntClient.UI
 {
@@ -16,17 +17,24 @@ namespace SurviveTheHuntClient.UI
 
         private NativeMenu MainMenu;
 
-        private NativeItem StartHuntButton;
+        private NativeSubmenuItem StartHuntMenuItem;
         private NativeItem CharacterButton;
         private NativeItem SpawnCarsButton;
         private NativeItem AboutButton;
-        
+
+        private NativeMenu StartHuntMenu;
+        private NativeListItem<string> SelectPlayerItem;
+        private NativeItem StartHuntButton;
+
         private NativeMenu PlayerMenu;
         private NativeSubmenuItem PlayerMenuItem;
         private NativeItem HealButton;
         private NativeMenu RespawnMenu;
         private NativeSubmenuItem RespawnMenuItem;
         private NativeItem RespawnConfirmButton;
+
+        private const string DefaultSelectPlayerDescription = "Choose which player to hunt, or let the server pick a random player.";
+        private List<int> SelectablePlayerHandles = new List<int>();
 
         private bool Shown = false;
 
@@ -46,17 +54,36 @@ namespace SurviveTheHuntClient.UI
 
                 InitUI();
 
-                RegisterCommand("_sthmenukeybind", new Action(MenuKeybindAction), false);
-
                 Tick += Update;
             }
         }
 
-        private void MenuKeybindAction()
+        private void UpdateSelectablePlayers()
         {
-            if (ConvarHelper.GetBoolean(GetConvar("sth_registerMenuKeybind", "true")))
+            SelectablePlayerHandles.Clear();
+            bool menuItemExists = SelectPlayerItem != null;
+            if (menuItemExists)
             {
-                ToggleUI();
+                SelectPlayerItem.Items.Clear();
+            }
+
+            List<string> players = new List<string>(GetNumberOfPlayers() + 1);
+            players.Add(GetLabelText("FMMC_VEH_RAND"));
+            SelectablePlayerHandles.Add(-1);
+            foreach (Player player in Players)
+            {
+                players.Add(player.Handle == Game.Player.Handle ? $"{player.Name} (you)" : player.Name);
+                SelectablePlayerHandles.Add(player.Handle);
+            }
+
+            if(!menuItemExists)
+            {
+                SelectPlayerItem = new NativeListItem<string>("Hunted Player", DefaultSelectPlayerDescription, players.ToArray());
+            }
+            else
+            {
+                SelectPlayerItem.Items = players;
+                SelectPlayerItem.SelectedIndex = 0;
             }
         }
 
@@ -67,18 +94,27 @@ namespace SurviveTheHuntClient.UI
             MainMenu = new NativeMenu("Survive the Hunt", "Main menu");
             PlayerMenu = new NativeMenu("Player Options", "Player Options", "Restore your health, respawn etc.");
             RespawnMenu = new NativeMenu("Are you sure?", "Respawn", "Respawn immediately. Keep in mind you will lose the round if you are the hunted player.");
+            StartHuntMenu = new NativeMenu("Confirm settings", "Start hunt", "Select the player to be hunted and start a match.");
+
+            StartHuntMenuItem = new NativeSubmenuItem(StartHuntMenu, MainMenu);
+
+            // This creates SelectPlayerItem
+            UpdateSelectablePlayers();
+            StartHuntButton = new NativeItem("Start", "Start a new round of Survive the Hunt with the selected settings.");
+            StartHuntMenu.Add(SelectPlayerItem);
+            StartHuntMenu.Add(StartHuntButton);
 
             ObjectPool.Add(MainMenu);
             ObjectPool.Add(PlayerMenu);
             ObjectPool.Add(RespawnMenu);
+            ObjectPool.Add(StartHuntMenu);
 
-            StartHuntButton = new NativeItem("Start", "Start a new round of Survive the Hunt.");
             CharacterButton = new NativeItem("Appearance", "Change your character's appearance.");
             SpawnCarsButton = new NativeItem("Spawn cars", "Request a fresh batch of rides.");
             PlayerMenuItem = new NativeSubmenuItem(PlayerMenu, MainMenu);
             AboutButton = new NativeItem("About", $"Survive the Hunt v{typeof(MainScript).Assembly.GetName().Version}\n\nBased on FailRace's YouTube videos. Developed by Tomeztos (tomezpl).\n\nSpecial thanks for QA:\n- happygrowls\n- rollschuh2282\n- SpiderVice");
 
-            MainMenu.Add(StartHuntButton);
+            MainMenu.Add(StartHuntMenuItem);
             MainMenu.Add(CharacterButton);
             MainMenu.Add(SpawnCarsButton);
             MainMenu.Add(PlayerMenuItem);
@@ -99,6 +135,26 @@ namespace SurviveTheHuntClient.UI
             MainMenu.Closing += MainMenuClosing;
 
             MainMenu.Add(AboutButton);
+
+            SelectPlayerItem.ItemChanged += SelectedPlayerChanged;
+            StartHuntMenuItem.Activated += OpenedStartHuntMenu;
+        }
+
+        private void OpenedStartHuntMenu(object sender, EventArgs e)
+        {
+            UpdateSelectablePlayers();
+        }
+
+        private void SelectedPlayerChanged(object sender, ItemChangedEventArgs<string> e)
+        {
+            if(SelectablePlayerHandles[SelectPlayerItem.SelectedIndex] == Game.Player.Handle)
+            {
+                SelectPlayerItem.Description = "Choose yourself as the next hunted player.";
+            }
+            else
+            {
+                SelectPlayerItem.Description = DefaultSelectPlayerDescription;
+            }
         }
 
         private void MainMenuClosing(object sender, CancelEventArgs e)
@@ -109,6 +165,7 @@ namespace SurviveTheHuntClient.UI
         private void HealButtonClicked(object sender, EventArgs e)
         {
             TriggerEvent(Events.Client.Heal);
+            PlayerMenu.Visible = false;
         }
 
         private void RespawnConfirmed(object sender, EventArgs e)
@@ -125,8 +182,16 @@ namespace SurviveTheHuntClient.UI
 
         private void StartHuntClicked(object sender, EventArgs e)
         {
-            TriggerServerEvent(Events.Server.RequestStartHunt);
+            if (SelectPlayerItem.SelectedIndex != 0)
+            {
+                TriggerServerEvent(Events.Server.RequestStartHunt, GetPlayerServerId(SelectablePlayerHandles[SelectPlayerItem.SelectedIndex]));
+            }
+            else
+            {
+                TriggerServerEvent(Events.Server.RequestStartHunt);
+            }
             MainMenu.Visible = false;
+            StartHuntMenu.Visible = false;
         }
 
         private void SpawnCarsClicked(object sender, EventArgs e)
@@ -135,6 +200,7 @@ namespace SurviveTheHuntClient.UI
             TriggerEvent(Events.Client.SpawnCars);
         }
 
+        [EventHandler("sth:client:ui:toggleMenu")]
         private void ToggleUI()
         {
             Shown = !Shown;
@@ -142,26 +208,54 @@ namespace SurviveTheHuntClient.UI
             MainMenu.Visible = Shown;
         }
 
+        [EventHandler("sth:client:ui:showMenu")]
+        private void ShowMenu()
+        {
+            Shown = true;
+            ObjectPool.HideAll();
+            MainMenu.Visible = true;
+        }
+
+        [EventHandler("sth:client:ui:closeMenu")]
+        private void CloseMenu()
+        {
+            Shown = false;
+            ObjectPool.HideAll();
+        }
+
         public async Task Update()
         {
-            if(HoldingInteractionMenuPadButton && TimeHoldingInteractionMenu >= 0.25f)
+            const float secondsToHold = 0.25f;
+            if(HoldingInteractionMenuPadButton && TimeHoldingInteractionMenu >= secondsToHold && !ObjectPool.AreAnyVisible)
             {
-                ToggleUI();
+                ShowMenu();
                 TimeHoldingInteractionMenu = 0f;
                 HoldingInteractionMenuPadButton = false;
                 EnableControlAction(0, 0, true);
             }
 
-            if(IsControlPressed(0, 244))
+            bool keyboard = IsUsingKeyboard(0);
+            if (!keyboard && IsControlPressed(0, 244))
             {
                 HoldingInteractionMenuPadButton = true;
                 TimeHoldingInteractionMenu += GetFrameTime();
                 DisableControlAction(0, 0, true);
             } else if (IsControlJustReleased(0, 244))
             {
-                EnableControlAction(0, 0, true);
-                TimeHoldingInteractionMenu = 0f;
-                HoldingInteractionMenuPadButton = false;
+                // Don't need to hold the button on keyboard
+                if (keyboard)
+                {
+                    if (!ObjectPool.AreAnyVisible)
+                    {
+                        ShowMenu();
+                    }
+                }
+                else
+                {
+                    EnableControlAction(0, 0, true);
+                    TimeHoldingInteractionMenu = 0f;
+                    HoldingInteractionMenuPadButton = false;
+                }
             }
 
             if (ObjectPool.AreAnyVisible)
