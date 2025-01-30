@@ -174,12 +174,39 @@ namespace SurviveTheHuntServer
                     Events.Server.RequestStartHunt.EventName(), new Action<dynamic>(data =>
                     {
                         // Prevent the next hunt from being started too quick.
-                        if(GameState.Hunt.NextHuntStartTime != null && GameState.Hunt.NextHuntStartTime > DateTime.UtcNow)
+                        if(GameState.Hunt.IsStarted || (GameState.Hunt.NextHuntStartTime != null && GameState.Hunt.NextHuntStartTime > DateTime.UtcNow))
                         {
                             return;
                         }
 
-                        Player randomPlayer = Hunt.ChooseRandomPlayer(Players, ref GameState);
+                        // Check if a specific player was requested when the hunt was started.
+                        int? requestedPlayer = null;
+                        try
+                        {
+                            requestedPlayer = data as int?;
+                        }
+                        catch
+                        {
+                            requestedPlayer = null;
+                        }
+
+                        Player randomPlayer = null;
+                        if(requestedPlayer != null)
+                        {
+                            foreach(Player player in Players)
+                            {
+                                if(player.Handle == requestedPlayer.Value.ToString())
+                                {
+                                    randomPlayer = player;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if(randomPlayer == null)
+                        {
+                            randomPlayer = Hunt.ChooseRandomPlayer(Players, ref GameState);
+                        }
 
                         GameState.Hunt.LastHuntedPlayer = randomPlayer;
 

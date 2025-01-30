@@ -166,18 +166,20 @@ namespace SurviveTheHuntClient
             // We need to check that the resource name is sth-gamemode so we only perform init once!
             if (resource == SharedConstants.ResourceName)
             {
-                RegisterCommand("respawn", new Action(() =>
+                Action respawnAction = new Action(() =>
                 {
                     Game.PlayerPed.HealthFloat = 0f;
                     TriggerEvent("baseevents:onPlayerKilled");
-                }), false);
+                });
+                RegisterCommand("respawn", respawnAction, false);
+                EventHandlers[Events.Client.Respawn] += respawnAction;
 
                 RegisterCommand("starthunt", new Action(() =>
                 {
                     TriggerServerEvent(Events.Server.RequestStartHunt);
                 }), false);
 
-                RegisterCommand("spawncars", new Action(async () =>
+                Action spawnCarsAction = new Action(async () =>
                 {
                     if (!IsSpawningCars)
                     {
@@ -185,9 +187,11 @@ namespace SurviveTheHuntClient
                         await SpawnCars();
                         IsSpawningCars = false;
                     }
-                }), false);
+                });
+                RegisterCommand("spawncars", spawnCarsAction, false);
+                EventHandlers[Events.Client.SpawnCars] += spawnCarsAction;
 
-                RegisterCommand("heal", new Action(() =>
+                Action healAction = new Action(() =>
                 {
                     if (!GameState.Hunt.IsStarted)
                     {
@@ -200,7 +204,9 @@ namespace SurviveTheHuntClient
                         BeginTextCommandDisplayHelp(helpText);
                         EndTextCommandDisplayHelp(0, false, true, 5000);
                     }
-                }), false);
+                });
+                RegisterCommand("heal", healAction, false);
+                EventHandlers[Events.Client.Heal] += healAction;
 
                 // Add relationship groups so enemy players can attack each other without friendly fire.
                 uint hunterGroupHash = 0, huntedGroupHash = 0;
