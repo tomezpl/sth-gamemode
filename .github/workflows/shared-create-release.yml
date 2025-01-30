@@ -90,7 +90,7 @@ jobs:
       - 
         if: ${{inputs.prerelease == true}}
         name: Upload build to run artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{env.sthArtifactName}}-${{inputs.version_number}}
           path: artifacts/**/*
