@@ -41,6 +41,8 @@ namespace SurviveTheHuntClient.UI
         private bool HoldingInteractionMenuPadButton = false;
         private float TimeHoldingInteractionMenu = 0f;
 
+        private const string ShowMenuEventName = "sth:client:ui:showMenu";
+
         public MainScript()
         {
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientGameTypeStart);
@@ -177,7 +179,7 @@ namespace SurviveTheHuntClient.UI
         private void CharacterMenuClicked(object sender, EventArgs e)
         {
             MainMenu.Visible = false;
-            TriggerEvent("lbg-openChar");
+            TriggerEvent("lbg-openChar", ShowMenuEventName);
         }
 
         private void StartHuntClicked(object sender, EventArgs e)
@@ -208,7 +210,7 @@ namespace SurviveTheHuntClient.UI
             MainMenu.Visible = Shown;
         }
 
-        [EventHandler("sth:client:ui:showMenu")]
+        [EventHandler(ShowMenuEventName)]
         private void ShowMenu()
         {
             Shown = true;
