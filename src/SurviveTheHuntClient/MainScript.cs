@@ -303,13 +303,19 @@ namespace SurviveTheHuntClient
 
             List<VehicleHash> spawnableCars = Constants.Vehicles.ToList();
 
+            int availableCars = Constants.Vehicles.Length;
+
             for (int i = 0; i < maxNewCarCount; i++)
             {
                 int randomIndex = RNG.Next(0, spawnableCars.Count);
                 VehicleHash randomVehicle = spawnableCars[randomIndex];
                 carsToSpawn.Add(randomVehicle);
 
-                spawnableCars.RemoveAt(randomIndex);
+                // Only remove cars if the config contains at least 26 entries, otherwise allow duplicates
+                if (availableCars >= maxNewCarCount)
+                {
+                    spawnableCars.RemoveAt(randomIndex);
+                }
             }
 
             int counter = 0;
