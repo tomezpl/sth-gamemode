@@ -50,6 +50,26 @@ namespace SurviveTheHuntShared
             public const string NotifyAboutHuntedZone = "sth:notifyAboutHuntedZone";
             public const string ReceiveTimeSync = "sth:receiveTimeSync";
             public const string ReceiveGameState = "sth:receiveGameState";
+            public const string ReceiveHuntedClock = "sth:receiveHuntedClock";
+
+            public const string CharCreatorPedChanged = "lbg-char-neo:pedChanged";
+            public const string CharCreatorForceExit = "lbg-char-neo:forceExit";
+            public const string CharCreatorCreatorExited = "lbg-char-neo:creatorExited";
+            public const string CharCreatorCreatorEntered = "lbg-char-neo:creatorEntered";
+
+            /// <summary>
+            /// The hunted player's client should receive this event before relaying the current in-game clock to a newly joined player via the server.
+            /// </summary>
+            public const string ReceiveClockSyncRequest = "sth:receiveHuntedClockSyncRequest";
+
+            /// <summary>
+            /// A client-side event that will run the UI functions to display a notification about a player's death.
+            /// </summary>
+            public const string DisplayKill = "sth:displayKill";
+
+            public const string SpawnCars = "sth:spawnCars";
+            public const string Heal = "sth:heal";
+            public const string Respawn = "sth:respawn";
         }
 
         /// <summary>
@@ -64,6 +84,13 @@ namespace SurviveTheHuntShared
             public const string RequestSyncVehicles = "sth:reqSyncVehicles";
             public const string ClientStarted = "sth:clientStarted";
             public const string RequestStartHunt = "sth:startHunt";
+            public const string ReceiveHuntedClock = "sth:receiveClockFromHuntedPlayer";
+
+            /// <summary>
+            /// A newly joined client will trigger this server event, which will then send <see cref="Client.ReceiveClockSyncRequest"/> to the hunted player,
+            /// which in turn sends back the in-game clock value to the server, which will finally send it back to the newly joined client.
+            /// </summary>
+            public const string HuntedClockSyncRequested = "sth:huntedClockSyncRequested";
         }
     }
 }

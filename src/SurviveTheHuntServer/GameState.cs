@@ -44,6 +44,12 @@ namespace SurviveTheHuntServer
             public DateTime EndTime { get { return StartTime + SharedConstants.HuntDuration + EndTimeOffset; } }
 
             /// <summary>
+            /// UTC time when the next hunt can be started (this is to induce a cooldown so client scripts can catch up - yes it's gash but otherwise wrong weapon loadouts can be given out)
+            /// If null, this means the hunt can be started right now.
+            /// </summary>
+            public DateTime? NextHuntStartTime = null;
+
+            /// <summary>
             /// UTC time of last time the hunted player was pinged on the map.
             /// </summary>
             public DateTime LastPingTime { get; set; } = DateTime.UtcNow;
@@ -82,6 +88,7 @@ namespace SurviveTheHuntServer
                 WinningTeam = winningTeam;
                 IsStarted = false;
                 HuntedPlayer = null;
+                NextHuntStartTime = DateTime.UtcNow + TimeSpan.FromMilliseconds(SharedConstants.HuntStartCooldown);
             }
         }
 
@@ -105,6 +112,11 @@ namespace SurviveTheHuntServer
                 gameState.Hunt.LastPingTime.Ticks, 
                 gameState.Hunt.PrepPhaseEndTime.Ticks
             );
+
+            if(gameState.Hunt.IsStarted)
+            {
+                JoinTeam(player, Teams.Team.Hunters);
+            }
         }
     }
 }

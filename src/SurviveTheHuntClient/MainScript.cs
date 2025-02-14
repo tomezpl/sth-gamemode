@@ -16,6 +16,7 @@ using static CitizenFX.Core.Native.API;
 using SharedConstants = SurviveTheHuntShared.Constants;
 using SurviveTheHuntShared.Core;
 using SurviveTheHuntShared;
+using System.Xml;
 
 namespace SurviveTheHuntClient
 {
@@ -87,11 +88,14 @@ namespace SurviveTheHuntClient
 
         private bool IsTargetClipsetLoaded = false;
 
+        private uint? HunterGroupHash = null;
+        private uint? HuntedGroupHash = null;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientResourceStart);
-            EventHandlers["onResourceStopping"] += new Action<string>(OnResourceStopping);
+            EventHandlers["onResourceStop"] += new Action<string>(OnResourceStopping);
 
             CreateEvents();
             foreach(KeyValuePair<string, Action<dynamic>> ev in STHEvents)
@@ -150,6 +154,10 @@ namespace SurviveTheHuntClient
             EventHandlers["playerSpawned"] += new Action(PlayerSpawnedCallback);
 
             Tick += UpdateLoop;
+
+            // #63: Previously this used to be controlled by vMenu, but now the gamemode is decoupled from that,
+            // so we're just letting FiveM manage the weather. (In testing it seems to work reliably well)
+            SetWeatherOwnedByNetwork(true);
         }
 
         private void OnClientResourceStart(string resource)
@@ -158,18 +166,20 @@ namespace SurviveTheHuntClient
             // We need to check that the resource name is sth-gamemode so we only perform init once!
             if (resource == SharedConstants.ResourceName)
             {
-                RegisterCommand("respawn", new Action(() =>
+                Action respawnAction = new Action(() =>
                 {
                     Game.PlayerPed.HealthFloat = 0f;
                     TriggerEvent("baseevents:onPlayerKilled");
-                }), false);
+                });
+                RegisterCommand("respawn", respawnAction, false);
+                EventHandlers[Events.Client.Respawn] += respawnAction;
 
                 RegisterCommand("starthunt", new Action(() =>
                 {
                     TriggerServerEvent(Events.Server.RequestStartHunt);
                 }), false);
 
-                RegisterCommand("spawncars", new Action(async () =>
+                Action spawnCarsAction = new Action(async () =>
                 {
                     if (!IsSpawningCars)
                     {
@@ -177,7 +187,37 @@ namespace SurviveTheHuntClient
                         await SpawnCars();
                         IsSpawningCars = false;
                     }
-                }), false);
+                });
+                RegisterCommand("spawncars", spawnCarsAction, false);
+                EventHandlers[Events.Client.SpawnCars] += spawnCarsAction;
+
+                Action healAction = new Action(() =>
+                {
+                    if (!GameState.Hunt.IsStarted)
+                    {
+                        ApplyMaxHealth(true);
+                    }
+                    else
+                    {
+                        const string helpText = "HealNotAvailableDueToHuntStarted";
+                        AddTextEntry(helpText, "You cannot heal once the round has started.");
+                        BeginTextCommandDisplayHelp(helpText);
+                        EndTextCommandDisplayHelp(0, false, true, 5000);
+                    }
+                });
+                RegisterCommand("heal", healAction, false);
+                EventHandlers[Events.Client.Heal] += healAction;
+
+                // Add relationship groups so enemy players can attack each other without friendly fire.
+                uint hunterGroupHash = 0, huntedGroupHash = 0;
+                AddRelationshipGroup(Constants.RelationshipGroups.Hunters, ref hunterGroupHash);
+                AddRelationshipGroup(Constants.RelationshipGroups.Hunted, ref huntedGroupHash);
+
+                SetRelationshipBetweenGroups(5, huntedGroupHash, hunterGroupHash);
+                SetRelationshipBetweenGroups(5, hunterGroupHash, huntedGroupHash);
+
+                HuntedGroupHash = huntedGroupHash;
+                HunterGroupHash = hunterGroupHash;
 
                 Vector3 spawn = SharedConstants.DockSpawn;
                 ClearAreaOfEverything(spawn.X, spawn.Y, spawn.Z, 1000f, false, false, false, false);
@@ -197,18 +237,8 @@ namespace SurviveTheHuntClient
         /// </summary>
         protected async Task SpawnCars()
         {
-            List<VehicleHash> carsToSpawn = new List<VehicleHash>(SharedConstants.CarSpawnPoints.Length);
-
-            List<VehicleHash> spawnableCars = Constants.Vehicles.ToList();
-
-            for(int i = 0; i < carsToSpawn.Capacity; i++)
-            {
-                int randomIndex = RNG.Next(0, spawnableCars.Count);
-                VehicleHash randomVehicle = spawnableCars[randomIndex];
-                carsToSpawn.Add(randomVehicle);
-
-                spawnableCars.RemoveAt(randomIndex);
-            }
+            // Need to build a list of vehicles that SHOULD be deleted, ie. empty vehicles
+            List<SyncedVehicle> deletedVehicles = new List<SyncedVehicle>(SpawnedVehicles.Count);
 
             foreach(SyncedVehicle vehicleToDelete in SpawnedVehicles)
             {
@@ -216,8 +246,38 @@ namespace SurviveTheHuntClient
                 int id = hasNetId ? vehicleToDelete.NetId.Value : vehicleToDelete.Handle.Value;
                 if (hasNetId || Vehicle.Exists(vehicleToDelete.Vehicle))
                 {
-                    Debug.WriteLine($"Requesting to delete vehicle with {(hasNetId ? "net ID" : "entity handle")} {id}");
-                    TriggerServerEvent(Events.Server.RequestDeleteVehicle, hasNetId ? id : VehToNet(id));
+                    int vehicleHandle = 0;
+                    if(hasNetId && NetworkDoesNetworkIdExist(id))
+                    {
+                        vehicleHandle = NetToVeh(id);
+                    }
+                    else if(!hasNetId && DoesEntityExist(id))
+                    {
+                        vehicleHandle = id;
+                    }
+
+                    // Check that the vehicle is in fact empty
+                    bool hasPed = false;
+                    if (vehicleHandle != 0 && DoesEntityExist(vehicleHandle))
+                    {
+                        int vehicleSeats = GetVehicleModelNumberOfSeats((uint)GetEntityModel(vehicleHandle));
+                        for (int i = -1; !hasPed && i < vehicleSeats; i++)
+                        {
+                            hasPed = GetPedInVehicleSeat(vehicleHandle, i) != 0;
+                        }
+                    }
+
+                    // Mark the vehicle for deletion if it was empty
+                    if (!hasPed)
+                    {
+                        Debug.WriteLine($"Requesting to delete vehicle with {(hasNetId ? "net ID" : "entity handle")} {id}");
+                        TriggerServerEvent(Events.Server.RequestDeleteVehicle, hasNetId ? id : VehToNet(id));
+                        deletedVehicles.Add(vehicleToDelete);
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"Vehicle with {(hasNetId ? "net ID" : "entity handle")} {id} could not be removed as it is not empty.");
+                    }
                 }
                 else
                 {
@@ -225,7 +285,30 @@ namespace SurviveTheHuntClient
                 }
             }
             await Delay(3500);
-            SpawnedVehicles.Clear();
+
+            // Only remove empty vehicles
+            foreach(SyncedVehicle deletedVehicle in deletedVehicles)
+            {
+                SpawnedVehicles.Remove(deletedVehicle);
+            }
+
+            // Ignore non-empty vehicles so that there are only ever 26 vehicles spawned at a time,
+            // and that we don't lose vehicle handles when spawning new cars.
+            int maxNewCarCount = SharedConstants.CarSpawnPoints.Length - SpawnedVehicles.Count;
+            List<VehicleHash> carsToSpawn = new List<VehicleHash>(maxNewCarCount);
+
+            Debug.WriteLine($"{maxNewCarCount} new cars will be created");
+
+            List<VehicleHash> spawnableCars = Constants.Vehicles.ToList();
+
+            for (int i = 0; i < maxNewCarCount; i++)
+            {
+                int randomIndex = RNG.Next(0, spawnableCars.Count);
+                VehicleHash randomVehicle = spawnableCars[randomIndex];
+                carsToSpawn.Add(randomVehicle);
+
+                spawnableCars.RemoveAt(randomIndex);
+            }
 
             int counter = 0;
             foreach(VehicleHash vehicle in carsToSpawn)
@@ -307,6 +390,12 @@ namespace SurviveTheHuntClient
 
         protected void PlayerSpawnedCallback()
         {
+            if(!SpawnedOnce)
+            {
+                // If this is our first-spawn, try syncing the in-game clock just in case we're joining a hunt in progress.
+                TriggerLatentServerEvent(Events.Server.HuntedClockSyncRequested, 1);
+            }
+
             SpawnedOnce = true;
 
             // Refresh player's death state.
@@ -319,8 +408,7 @@ namespace SurviveTheHuntClient
             TriggerServerEvent(Events.Server.RequestCleanClothes, new { PlayerId = GetPlayerServerId(PlayerId()) });
 
             // Enable friendly fire.
-            NetworkSetFriendlyFireOption(true);
-            SetCanAttackFriendly(PlayerPedId(), true, true);
+            NetworkSetFriendlyFireOption(false);
 
             if(GameState.Hunt.IsInProgress || GameState.Hunt.IsEnding)
             {
@@ -336,20 +424,49 @@ namespace SurviveTheHuntClient
                 SetPedRandomComponentVariation(Player.Local.Character.Handle, false);
                 SetPedRandomProps(Player.Local.Character.Handle);
             }
+
+            WantedLevelHelper.DisableWantedLevel();
+
+            LastSpawnTime = DateTime.UtcNow.Ticks;
+
+            KillTracker.Reset();
         }
 
         /// <summary>
         /// Applies max health to the current player ped and optionally replenishes their health.
         /// </summary>
         /// <param name="restore">Should the player ped's health be replenished to max?</param>
-        protected void ApplyMaxHealth(bool restore = false)
+        /// <param name="onlyPed">Should only the player ped be healed? If false, the player's current vehicle will be healed too.</param>
+        protected void ApplyMaxHealth(bool restore = false, bool onlyPed = false)
         {
             int maxHealth = GetConvarInt("sth_maxHealth", SharedConstants.DefaultMaxHealth);
-            SetPedMaxHealth(PlayerPedId(), maxHealth);
+            int playerPed = PlayerPedId();
+            SetPedMaxHealth(playerPed, maxHealth);
             
             if (restore)
             {
-                SetEntityHealth(PlayerPedId(), maxHealth);
+                SetEntityHealth(playerPed, maxHealth);
+
+                if(!onlyPed)
+                {
+                    int vehicle = GetVehiclePedIsIn(playerPed, false);
+                    if(vehicle != 0)
+                    {
+                        SetVehicleBodyHealth(vehicle, 1000f);
+                        SetVehicleEngineHealth(vehicle, 1000f);
+                        SetVehicleFixed(vehicle);
+                        SetVehiclePetrolTankHealth(vehicle, 1000f);
+                        short wheelCount = (short)GetVehicleNumberOfWheels(vehicle);
+                        for(short i = 0; i < wheelCount; i++)
+                        {
+                            SetVehicleWheelHealth(vehicle, i, 1000f);
+                            SetTyreHealth(vehicle, i, 1000f);
+                            SetVehicleTyreFixed(vehicle, i);
+                            SetVehicleTyreBurst(vehicle, i, false, 0f);
+                        }
+                        ResetVehicleWheels(vehicle, true);
+                    }
+                }
             }
         }
 
@@ -385,14 +502,25 @@ namespace SurviveTheHuntClient
 
             PlayerState.UpdateWeapons(Game.PlayerPed);
 
-            // Make sure the player can't get cops.
-            ClearPlayerWantedLevel(PlayerId());
-
             // Check and report player death to the server if needed.
+            if(PlayerState.ReportDeathNextTick)
+            {
+                TriggerServerEvent(Events.Server.PlayerDied, PlayerDiedPayload.Serialize(new PlayerDiedPayload
+                {
+                    PlayerId = Game.Player.ServerId,
+                    PlayerPosX = PlayerPos.X,
+                    PlayerPosY = PlayerPos.Y,
+                    PlayerPosZ = PlayerPos.Z,
+                    PlayerTeam = PlayerState.Team,
+                    KillInfo = KillTracker.GetKillInfo()
+                }));
+                PlayerState.DeathReported = true;
+                PlayerState.ReportDeathNextTick = false;
+            }
             if(!Game.Player.IsAlive && !PlayerState.DeathReported)
             {
-                TriggerServerEvent(Events.Server.PlayerDied, new { PlayerId = Game.Player.ServerId, PlayerPosX = PlayerPos.X, PlayerPosY = PlayerPos.Y, PlayerPosZ = PlayerPos.Z, PlayerTeam = PlayerState.Team });
-                PlayerState.DeathReported = true;
+                // Instead of reporting immediately, defer it for the next tick, so the KillTracker can tick to build the KillInfo.
+                PlayerState.ReportDeathNextTick = true;
             }
 
             if (SpawnedVehiclesNeedSync)
@@ -455,18 +583,30 @@ namespace SurviveTheHuntClient
 
             DeathBlips.ClearExpiredBlips();
 
-            if(Game.PlayerPed?.Exists() == true)
+            RunPedChangedChecks();
+
+            TickLbgCharNeoIntegration();
+
+            UpdateRelationships();
+
+            KillTracker.Tick();
+
+            Wait(0);
+        }
+
+        private void RunPedChangedChecks()
+        {
+            if (Game.PlayerPed?.Exists() == true)
             {
-                if(PreviousTickPedHandle != Game.PlayerPed.Handle)
+                if (PreviousTickPedHandle != Game.PlayerPed.Handle)
                 {
                     Debug.WriteLine("Ped changed, setting max health");
                     ApplyMaxHealth();
+                    WantedLevelHelper.DisableWantedLevel();
                 }
 
                 PreviousTickPedHandle = Game.PlayerPed.Handle;
             }
-
-            Wait(0);
         }
 
         void ApplySafeZoneProtection(bool protectionActive, bool canLeaveSpawn, CfxVector3 safeZoneOrigin, float safeZoneRadius)
@@ -507,7 +647,8 @@ namespace SurviveTheHuntClient
                             SetEntityVelocity(entityId, velocity.X * mult, velocity.Y * mult, velocity.Z * mult);
                         }
 
-                        bool needsTeleport = PlayerState.WaitingToTeleportToSpawn || magnitudeSqr > radiusSqr * 1.2f;
+                        bool isInCreator = PlayerState.IsInCharacterCreator;
+                        bool needsTeleport = !isInCreator && (PlayerState.WaitingToTeleportToSpawn || magnitudeSqr > radiusSqr * 1.2f);
 
                         if (needsTeleport)
                         {
@@ -591,10 +732,13 @@ namespace SurviveTheHuntClient
             }
 
             PlayerState.TakeAwayWeapons(ref playerPed);
+            AmmoCheckTimer = 0;
         }
 
         private void HuntStartedByServer(float secondsTillPing, DateTime endTime, TimeSpan? prepPhase = null)
         {
+            TriggerEvent(Events.Client.CharCreatorForceExit);
+
             if (!prepPhase.HasValue)
             {
                 prepPhase = TimeSpan.Zero;
@@ -604,6 +748,19 @@ namespace SurviveTheHuntClient
             GameState.Hunt.InitialEndTime = endTime;
             GameState.Hunt.PrepPhaseEndTime = Utility.CurrentTime + prepPhase.Value;
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+
+            // Heal the player when the hunt is started.
+            const string huntStartedHealthRestoredString = "HuntStartedHealthRestoredString";
+            AddTextEntry(huntStartedHealthRestoredString, "Your health has been restored due to the round starting.");
+            ApplyMaxHealth(true);
+            BeginTextCommandDisplayHelp(huntStartedHealthRestoredString);
+            EndTextCommandDisplayHelp(0, false, true, 5000);
+
+            // Sync time
+            if (PlayerState.Team == Teams.Team.Hunted && ConvarHelper.GetBoolean(GetConvar(SharedConstants.SyncTimeOnHuntStartConvar, "true")))
+            {
+                TriggerServerEvent(Events.Server.ReceiveHuntedClock, GetClockHours(), GetClockMinutes(), GetClockSeconds());
+            }
         }
 
         /// <summary>
@@ -768,6 +925,123 @@ namespace SurviveTheHuntClient
             else
             {
                 Debug.WriteLine($"vehicleNetId {vehicleNetId} doesn't exist");
+            }
+        }
+
+        [EventHandler(Events.Client.CharCreatorPedChanged)]
+        public void PedChanged()
+        {
+            if(!ConvarHelper.GetBoolean(GetConvar(SharedConstants.CharCreationIntegrationEnabledConvar, "true")))
+            {
+                return;
+            }
+
+            Debug.WriteLine("Ped model changed by lbg-char");
+            int playerPed = PlayerPedId();
+
+            // If we've just spawned and the script changed our ped model shortly after spawn, reset the loadout
+            // TODO: this is gash and might be super flaky because we're just using ticks here but it'll work for now
+            if (LastSpawnTime == null || DateTime.UtcNow.Ticks - LastSpawnTime.Value <= Math.Pow(10, 7))
+            {
+                Debug.WriteLine("Resetting weapons");
+                Ped playerPedObj = Game.PlayerPed;
+                PlayerState.TakeAwayWeapons(ref playerPedObj);
+                PlayerState.UpdateWeapons(playerPedObj);
+            }
+            else
+            {
+                if(LastSpawnTime != null)
+                {
+                    Debug.WriteLine($"It has been ${DateTime.UtcNow.Ticks - LastSpawnTime.Value} ticks since last spawn");
+                }
+
+                RemoveAllPedWeapons(playerPed, false);
+                // Restore ammo to latest state
+                foreach (Weapons.WeaponAmmo weapon in AmmoState)
+                {
+                    Debug.WriteLine($"Setting {weapon.Hash} to have {weapon.Ammo} ammo");
+                    NativeHelpers.GivePedWeapon(playerPed, weapon);
+                }
+            }
+
+            // Restore health
+            ApplyMaxHealth();
+            if(HealthState != null && !IsPedDeadOrDying(playerPed, true) && HealthState.Value != 0)
+            {
+                Debug.WriteLine("Resetting health");
+                SetEntityHealth(playerPed, HealthState.Value);
+            }
+
+            WantedLevelHelper.DisableWantedLevel();
+        }
+
+        [EventHandler(Events.Client.CharCreatorCreatorExited)]
+        public void CreatorExited()
+        {
+            PlayerState.IsInCharacterCreator = false;
+        }
+
+        [EventHandler(Events.Client.CharCreatorCreatorEntered)]
+        public void CreatorEntered()
+        {
+            PlayerState.IsInCharacterCreator = true;
+        }
+
+        [EventHandler(Events.Client.ReceiveHuntedClock)]
+        public void SyncClock(int hours, int minutes, int seconds)
+        {
+            Debug.WriteLine($"Setting time to {hours.ToString().PadLeft(2, '0')}:{minutes.ToString().PadLeft(2, '0')}:{seconds.ToString().PadLeft(2, '0')}");
+            SetClockTime(hours, minutes, seconds);
+            NetworkOverrideClockTime(hours, minutes, seconds);
+            Debug.WriteLine($"Time is {GetClockHours().ToString().PadLeft(2, '0')}:{GetClockMinutes().ToString().PadLeft(2, '0')}:{GetClockSeconds().ToString().PadLeft(2, '0')}");
+        }
+
+        public float TimeSinceLastRelationshipGroupUpdate = 0;
+
+        /// <summary>
+        /// Sets each player's ped's relationship group based on game state
+        /// </summary>
+        public void UpdateRelationships()
+        {
+            TimeSinceLastRelationshipGroupUpdate += GetFrameTime();
+            if(TimeSinceLastRelationshipGroupUpdate > 1.5f)
+            {
+                TimeSinceLastRelationshipGroupUpdate = 0f;
+            }
+            else
+            {
+                return;
+            }
+
+            NetworkSetFriendlyFireOption(false);
+
+            if (DoesEntityExist(PlayerPedId()))
+            {
+                SetCanAttackFriendly(PlayerPedId(), false, false);
+            }
+
+            if (HunterGroupHash.HasValue && HuntedGroupHash.HasValue)
+            {
+                if (GameState.Hunt?.IsInProgress == true)
+                {
+                    foreach (Player player in Players)
+                    {
+                        if (player.Character.Exists())
+                        {
+                            SetPedRelationshipGroupHash(player.Character.Handle, GameState.Hunt.HuntedPlayer.Handle == player.Handle ? HuntedGroupHash.Value : HunterGroupHash.Value);
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (Player player in Players)
+                    {
+                        if (player.Character.Exists())
+                        {
+                            SetPedRelationshipGroupHash(player.Character.Handle, HunterGroupHash.Value);
+                        }
+                    }
+                }
             }
         }
     }

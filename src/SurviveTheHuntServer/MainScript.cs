@@ -30,7 +30,7 @@ namespace SurviveTheHuntServer
 
         private readonly HuntedQueue HuntedPlayerQueue = null;
 
-        private Config Config;
+        private ServerConfig Config;
 
         public MainScript()
         {
@@ -78,6 +78,7 @@ namespace SurviveTheHuntServer
             {
                 Debug.WriteLine("Hunted player left, ending hunt.");
                 GameState.Hunt.End(Teams.Team.Hunters);
+                ResetTeams();
                 NotifyWinner();
             }
 
@@ -120,6 +121,7 @@ namespace SurviveTheHuntServer
                 if (GameState.Hunt.EndTime <= DateTime.UtcNow)
                 {
                     GameState.Hunt.End(Teams.Team.Hunted);
+                    ResetTeams();
                     NotifyWinner();
                 }
 
@@ -148,6 +150,7 @@ namespace SurviveTheHuntServer
         /// </summary>
         private void NotifyWinner()
         {
+            SetConvarReplicated(SharedConstants.CharCreatorBlockCreatorConvar, "false");
             TriggerClientEvent(Events.Client.NotifyWinner, new { WinningTeam = (int)GameState.Hunt.WinningTeam });
         }
 
@@ -168,26 +171,42 @@ namespace SurviveTheHuntServer
                     })
                 },
                 {
-                    Events.Server.PlayerDied.EventName(), new Action<dynamic>(data =>
-                    {
-                        int playerId = data.PlayerId;
-
-                        Console.WriteLine($"Player died: {GetPlayerName($"{playerId}")}");
-
-                        // Did the hunted player die?
-                        if(Hunt.CheckPlayerDeath(Players[playerId], ref GameState))
-                        {
-                            NotifyWinner();
-                        }
-
-                        // Mark the player's death location with a blip for everyone.
-                        TriggerClientEvent(Events.Client.MarkPlayerDeath, data.PlayerPosX, data.PlayerPosY, data.PlayerPosZ, data.PlayerTeam);
-                    })
-                },
-                {
                     Events.Server.RequestStartHunt.EventName(), new Action<dynamic>(data =>
                     {
-                        Player randomPlayer = Hunt.ChooseRandomPlayer(Players, ref GameState);
+                        // Prevent the next hunt from being started too quick.
+                        if(GameState.Hunt.IsStarted || (GameState.Hunt.NextHuntStartTime != null && GameState.Hunt.NextHuntStartTime > DateTime.UtcNow))
+                        {
+                            return;
+                        }
+
+                        // Check if a specific player was requested when the hunt was started.
+                        int? requestedPlayer = null;
+                        try
+                        {
+                            requestedPlayer = data as int?;
+                        }
+                        catch
+                        {
+                            requestedPlayer = null;
+                        }
+
+                        Player randomPlayer = null;
+                        if(requestedPlayer != null)
+                        {
+                            foreach(Player player in Players)
+                            {
+                                if(player.Handle == requestedPlayer.Value.ToString())
+                                {
+                                    randomPlayer = player;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if(randomPlayer == null)
+                        {
+                            randomPlayer = Hunt.ChooseRandomPlayer(Players, ref GameState);
+                        }
 
                         GameState.Hunt.LastHuntedPlayer = randomPlayer;
 
@@ -195,6 +214,8 @@ namespace SurviveTheHuntServer
                         TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerServerId = int.Parse(randomPlayer.Handle) });
 
                         ulong prepPhaseSeconds = (ulong)GetConvarInt("sth_prepPhaseDuration", SharedConstants.DefaultPrepPhaseSeconds);
+
+                        SetConvarReplicated(SharedConstants.CharCreatorBlockCreatorConvar, "true");
 
                         GameState.Hunt.Begin(randomPlayer, prepPhaseSeconds);
 
@@ -204,6 +225,11 @@ namespace SurviveTheHuntServer
                             NextNotification = (float)prepPhaseSeconds + (float)SharedConstants.HuntedPingInterval.TotalSeconds,
                             PrepPhaseDuration = prepPhaseSeconds
                         });
+
+                        foreach(Player player in Players)
+                        {
+                            JoinTeam(player, player.Handle == randomPlayer.Handle ? Teams.Team.Hunted : Teams.Team.Hunters);
+                        }
                     })
                 },
                 {

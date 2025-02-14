@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace SurviveTheHuntShared
 {
-    public static class Constants
+    public static partial class Constants
     {
         /// <summary>
         /// Expected resource name for the gamemode on the server & client.
@@ -252,5 +252,26 @@ namespace SurviveTheHuntShared
             "MOVE_M@TOUGH_GUY@",
             "move_m@multiplayer"
         };
+
+        public const string CharCreatorBlockCreatorConvar = "lbg-char-neo_blockCreator";
+
+        /// <summary>
+        /// If true, enables support for lbg-char-neo.
+        /// </summary>
+        /// <remarks>
+        /// <see href="https://github.com/tomezpl/lbg-char-neo"/>
+        /// </remarks>
+        public const string CharCreationIntegrationEnabledConvar = "sth_charCreatorIntegration";
+
+        /// <summary>
+        /// If true, the hunter players' in-game clocks will be synced with the hunted player's in-game time when the hunt starts.
+        /// </summary>
+        public const string SyncTimeOnHuntStartConvar = "sth_syncTimeOnHuntStart";
+
+
+        /// <summary>
+        /// Number of milliseconds to wait before allowing a hunt to be started again.
+        /// </summary>
+        public const ushort HuntStartCooldown = 10 * 1000;
     }
 }

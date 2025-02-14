@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Helpers;
 using SurviveTheHuntShared.Core;
 using SurviveTheHuntShared.Utils;
 using System;
@@ -27,6 +28,11 @@ namespace SurviveTheHuntClient
         public bool DeathReported { get; set; } = false;
 
         /// <summary>
+        /// Should the player's death be reported to the server?
+        /// </summary>
+        public bool ReportDeathNextTick = false;
+
+        /// <summary>
         /// Last weapon the player had equipped.
         /// </summary>
         public uint LastWeaponEquipped = (uint)WeaponHash.Unarmed;
@@ -40,6 +46,11 @@ namespace SurviveTheHuntClient
         /// Is the player currently waiting to be teleported to spawn because of the hunt starting?
         /// </summary>
         public bool WaitingToTeleportToSpawn { get; set; } = false;
+
+        /// <summary>
+        /// Is the player currently in a character creator screen? This allows the creator resource to gracefully exit the screen before triggering the teleport etc.
+        /// </summary>
+        public bool IsInCharacterCreator = false;
 
         /// <summary>
         /// Manages the state of the bigmap widget on the HUD.
@@ -110,7 +121,7 @@ namespace SurviveTheHuntClient
             foreach(Weapons.WeaponAmmo weapon in Constants.WeaponLoadouts[Team])
             {
                 bool equip = weapon.Hash == LastWeaponEquipped;
-                GiveWeaponToPed(playerPed.Handle, weapon.Hash, weapon.Ammo, false, equip);
+                NativeHelpers.GivePedWeapon(playerPed.Handle, weapon, equip);
             }
 
             WeaponsGiven = true;

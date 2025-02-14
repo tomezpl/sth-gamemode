@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -13,6 +14,11 @@ namespace SurviveTheHuntClient
         /// Blip handle used for showing the hunted player's radius.
         /// </summary>
         private static Blip RadiusBlip = null;
+
+        /// <summary>
+        /// Blip handle used for showing the hunted player's search radius center.
+        /// </summary>
+        private static Blip RadiusCenterBlip = null;
 
         /// <summary>
         /// Regular player blips to show on the radar.
@@ -38,6 +44,11 @@ namespace SurviveTheHuntClient
             public Blip Blip { get; set; } = null;
 
             /// <summary>
+            /// "Precise" blip - this will show only when the radius is out of the minimap range.
+            /// </summary>
+            public Blip PreciseBlip = null;
+
+            /// <summary>
             /// When has the fade out effect started?
             /// </summary>
             public DateTime FadeOutStart = default;
@@ -53,9 +64,10 @@ namespace SurviveTheHuntClient
             /// <param name="blip">The handle of the blip to be faded.</param>
             /// <param name="fadeOutStart">When the blip should start fading.</param>
             /// <param name="fadeOutEnd">When the blip should finish fading & disappear.</param>
-            public FadingBlip(Blip blip, DateTime fadeOutStart, DateTime fadeOutEnd)
+            public FadingBlip(Blip blip, Blip preciseBlip, DateTime fadeOutStart, DateTime fadeOutEnd)
             {
                 Blip = blip;
+                PreciseBlip = preciseBlip;
                 FadeOutStart = fadeOutStart;
                 FadeOutEnd = fadeOutEnd;
             }
@@ -243,17 +255,24 @@ namespace SurviveTheHuntClient
         {
             Vector3 position = GetEntityCoords(player.Character.Handle, false);
 
+            float blipX = position.X + offsetX;
+            float blipY = position.Y;
+            float blipZ = position.Z + offsetY;
+
             if (RadiusBlip == null)
             {
-                RadiusBlip = new Blip(AddBlipForRadius(position.X + offsetX, position.Y, position.Z + offsetY, radius));
+                RadiusBlip = new Blip(AddBlipForRadius(blipX, blipY, blipZ, radius));
+                RadiusCenterBlip = new Blip(AddBlipForCoord(blipX, blipY, blipZ));
             }
             else
             {
-                SetBlipCoords(RadiusBlip.Handle, position.X + offsetX, position.Y, position.Z + offsetY);
+                SetBlipCoords(RadiusBlip.Handle, blipX, blipY, blipZ);
+                SetBlipCoords(RadiusCenterBlip.Handle, blipX, blipY, blipZ);
             }
 
             // Set blip to be yellow (main objective).
             SetBlipColour(RadiusBlip.Handle, 66);
+            SetBlipColour(RadiusCenterBlip.Handle, 66);
 
             // Set blip to be semi-transparent.
             SetBlipAlpha(RadiusBlip.Handle, 128);
@@ -261,11 +280,16 @@ namespace SurviveTheHuntClient
             // Show the blip on both the map and the minimap.
             SetBlipDisplay(RadiusBlip.Handle, 6);
 
+            bool radiusOnMinimap = MinimapHelper.IsCoordInRadarBounds(RadiusBlip.Position);
+            SetBlipDisplay(RadiusCenterBlip.Handle, !radiusOnMinimap ? 6 : 0);
+
             // Attach the hunted player's name to the blip.
             SetBlipNameToPlayerName(RadiusBlip.Handle, player.Handle);
+            SetBlipNameToPlayerName(RadiusCenterBlip.Handle, player.Handle);
 
             // Show the blip in the map legend.
             SetBlipHiddenOnLegend(RadiusBlip.Handle, false);
+            SetBlipHiddenOnLegend(RadiusCenterBlip.Handle, radiusOnMinimap);
 
             // If the local player is on the hunter team, display a GPS route to the hunted player's last pinged blip.
             if (playerState.Team == Team.Hunters)
@@ -274,7 +298,7 @@ namespace SurviveTheHuntClient
             }
 
             // Starts fading the blip out.
-            PingBlipOnMap(ref RadiusBlip, creationTime, TimeSpan.FromSeconds(Constants.HuntedBlipLifespan), TimeSpan.FromSeconds(Constants.HuntedBlipFadeoutTime));
+            PingBlipOnMap(ref RadiusBlip, ref RadiusCenterBlip, creationTime, TimeSpan.FromSeconds(Constants.HuntedBlipLifespan), TimeSpan.FromSeconds(Constants.HuntedBlipFadeoutTime));
         }
 
         /// <summary>
@@ -286,7 +310,22 @@ namespace SurviveTheHuntClient
             foreach(FadingBlip blip in FadingBlips)
             {
                 SetBlipAlpha(blip.Blip.Handle, Convert.ToInt32(blip.Alpha * 128f));
-                if(blip.Alpha == 0f)
+
+                bool radiusOnMinimap = MinimapHelper.IsCoordInRadarBounds(blip.Blip.Position);
+                bool preciseBlipDisplayed = GetBlipInfoIdDisplay(blip.PreciseBlip.Handle) != 0;
+                
+                if(preciseBlipDisplayed && radiusOnMinimap)
+                {
+                    SetBlipDisplay(blip.PreciseBlip.Handle, 0);
+                    SetBlipHiddenOnLegend(blip.PreciseBlip.Handle, true);
+                }
+                else if (!preciseBlipDisplayed && !radiusOnMinimap)
+                {
+                    SetBlipDisplay(blip.PreciseBlip.Handle, 6);
+                    SetBlipHiddenOnLegend(blip.PreciseBlip.Handle, false);
+                }
+
+                if (blip.Alpha == 0f)
                 {
                     blipsToDelete.Add(blip);
                 }
@@ -298,6 +337,11 @@ namespace SurviveTheHuntClient
                 SetBlipDisplay(blip.Blip.Handle, 0);
                 SetBlipRoute(blip.Blip.Handle, false);
                 SetBlipHiddenOnLegend(blip.Blip.Handle, true);
+
+                SetBlipDisplay(blip.PreciseBlip.Handle, 0);
+                SetBlipRoute(blip.PreciseBlip.Handle, false);
+                SetBlipHiddenOnLegend(blip.PreciseBlip.Handle, true);
+
                 FadingBlips.Remove(blip);
             }
         }
@@ -305,13 +349,13 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Adds the blip to <see cref="FadingBlips"/> so that it can begin fading over time.
         /// </summary>
-        /// <param name="blip">The constructed blip to add.</param>
+        /// <param name="blip">The constructed radius blip to add.</param>
         /// <param name="creationTime">Spawn time of the blip.</param>
         /// <param name="lifespan">How long the blip should be visible for before starting to fade.</param>
         /// <param name="fadeOutTime">The time it takes for a blip to fade once <paramref name="lifespan"/> has been reached.</param>
-        public static void PingBlipOnMap(ref Blip blip, DateTime creationTime, TimeSpan lifespan, TimeSpan fadeOutTime)
+        public static void PingBlipOnMap(ref Blip blip, ref Blip preciseBlip, DateTime creationTime, TimeSpan lifespan, TimeSpan fadeOutTime)
         {
-            FadingBlips.Add(new FadingBlip(blip, creationTime + lifespan, creationTime + lifespan + fadeOutTime));
+            FadingBlips.Add(new FadingBlip(blip, preciseBlip, creationTime + lifespan, creationTime + lifespan + fadeOutTime));
         }
 
         /// <summary>

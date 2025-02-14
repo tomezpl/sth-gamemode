@@ -6,6 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using static CitizenFX.Core.Native.API;
 using SurviveTheHuntShared;
+using SurviveTheHuntShared.Core;
+using SurviveTheHuntServer.Helpers;
+using System.Dynamic;
 
 namespace SurviveTheHuntServer
 {
@@ -96,6 +99,48 @@ namespace SurviveTheHuntServer
             {
                 Debug.WriteLine($"Couldn't delete vehicle: {ex.ToString()}");
             }
+        }
+
+        [EventHandler(Events.Server.ReceiveHuntedClock)]
+        public void SyncHuntedClock(int hours, int minutes, int seconds)
+        {
+            Debug.WriteLine($"Sending {Events.Client.ReceiveHuntedClock} with {hours.ToString().PadLeft(2, '0')}:{minutes.ToString().PadLeft(2, '0')}:{seconds.ToString().PadLeft(2, '0')}");
+            TriggerClientEvent(Events.Client.ReceiveHuntedClock, hours, minutes, seconds);
+        }
+
+        [EventHandler(Events.Server.HuntedClockSyncRequested)]
+        public void RequestHuntedClockResync()
+        {
+            if (GameState.Hunt?.IsStarted == true && GameState.Hunt?.HuntedPlayer != null)
+            {
+                Debug.WriteLine($"Requesting in-game clock to be re-synced from the hunted player");
+                TriggerLatentClientEvent(GameState.Hunt.HuntedPlayer, Events.Client.ReceiveClockSyncRequest, 1);
+            }
+        }
+
+        [EventHandler(Events.Server.PlayerDied)]
+        public void OnPlayerDied(string dataSerialized)
+        {
+            Debug.WriteLine(dataSerialized);
+            PlayerDiedPayload data = PlayerDiedPayload.Deserialize(dataSerialized);
+            int playerId = data.PlayerId;
+            KillFeedClientPayload killInfo = data.KillInfo;
+
+            Console.WriteLine($"Player died: {GetPlayerName($"{playerId}")}");
+
+            // Did the hunted player die?
+            if (Hunt.CheckPlayerDeath(Players[playerId], ref GameState))
+            {
+                NotifyWinner();
+                ResetTeams();
+            }
+
+            // Mark the player's death location with a blip for everyone.
+            TriggerClientEvent(Events.Client.MarkPlayerDeath, data.PlayerPosX, data.PlayerPosY, data.PlayerPosZ, data.PlayerTeam);
+
+            // Broadcast a killfeed message.
+            KillFeedServerPayload killfeedPayload = KillFeedDispatcher.GetKillFeedPayload(killInfo, GameState, RNG);
+            TriggerClientEvent(Events.Client.DisplayKill, KillFeedServerPayload.Serialize(killfeedPayload));
         }
     }
 }

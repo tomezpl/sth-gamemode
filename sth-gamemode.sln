@@ -21,6 +21,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "configs", "configs", "{B798
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SurviveTheHuntShared", "src\SurviveTheHuntShared\SurviveTheHuntShared.csproj", "{A49F7AC5-2652-4C94-930C-950F8C80283A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SurviveTheHuntClient.UI", "src\SurviveTheHuntClient.UI\SurviveTheHuntClient.UI.csproj", "{AA0FD86C-A6B6-4B36-A3A9-2AE00B40E169}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{A49F7AC5-2652-4C94-930C-950F8C80283A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A49F7AC5-2652-4C94-930C-950F8C80283A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A49F7AC5-2652-4C94-930C-950F8C80283A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AA0FD86C-A6B6-4B36-A3A9-2AE00B40E169}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AA0FD86C-A6B6-4B36-A3A9-2AE00B40E169}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AA0FD86C-A6B6-4B36-A3A9-2AE00B40E169}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AA0FD86C-A6B6-4B36-A3A9-2AE00B40E169}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
