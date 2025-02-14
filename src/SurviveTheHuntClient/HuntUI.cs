@@ -410,7 +410,6 @@ namespace SurviveTheHuntClient
                 if(player == Game.Player)
                 {
                     SetBlipColour(GetMainPlayerBlipId(), player.Handle + 10);
-                    continue;
                 }
 
                 // Creates overhead player name labels if need be.
@@ -418,6 +417,12 @@ namespace SurviveTheHuntClient
                 {
                     //Debug.WriteLine($"Creating GamerTag for {player.Name}");
                     CreateMpGamerTagWithCrewColor(player.Handle, player.Name, false, false, "", 0, 0, 0, 0);
+                }
+
+                if(player == Game.Player)
+                {
+                    SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(GetMainPlayerBlipId()));
+                    continue;
                 }
 
                 if (!PlayerBlips.ContainsKey(player.Character.Handle))
@@ -451,6 +456,9 @@ namespace SurviveTheHuntClient
             N_0x82cedc33687e1f50(true);
 
             List<int> pedsToDelete = new List<int>();
+
+            // Show the local player's overhead name if they're outside the play area.
+            SetMpGamerTagVisibility(Game.Player.Handle, 0, gameState.Hunt.IsStarted && GameState.IsPedTooFar(Game.PlayerPed));
 
             foreach(int ped in PlayerBlips.Keys)
             {
