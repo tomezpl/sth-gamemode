@@ -609,6 +609,8 @@ namespace SurviveTheHuntClient
 
             BoundsTracker.Tick();
 
+            PlayerPassenger.Tick();
+
             Wait(0);
         }
 
