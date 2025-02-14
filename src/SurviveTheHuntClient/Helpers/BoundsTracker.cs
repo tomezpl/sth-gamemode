@@ -5,6 +5,10 @@ using SharedConstants = SurviveTheHuntShared.Constants;
 
 namespace SurviveTheHuntClient.Helpers
 {
+    /// <summary>
+    /// Helper class that runs logic for checking the local player's proximity to play area limits
+    /// and displaying the appropriate UI elements to help them avoid detection.
+    /// </summary>
     internal static class BoundsTracker
     {
         private static int? PlayAreaBlip = null;
