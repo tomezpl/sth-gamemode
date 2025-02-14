@@ -229,6 +229,8 @@ namespace SurviveTheHuntClient
                 SetBlipColour(SafeZoneRadiusBlipHandle, 69);
                 SetBlipAlpha(SafeZoneRadiusBlipHandle, 128);
                 SetBlipDisplay(SafeZoneRadiusBlipHandle, 6);
+
+                BoundsTracker.Init();
             }
         }
 
@@ -590,6 +592,8 @@ namespace SurviveTheHuntClient
             UpdateRelationships();
 
             KillTracker.Tick();
+
+            BoundsTracker.Tick();
 
             Wait(0);
         }
