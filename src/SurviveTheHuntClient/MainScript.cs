@@ -346,7 +346,15 @@ namespace SurviveTheHuntClient
                     int nbMods = GetNumVehicleMods(spawnedVehicle.Handle, i);
                     if(nbMods > 0)
                     {
-                        SetVehicleMod(spawnedVehicle.Handle, i, nbMods - 1, false);
+                        // By default, max every mod
+                        int appliedMod = nbMods - 1;
+                        if(i == (int)VehicleModType.Horns || i == (int)VehicleModType.Livery)
+                        {
+                            // Randomise the horn & livery
+                            appliedMod = RNG.Next(nbMods);
+                        }
+
+                        SetVehicleMod(spawnedVehicle.Handle, i, appliedMod, false);
                     }
                 }
                 // Add neons.
