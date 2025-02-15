@@ -258,7 +258,6 @@ namespace SurviveTheHuntClient.UI
             const float secondsToHold = 0.25f;
             if(HoldingInteractionMenuPadButton && TimeHoldingInteractionMenu >= secondsToHold && !ObjectPool.AreAnyVisible)
             {
-                Debug.WriteLine("hi");
                 ShowMenu();
                 TimeHoldingInteractionMenu = 0f;
                 HoldingInteractionMenuPadButton = false;
@@ -305,7 +304,6 @@ namespace SurviveTheHuntClient.UI
                 if (!IsVehicleMenuPresent)
                 {
                     int idx = MainMenu.Items.IndexOf(AboutButton);
-                    Debug.WriteLine($"Adding vehicle menu at {idx}");
                     MainMenu.Items.Insert(idx, VehicleOptionsMenuItem);
                     MainMenu.Recalculate();
                     MainMenu.Process();
@@ -324,7 +322,6 @@ namespace SurviveTheHuntClient.UI
             {
                 if (IsVehicleMenuPresent)
                 {
-                    Debug.WriteLine("Removing veh menu");
                     MainMenu.Remove(VehicleOptionsMenuItem);
                     IsVehicleMenuPresent = false;
                 }
