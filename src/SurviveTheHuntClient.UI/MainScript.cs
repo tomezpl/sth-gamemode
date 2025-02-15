@@ -8,6 +8,8 @@ using LemonUI;
 using LemonUI.Menus;
 using SurviveTheHuntShared;
 using System.Collections.Generic;
+using LemonUI.Elements;
+using LemonUI.Tools;
 
 namespace SurviveTheHuntClient.UI
 {
@@ -37,6 +39,13 @@ namespace SurviveTheHuntClient.UI
         private NativeSubmenuItem VehicleOptionsMenuItem;
         private NativeItem VehicleEngineOffButton;
 
+        private NativeMenu HelpMenu;
+        private NativeSubmenuItem HelpMenuItem;
+        private NativeItem HelpTextGeneral;
+        private NativeItem HelpTextBounds;
+        private NativeItem HelpTextBuses;
+        private NativeItem HelpTextBlendingIn;
+
         private const string DefaultSelectPlayerDescription = "Choose which player to hunt, or let the server pick a random player.";
         private List<int> SelectablePlayerHandles = new List<int>();
 
@@ -48,6 +57,41 @@ namespace SurviveTheHuntClient.UI
         private const string ShowMenuEventName = "sth:client:ui:showMenu";
 
         private bool IsVehicleMenuPresent = false;
+
+        private const string MenuTxdName = "sthUiMenuTxd";
+        private long MenuTxdHandle = 0;
+
+        private static class Textures
+        {
+            internal struct Texture
+            {
+                internal const string Txd = MenuTxdName;
+                internal string Txn;
+                internal string Filename;
+                internal long Handle;
+
+                internal static Texture Create(string filename, string txn = null)
+                {
+                    var ret = new Texture();
+
+                    ret.Txn = txn;
+                    ret.Filename = filename;
+
+                    return ret;
+                }
+            }
+
+            internal static Texture BusTexture = Texture.Create("files/bus.png", "busTexture");
+            internal static Texture AppearanceTexture = Texture.Create("files/appearance.png", "appearanceTexture");
+            internal static Texture BoundsTexture = Texture.Create("files/lslimits.png", "boundsTexture");
+
+            internal static readonly Texture[] AllTextures =
+            {
+                BusTexture,
+                AppearanceTexture,
+                BoundsTexture
+            };
+        }
 
         public MainScript()
         {
@@ -95,8 +139,20 @@ namespace SurviveTheHuntClient.UI
             }
         }
 
+        private void PrepareTextures()
+        {
+            MenuTxdHandle = CreateRuntimeTxd(MenuTxdName);
+            for(int i = 0; i < Textures.AllTextures.Length; i++)
+            {
+                Textures.Texture texture = Textures.AllTextures[i];
+                texture.Handle = CreateRuntimeTextureFromImage(MenuTxdHandle, texture.Txn, texture.Filename);
+            }
+        }
+
         private void InitUI()
         {
+            PrepareTextures();
+
             ObjectPool = new ObjectPool();
 
             MainMenu = new NativeMenu("Survive the Hunt", "Main menu");
@@ -104,6 +160,7 @@ namespace SurviveTheHuntClient.UI
             RespawnMenu = new NativeMenu("Are you sure?", "Respawn", "Respawn immediately. Keep in mind you will lose the round if you are the hunted player.");
             StartHuntMenu = new NativeMenu("Confirm settings", "Start hunt", "Select the player to be hunted and start a match.");
             VehicleOptionsMenu = new NativeMenu("Vehicle Options", "Vehicle Options", "Perform vehicle-related actions to help with blending in.");
+            HelpMenu = new NativeMenu("Help & Tips", "Help & Tips", "Need help? Check this menu for a general introduction and some useful tips!");
 
             StartHuntMenuItem = new NativeSubmenuItem(StartHuntMenu, MainMenu);
 
@@ -118,6 +175,7 @@ namespace SurviveTheHuntClient.UI
             ObjectPool.Add(RespawnMenu);
             ObjectPool.Add(StartHuntMenu);
             ObjectPool.Add(VehicleOptionsMenu);
+            ObjectPool.Add(HelpMenu);
 
             CharacterButton = new NativeItem("Appearance", "Change your character's appearance.");
             SpawnCarsButton = new NativeItem("Spawn cars", "Request a fresh batch of rides.");
@@ -148,6 +206,9 @@ namespace SurviveTheHuntClient.UI
 
             MainMenu.Closing += MainMenuClosing;
 
+            HelpMenuItem = new NativeSubmenuItem(HelpMenu, MainMenu);
+            MainMenu.Add(HelpMenuItem);
+
             MainMenu.Add(AboutButton);
 
             SelectPlayerItem.ItemChanged += SelectedPlayerChanged;
@@ -156,6 +217,29 @@ namespace SurviveTheHuntClient.UI
             VehicleEngineOffButton = new NativeItem("Turn engine off", "Turn the ignition off. It will automatically turn back on if you apply the accelerator.");
             VehicleEngineOffButton.Activated += TurnVehicleEngineOff;
             VehicleOptionsMenu.Add(VehicleEngineOffButton);
+
+            HelpTextGeneral = new NativeItem("General", "24 minutes in LS. You, your ride, and a bunch of psychos scouring the city just to put a bullet in you. Hunters can't see you on the radar, but your approximate area is broadcast once every minute. You won't be gunned down in a driveby, but if you see them step out of their cars, it's over. Hide, blend in, or pray that your 0 to 60 shakes them off.");
+            HelpMenu.Add(HelpTextGeneral);
+            HelpTextBounds = new NativeItem("Play Area", "The gamemode is limited to Los Santos.\n\nWhen you approach the outer bounds of north LS, you will be warned to return to the play area. You're advised not to leave the play area, as it will reveal your position on the radar to all players until you're back in the city.");
+            HelpMenu.Add(HelpTextBounds);
+            HelpTextBuses = new NativeItem("Passengers", "No wheels? Hunters swooping in?\nCatch a bus!\nKeep holding the enter button, and you'll politely sit down instead of treating the public transit wage-slave to a fisty smooch.\n\nYou can also enter cars as a passenger, provided they're empty - LS citizens are wary of hitchikers.");
+            HelpMenu.Add(HelpTextBuses);
+            HelpTextBlendingIn = new NativeItem("Blending in", "Disguising yourself as an ordinary LS citizen is your best chance for survival.\n\nThrow some boring clothes on using the Appearance menu, and make sure to turn off the engine using the Vehicle Options when parked.");
+            HelpMenu.Add(HelpTextBlendingIn);
+            HelpMenu.Shown += HelpMenu_Shown;
+            HelpMenu.Closed += HelpMenu_Closed;
+        }
+
+        private void HelpMenu_Closed(object sender, EventArgs e)
+        {
+            ShowHelpImages = false;
+        }
+
+        private bool ShowHelpImages = false;
+
+        private void HelpMenu_Shown(object sender, EventArgs e)
+        {
+            ShowHelpImages = true;
         }
 
         private void TurnVehicleEngineOff(object sender, EventArgs e)
@@ -253,8 +337,56 @@ namespace SurviveTheHuntClient.UI
             ObjectPool.HideAll();
         }
 
+        private void DrawHelpImages()
+        {
+            if (ShowHelpImages)
+            {
+                float menuWidth = Extensions.ToXRelative(HelpMenu.Width);
+                float safeZone = 1f - GetSafeZoneSize();
+                float originX = HelpMenu.Offset.X + (0.5f * safeZone);
+                float origin = Extensions.ToYRelative((37.4f * HelpMenu.Items.Count));
+
+                // TODO: I really can't be bothered with this and LemonUI hiding the Description rect data behind a private field isn't helping.
+                // This offset looks good enough so we'll roll with it, as long as the text isn't too long
+                origin += 0.285f;
+
+                Textures.Texture? texture = null;
+
+                switch (HelpMenu.SelectedIndex)
+                {
+                    case 0:
+                        origin += 0.05f;
+                        break;
+                    case 1:
+                        origin += 0.15f;
+                        texture = Textures.BoundsTexture;
+                        break;
+                    case 2:
+                        origin += 0.175f;
+                        texture = Textures.BusTexture;
+                        break;
+                    case 3:
+                        origin += 0.125f;
+                        texture = Textures.AppearanceTexture;
+                        break;
+                    default:
+                        origin += 0f;
+                        texture = Textures.AppearanceTexture;
+                        break;
+                }
+
+                if (texture.HasValue)
+                {
+                    origin += 0.01f;
+                    DrawSprite(MenuTxdName, texture.Value.Txn, originX + (menuWidth * .5f), origin + (0.5f * safeZone), menuWidth, 0.185f, 0f, 255, 255, 255, 255);
+                }
+            }
+        }
+
         public async Task Update()
         {
+            DrawHelpImages();
+
             const float secondsToHold = 0.25f;
             if(HoldingInteractionMenuPadButton && TimeHoldingInteractionMenu >= secondsToHold && !ObjectPool.AreAnyVisible)
             {
@@ -303,11 +435,11 @@ namespace SurviveTheHuntClient.UI
             {
                 if (!IsVehicleMenuPresent)
                 {
-                    int idx = MainMenu.Items.IndexOf(AboutButton);
+                    int idx = MainMenu.Items.IndexOf(HelpMenuItem);
                     MainMenu.Items.Insert(idx, VehicleOptionsMenuItem);
                     MainMenu.Recalculate();
                     MainMenu.Process();
-                    if (MainMenu.Visible & MainMenu.SelectedIndex == MainMenu.Items.IndexOf(AboutButton) - 1)
+                    if (MainMenu.Visible & MainMenu.SelectedIndex == MainMenu.Items.IndexOf(HelpMenuItem) - 1)
                     {
                         MainMenu.ResetCursor();
                         MainMenu.Visible = false;
