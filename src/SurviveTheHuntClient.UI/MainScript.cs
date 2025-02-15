@@ -33,6 +33,10 @@ namespace SurviveTheHuntClient.UI
         private NativeSubmenuItem RespawnMenuItem;
         private NativeItem RespawnConfirmButton;
 
+        private NativeMenu VehicleOptionsMenu;
+        private NativeSubmenuItem VehicleOptionsMenuItem;
+        private NativeItem VehicleEngineOffButton;
+
         private const string DefaultSelectPlayerDescription = "Choose which player to hunt, or let the server pick a random player.";
         private List<int> SelectablePlayerHandles = new List<int>();
 
@@ -42,6 +46,8 @@ namespace SurviveTheHuntClient.UI
         private float TimeHoldingInteractionMenu = 0f;
 
         private const string ShowMenuEventName = "sth:client:ui:showMenu";
+
+        private bool IsVehicleMenuPresent = false;
 
         public MainScript()
         {
@@ -97,6 +103,7 @@ namespace SurviveTheHuntClient.UI
             PlayerMenu = new NativeMenu("Player Options", "Player Options", "Restore your health, respawn etc.");
             RespawnMenu = new NativeMenu("Are you sure?", "Respawn", "Respawn immediately. Keep in mind you will lose the round if you are the hunted player.");
             StartHuntMenu = new NativeMenu("Confirm settings", "Start hunt", "Select the player to be hunted and start a match.");
+            VehicleOptionsMenu = new NativeMenu("Vehicle Options", "Vehicle Options", "Perform vehicle-related actions to help with blending in.");
 
             StartHuntMenuItem = new NativeSubmenuItem(StartHuntMenu, MainMenu);
 
@@ -110,6 +117,7 @@ namespace SurviveTheHuntClient.UI
             ObjectPool.Add(PlayerMenu);
             ObjectPool.Add(RespawnMenu);
             ObjectPool.Add(StartHuntMenu);
+            ObjectPool.Add(VehicleOptionsMenu);
 
             CharacterButton = new NativeItem("Appearance", "Change your character's appearance.");
             SpawnCarsButton = new NativeItem("Spawn cars", "Request a fresh batch of rides.");
@@ -120,6 +128,10 @@ namespace SurviveTheHuntClient.UI
             MainMenu.Add(CharacterButton);
             MainMenu.Add(SpawnCarsButton);
             MainMenu.Add(PlayerMenuItem);
+
+            VehicleOptionsMenuItem = new NativeSubmenuItem(VehicleOptionsMenu, MainMenu);
+            MainMenu.Add(VehicleOptionsMenuItem);
+            IsVehicleMenuPresent = true;
 
             HealButton = new NativeItem("Heal", "Restore your health immediately. You cannot heal during an active hunt.");
             RespawnMenuItem = new NativeSubmenuItem(RespawnMenu, PlayerMenu);
@@ -140,6 +152,22 @@ namespace SurviveTheHuntClient.UI
 
             SelectPlayerItem.ItemChanged += SelectedPlayerChanged;
             StartHuntMenuItem.Activated += OpenedStartHuntMenu;
+
+            VehicleEngineOffButton = new NativeItem("Turn engine off", "Turn the ignition off. It will automatically turn back on if you apply the accelerator.");
+            VehicleEngineOffButton.Activated += TurnVehicleEngineOff;
+            VehicleOptionsMenu.Add(VehicleEngineOffButton);
+        }
+
+        private void TurnVehicleEngineOff(object sender, EventArgs e)
+        {
+            if(IsPedInAnyVehicle(PlayerPedId(), true))
+            {
+                int vehicle = GetVehiclePedIsIn(PlayerPedId(), false);
+                if(DoesEntityExist(vehicle) && IsEntityAVehicle(vehicle))
+                {
+                    SetVehicleEngineOn(vehicle, false, false, true);
+                }
+            }
         }
 
         private void OpenedStartHuntMenu(object sender, EventArgs e)
@@ -268,8 +296,37 @@ namespace SurviveTheHuntClient.UI
             {
                 EnableControlAction(0, 21, true);
             }
-
             ObjectPool.Process();
+
+            // Remove the vehicle options menu if the player is not in a vehicle, and re-add it when they enter one.
+            if (IsPedInAnyVehicle(PlayerPedId(), true))
+            {
+                if (!IsVehicleMenuPresent)
+                {
+                    int idx = MainMenu.Items.IndexOf(AboutButton);
+                    MainMenu.Items.Insert(idx, VehicleOptionsMenuItem);
+                    MainMenu.Recalculate();
+                    MainMenu.Process();
+                    if (MainMenu.Visible & MainMenu.SelectedIndex == MainMenu.Items.IndexOf(AboutButton) - 1)
+                    {
+                        MainMenu.ResetCursor();
+                        MainMenu.Visible = false;
+                        MainMenu.Process();
+                        MainMenu.SelectedIndex = MainMenu.Items.IndexOf(VehicleOptionsMenuItem);
+                        MainMenu.Visible = true;
+                    }
+                    IsVehicleMenuPresent = true;
+                }
+            }
+            else
+            {
+                if (IsVehicleMenuPresent)
+                {
+                    MainMenu.Remove(VehicleOptionsMenuItem);
+                    IsVehicleMenuPresent = false;
+                }
+            }
+
         }
     }
 }
