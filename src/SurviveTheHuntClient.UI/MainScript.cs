@@ -105,20 +105,6 @@ namespace SurviveTheHuntClient.UI
 
                 InitUI();
 
-                RegisterCommand("heli", new Action(() =>
-                {
-                    RequestModel((uint)VehicleHash.Buzzard);
-                    Vector3 pos = Game.PlayerPed.Position;
-                    pos += Game.PlayerPed.ForwardVector * 10f;
-                    CreateVehicle((uint)VehicleHash.Buzzard, pos.X, pos.Y, pos.Z, Game.PlayerPed.Heading, false, false);
-                }), false);
-
-                RegisterCommand("time", new Action(() =>
-                {
-                    SetClockTime(0, 0, 0);
-                    NetworkOverrideClockTime(0, 0, 0);
-                }), false);
-
                 Tick += Update;
             }
         }
