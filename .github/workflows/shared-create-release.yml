@@ -6,6 +6,7 @@ env:
   STH_SHARED_LIB: SurviveTheHuntShared.net.dll
   NEWTONSOFT_JSON_DLL: Newtonsoft.Json.dll
   CONFIG_DIR: ${{github.workspace}}/configs/*
+  UI_FILE_DIR: ${{github.workspace}}/ui_files/*
 
 on:
   workflow_call:
@@ -59,6 +60,7 @@ jobs:
             mkdir artifacts/sth-gamemode
             mkdir artifacts/sth-gamemode/configs
             mkdir artifacts/sth-ui
+            mkdir artifacts/sth-ui/files
             mkdir build
             msbuild.exe sth-gamemode.sln /p:platform="Any CPU" /p:configuration="Release" /p:OutputPath=..\..\build
       -
@@ -75,6 +77,7 @@ jobs:
             copy build/${{env.LEMONUI_DLL}} artifacts/sth-ui/${{env.LEMONUI_DLL}}
             copy build/${{env.NEWTONSOFT_JSON_DLL}} artifacts/sth-gamemode/${{env.NEWTONSOFT_JSON_DLL}}
             copy ${{env.CONFIG_DIR}} artifacts/sth-gamemode/configs/
+            copy ${{env.UI_FILE_DIR}} artifacts/sth-ui/files/
             Compress-Archive -Path artifacts\* -DestinationPath ${{env.sthArtifactName}}-${{inputs.version_number}}.zip
       -
         if: ${{!inputs.prerelease}}

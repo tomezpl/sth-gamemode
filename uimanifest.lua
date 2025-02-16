@@ -3,6 +3,11 @@ fx_version 'cerulean'
 client_scripts {'SurviveTheHuntClient.UI.net.dll' }
 shared_scripts { 'SurviveTheHuntShared.net.dll' }
 
-file 'LemonUI.FiveM.dll'
+files { 
+	'LemonUI.FiveM.dll',
+	'files/lslimits.png',
+	'files/bus.png',
+	'files/appearance.png'
+}
 
 game 'gta5'
