@@ -60,6 +60,11 @@ namespace SurviveTheHuntClient.UI
         private const string MenuTxdName = "sthUiMenuTxd";
         private long MenuTxdHandle = 0;
 
+        // Only spawn cars if the user confirmed it
+        private const int SpawnCarsActivationThreshold = 2;
+        private int SpawnCarsActivatedCount = 0;
+        private const string SpawnCarsDescription = "Request a fresh batch of rides.";
+
         private static class Textures
         {
             internal struct Texture
@@ -177,7 +182,7 @@ namespace SurviveTheHuntClient.UI
             ObjectPool.Add(HelpMenu);
 
             CharacterButton = new NativeItem("Appearance", "Change your character's appearance.");
-            SpawnCarsButton = new NativeItem("Spawn cars", "Request a fresh batch of rides.");
+            SpawnCarsButton = new NativeItem("Spawn cars", SpawnCarsDescription);
             PlayerMenuItem = new NativeSubmenuItem(PlayerMenu, MainMenu);
             AboutButton = new NativeItem("About", $"Survive the Hunt v{typeof(MainScript).Assembly.GetName().Version}\n\nBased on FailRace's YouTube videos. Developed by Tomeztos (tomezpl).\n\nSpecial thanks for QA:\n- happygrowls\n- rollschuh2282\n- SpiderVice");
 
@@ -228,6 +233,14 @@ namespace SurviveTheHuntClient.UI
             HelpMenu.Add(HelpTextBlendingIn);
             HelpMenu.Shown += HelpMenu_Shown;
             HelpMenu.Closed += HelpMenu_Closed;
+
+            MainMenu.SelectedIndexChanged += MainMenu_SelectedIndexChanged;
+        }
+
+        private void MainMenu_SelectedIndexChanged(object sender, SelectedEventArgs e)
+        {
+            SpawnCarsActivatedCount = 0;
+            SpawnCarsButton.Description = SpawnCarsDescription;
         }
 
         private void PlayerMenu_Shown(object sender, EventArgs e)
@@ -289,6 +302,7 @@ namespace SurviveTheHuntClient.UI
         private void MainMenuClosing(object sender, CancelEventArgs e)
         {
             Shown = false;
+            SpawnCarsActivatedCount = 0;
         }
 
         private void HealButtonClicked(object sender, EventArgs e)
@@ -325,8 +339,19 @@ namespace SurviveTheHuntClient.UI
 
         private void SpawnCarsClicked(object sender, EventArgs e)
         {
-            MainMenu.Visible = false;
-            TriggerEvent(Events.Client.SpawnCars);
+            if(SpawnCarsActivatedCount < SpawnCarsActivationThreshold)
+            {
+                SpawnCarsActivatedCount++;
+                SpawnCarsButton.Description = "Are you sure? This will remove ALL previously spawned vehicles that aren't currently being driven.";
+            }
+
+            if (SpawnCarsActivatedCount >= SpawnCarsActivationThreshold)
+            {
+                MainMenu.Visible = false;
+                TriggerEvent(Events.Client.SpawnCars);
+                SpawnCarsActivatedCount = 0;
+                SpawnCarsButton.Description = SpawnCarsDescription;
+            }
         }
 
         [EventHandler("sth:client:ui:toggleMenu")]
