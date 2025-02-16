@@ -1,5 +1,4 @@
 ﻿using CitizenFX.Core;
-using SurviveTheHuntShared.Utils;
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -106,6 +105,20 @@ namespace SurviveTheHuntClient.UI
 
                 InitUI();
 
+                RegisterCommand("heli", new Action(() =>
+                {
+                    RequestModel((uint)VehicleHash.Buzzard);
+                    Vector3 pos = Game.PlayerPed.Position;
+                    pos += Game.PlayerPed.ForwardVector * 10f;
+                    CreateVehicle((uint)VehicleHash.Buzzard, pos.X, pos.Y, pos.Z, Game.PlayerPed.Heading, false, false);
+                }), false);
+
+                RegisterCommand("time", new Action(() =>
+                {
+                    SetClockTime(0, 0, 0);
+                    NetworkOverrideClockTime(0, 0, 0);
+                }), false);
+
                 Tick += Update;
             }
         }
@@ -196,6 +209,7 @@ namespace SurviveTheHuntClient.UI
             RespawnConfirmButton = new NativeItem("Confirm respawn", "Kill your character and respawn at Terminal.");
             PlayerMenu.Add(HealButton);
             PlayerMenu.Add(RespawnMenuItem);
+            PlayerMenu.Shown += PlayerMenu_Shown;
             RespawnMenu.Add(RespawnConfirmButton);
             RespawnConfirmButton.Activated += RespawnConfirmed;
             HealButton.Activated += HealButtonClicked;
@@ -230,6 +244,13 @@ namespace SurviveTheHuntClient.UI
             HelpMenu.Closed += HelpMenu_Closed;
         }
 
+        private void PlayerMenu_Shown(object sender, EventArgs e)
+        {
+            PlayerMenu.SelectedIndex = 0;
+            PlayerMenu.ResetCursor();
+            PlayerMenu.Process();
+        }
+
         private void HelpMenu_Closed(object sender, EventArgs e)
         {
             ShowHelpImages = false;
@@ -240,6 +261,10 @@ namespace SurviveTheHuntClient.UI
         private void HelpMenu_Shown(object sender, EventArgs e)
         {
             ShowHelpImages = true;
+
+            HelpMenu.SelectedIndex = 0;
+            HelpMenu.ResetCursor();
+            HelpMenu.Process();
         }
 
         private void TurnVehicleEngineOff(object sender, EventArgs e)
@@ -257,6 +282,10 @@ namespace SurviveTheHuntClient.UI
         private void OpenedStartHuntMenu(object sender, EventArgs e)
         {
             UpdateSelectablePlayers();
+
+            StartHuntMenu.SelectedIndex = 0;
+            StartHuntMenu.ResetCursor();
+            StartHuntMenu.Process();
         }
 
         private void SelectedPlayerChanged(object sender, ItemChangedEventArgs<string> e)
@@ -328,6 +357,10 @@ namespace SurviveTheHuntClient.UI
             Shown = true;
             ObjectPool.HideAll();
             MainMenu.Visible = true;
+
+            MainMenu.SelectedIndex = 0;
+            MainMenu.ResetCursor();
+            MainMenu.Process();
         }
 
         [EventHandler("sth:client:ui:closeMenu")]
@@ -377,8 +410,8 @@ namespace SurviveTheHuntClient.UI
 
                 if (texture.HasValue)
                 {
-                    origin += 0.01f;
-                    DrawSprite(MenuTxdName, texture.Value.Txn, originX + (menuWidth * .5f), origin + (0.5f * safeZone), menuWidth, 0.185f, 0f, 255, 255, 255, 255);
+                    origin += 0.015f;
+                    DrawSprite(MenuTxdName, texture.Value.Txn, originX + (menuWidth * .5f), origin + (0.5f * safeZone), menuWidth, 0.19f, 0f, 255, 255, 255, 255);
                 }
             }
         }
