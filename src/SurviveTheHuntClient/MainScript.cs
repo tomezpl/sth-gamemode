@@ -516,6 +516,8 @@ namespace SurviveTheHuntClient
             HuntUI.FadeBlips();
             HuntUI.UpdateTeammateBlips(Players, ref GameState, ref PlayerState);
 
+            // PlayerPassenger needs to tick before the weapons are updated because we need to check if the hunted player can driveby.
+            PlayerPassenger.Tick();
             PlayerState.UpdateWeapons(Game.PlayerPed);
 
             // Check and report player death to the server if needed.
@@ -608,8 +610,6 @@ namespace SurviveTheHuntClient
             KillTracker.Tick();
 
             BoundsTracker.Tick();
-
-            PlayerPassenger.Tick();
 
             Wait(0);
         }

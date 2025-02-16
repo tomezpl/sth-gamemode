@@ -140,7 +140,8 @@ namespace SurviveTheHuntClient
             }
 
             // Weapons aren't allowed in vehicles.
-            bool weaponsAllowed = !playerPed.IsGettingIntoAVehicle && !playerPed.IsInVehicle();
+            // However, the hunted player should be able to driveby if they're a passenger.
+            bool weaponsAllowed = (!playerPed.IsGettingIntoAVehicle && !playerPed.IsInVehicle()) || (Team == Teams.Team.Hunted && playerPed.SeatIndex >= 0);
 
             // If the player has a weapon equipped, store the weapon in LastWeaponEquipped so we keep track in case we need to re-equip it.
             if(weaponsAllowed && !ForcedUnarmed)
@@ -153,12 +154,14 @@ namespace SurviveTheHuntClient
             if (!weaponsAllowed && !ForcedUnarmed)
             {
                 SetCurrentPedWeapon(playerPed.Handle, (uint)WeaponHash.Unarmed, true);
-                SetPedCanSwitchWeapon(playerPed.Handle, false);
                 ForcedUnarmed = true;
             }
 
+            // Allow the hunted player to change their weapon as a passenger.
+            SetPedCanSwitchWeapon(playerPed.Handle, weaponsAllowed);
+
             // Revert the above, automatically equipping the player's last used weapon, if weapons are now allowed.
-            if(ForcedUnarmed && weaponsAllowed)
+            if (ForcedUnarmed && weaponsAllowed)
             {
                 SetCurrentPedWeapon(playerPed.Handle, LastWeaponEquipped, true);
                 SetPedCanSwitchWeapon(playerPed.Handle, true);
