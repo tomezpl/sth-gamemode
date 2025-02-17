@@ -40,7 +40,6 @@ namespace SurviveTheHuntClient.Helpers
                 if(currentAttacker != 0)
                 {
                     LastAttacker = NetworkGetPlayerIndexFromPed(currentAttacker);
-                    Debug.WriteLine($"Attacker: {GetPlayerName(LastAttacker.Value)}");
                 }
                 else if(TimeSinceLastDamage >= AttackerTimeout || currentHealth < LastTickHealth)
                 {
