@@ -55,6 +55,7 @@
     <Compile Include="Helpers\PlayerPassenger.cs" />
     <Compile Include="Helpers\SyncedVehicle.cs" />
     <Compile Include="Helpers\WantedLevelHelper.cs" />
+    <Compile Include="Helpers\WastedAnim.cs" />
     <Compile Include="Helpers\WeaponAttachments.cs" />
     <Compile Include="HuntUI.cs" />
     <Compile Include="Integrations\LbgCharNeo.cs" />

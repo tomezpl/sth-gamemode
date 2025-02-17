@@ -446,6 +446,8 @@ namespace SurviveTheHuntClient
             LastSpawnTime = DateTime.UtcNow.Ticks;
 
             KillTracker.Reset();
+
+            WastedAnim.StopShowing();
         }
 
         /// <summary>
@@ -534,6 +536,8 @@ namespace SurviveTheHuntClient
                 }));
                 PlayerState.DeathReported = true;
                 PlayerState.ReportDeathNextTick = false;
+
+                WastedAnim.NotifyDeath();
             }
             if(!Game.Player.IsAlive && !PlayerState.DeathReported)
             {
@@ -608,8 +612,8 @@ namespace SurviveTheHuntClient
             UpdateRelationships();
 
             KillTracker.Tick();
-
             BoundsTracker.Tick();
+            WastedAnim.Tick();
 
             Wait(0);
         }
