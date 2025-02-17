@@ -13,7 +13,7 @@ namespace SurviveTheHuntClient.Helpers
         private static int? ScaleformHandle = null;
         private static bool ShouldShow = false;
 
-        private const float SecondsTillShard = 0.15f;
+        private const float SecondsTillShard = 0.4f;
         private static float SecondsPassedSinceDeath = 0f;
         private static int? CurrentSoundId = null;
 
