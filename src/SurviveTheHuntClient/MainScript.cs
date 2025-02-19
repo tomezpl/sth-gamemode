@@ -231,6 +231,9 @@ namespace SurviveTheHuntClient
                 SetBlipDisplay(SafeZoneRadiusBlipHandle, 6);
 
                 BoundsTracker.Init();
+
+                Debug.WriteLine($"Clearing {MusicPlayer.AllEventsNames.Length} music events");
+                MusicPlayer.ClearMusic();
             }
         }
 

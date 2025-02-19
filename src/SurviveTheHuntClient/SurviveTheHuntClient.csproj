@@ -51,6 +51,7 @@
     <Compile Include="Helpers\DeathBlips.cs" />
     <Compile Include="Helpers\KillTracker.cs" />
     <Compile Include="Helpers\MinimapHelper.cs" />
+    <Compile Include="Helpers\MusicPlayer.cs" />
     <Compile Include="Helpers\NativeHelpers.cs" />
     <Compile Include="Helpers\PlayerPassenger.cs" />
     <Compile Include="Helpers\SyncedVehicle.cs" />
