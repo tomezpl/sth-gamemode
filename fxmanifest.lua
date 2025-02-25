@@ -5,4 +5,7 @@ client_scripts { 'SurviveTheHuntClient.net.dll' }
 server_scripts { 'SurviveTheHuntServer.net.dll' }
 shared_scripts { 'SurviveTheHuntShared.net.dll' }
 
+ui_page 'dbg_ui.html'
+file 'dbg_ui.html'
+
 game 'gta5'

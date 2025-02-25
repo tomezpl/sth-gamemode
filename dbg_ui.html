@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            font-size: 24px;
+        }
+
+        .stat-box {
+            display: grid;
+            max-width: 30vw;
+            padding: 0.5em;
+            grid-auto-columns: 100%;
+            grid-auto-rows: 1.5em;
+            font-family: sans-serif;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 1px 1px 1px #000, -1px -1px 1px #000, 0 1px 1px #000, 1px 0 1px #000, -1px 0 1px #000, 0 -1px 1px #000;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        #score::before {
+            content: 'Score: ';
+        }
+
+        #speed::before {
+            content: 'Speed: ';
+        }
+
+        #dist::before {
+            content: 'Distance: ';
+        }
+
+        #heading::before {
+            content: 'Heading: ';
+        }
+
+        #sight::before {
+            content: 'LOS: ';
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="stat-box">
+        <div id="score"></div>
+        <div id="speed"></div>
+        <div id="heading"></div>
+        <div id="dist"></div>
+        <div id="sight"></div>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const [score, speed, dist, heading, sight] = [document.getElementById('score'), document.getElementById('speed'), document.getElementById('dist'), document.getElementById('heading'), document.getElementById('sight')];
+
+            window.addEventListener('message', ({ data }) => {
+                score.innerText = data.score;
+                speed.innerText = data.speedFraction;
+                heading.innerText = data.headingSine;
+                dist.innerText = data.proximity;
+                sight.innerText = data.sight;
+            })
+        });
+    </script>
+</body>
+
+</html>

@@ -91,6 +91,9 @@ namespace SurviveTheHuntClient
         private uint? HunterGroupHash = null;
         private uint? HuntedGroupHash = null;
 
+        private IntensityTracker.SubjectState TrackedSubject = new IntensityTracker.SubjectState();
+        private Entity TrackedEntity = null;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -179,6 +182,82 @@ namespace SurviveTheHuntClient
                     TriggerServerEvent(Events.Server.RequestStartHunt);
                 }), false);
 
+                RegisterCommand("music", new Action(() =>
+                {
+                    string[] events =
+                    {
+                        "CAR1_MISSION_START",
+                        "CAR1_CHASE_START"
+                    };
+
+                    foreach(string ev in events)
+                    {
+                        if(!PrepareMusicEvent(ev))
+                        {
+                            Debug.WriteLine($"Failed to prep event {ev}");
+                        }
+                        if(!TriggerMusicEvent(ev))
+                        {
+                            Debug.WriteLine($"Failed to trigger event {ev}");
+                        }
+                    }
+                }), false);
+
+                RegisterCommand("pursuit", new Action(() =>
+                {
+                    MusicPlayer.PlayMusic(MusicPlayer.AllEvents.Pursuit);
+                }), false);
+
+                RegisterCommand("stealth", new Action(() =>
+                {
+                    MusicPlayer.PlayMusic(MusicPlayer.AllEvents.Stealth);
+                }), false);
+
+                RegisterCommand("stopmusic", new Action(() =>
+                {
+                    MusicPlayer.ClearMusic(true);
+                }), false);
+
+                RegisterCommand("track", new Action(() =>
+                {
+                    int trackedPed = 0;
+                    Entity[] allPeds = World.GetAllPeds();
+                    Entity nearestPed = null;
+                    CfxVector3 myPos = Game.PlayerPed.Position;
+                    float nearestDist = float.PositiveInfinity;
+                    foreach(Entity ped in allPeds)
+                    {
+                        float dist = ped.Position.DistanceToSquared(myPos);
+                        if (ped.Handle != PlayerPedId() && (nearestPed == null || dist < nearestDist))
+                        {
+                            nearestPed = ped;
+                            nearestDist = dist;
+                        }
+                    }
+                    if(nearestPed != null)
+                    {
+                        TrackedEntity = nearestPed;
+                        int blip = AddBlipForEntity(nearestPed.Handle);
+                        SetBlipDisplay(blip, 2);
+                        SetBlipAsFriendly(blip, true);
+                        SetEntityAsMissionEntity(nearestPed.Handle, false, true);
+                        int vehicle = GetVehiclePedIsIn(nearestPed.Handle, false);
+                        if(DoesEntityExist(vehicle))
+                        {
+                            SetTaskVehicleChaseBehaviorFlag(nearestPed.Handle, 16, true);
+                            TaskVehicleChase(nearestPed.Handle, PlayerPedId());
+                        }
+                        else
+                        {
+                            SetPedAsEnemy(nearestPed.Handle, true);
+                        }
+                        TrackedSubject = new IntensityTracker.SubjectState();
+                        TrackedSubject.Pos = TrackedEntity.Position;
+                        TrackedSubject.Heading = TrackedEntity.Heading;
+                        TrackedSubject.Velocity = TrackedEntity.Velocity;
+                    }
+                }), false);
+
                 Action spawnCarsAction = new Action(async () =>
                 {
                     if (!IsSpawningCars)
@@ -233,6 +312,8 @@ namespace SurviveTheHuntClient
                 BoundsTracker.Init();
 
                 Debug.WriteLine($"Clearing {MusicPlayer.AllEventsNames.Length} music events");
+
+                MusicPlayer.Init();
                 MusicPlayer.ClearMusic();
             }
         }
@@ -617,6 +698,40 @@ namespace SurviveTheHuntClient
             KillTracker.Tick();
             BoundsTracker.Tick();
             WastedAnim.Tick();
+
+            bool intensityChanged = false;
+            if(TrackedEntity?.Exists() == true)
+            {
+                CfxVector3 overhead = TrackedEntity.Position + TrackedEntity.UpVector * 5f;
+                DrawMarker(2, overhead.X, overhead.Y, overhead.Z, 0f, 0f, 0f, 0f, 0f, 0f, 1f, 1f, 1f, 255, 0, 0, 192, false, true, 2, false, null, null, false);
+                TrackedSubject.Pos = TrackedEntity.Position;
+                TrackedSubject.Velocity = TrackedEntity.Velocity;
+                TrackedSubject.Heading = TrackedEntity.Heading;
+                IntensityTracker.SubjectState.Result result = TrackedSubject.CalculateScoreFull(Game.PlayerPed.Position, Game.PlayerPed.Heading, Game.PlayerPed.Velocity, out float score);
+                intensityChanged = IntensityTracker.Tick(RNG, TrackedSubject);
+                SendNuiMessage($"{{\"score\": {score}, \"speedFraction\": {result.SpeedFraction}, \"headingSine\": {result.HeadingSine}, \"proximity\": {result.InvDistance}, \"sight\": {result.LineOfSight}}}");
+            }
+            else
+            {
+                intensityChanged =IntensityTracker.Tick(RNG);
+            }
+
+            if(intensityChanged)
+            {
+                Debug.WriteLine($"Intensity changed to {IntensityTracker.CurrentTier}");
+                switch(IntensityTracker.CurrentTier)
+                {
+                    case IntensityTracker.Tier.None:
+                        MusicPlayer.ClearMusic(true);
+                        break;
+                    case IntensityTracker.Tier.Stealth:
+                        MusicPlayer.PlayMusic(MusicPlayer.AllEvents.Stealth);
+                        break;
+                    case IntensityTracker.Tier.Pursuit:
+                        MusicPlayer.PlayMusic(MusicPlayer.AllEvents.Pursuit);
+                        break;
+                }
+            }
 
             Wait(0);
         }
