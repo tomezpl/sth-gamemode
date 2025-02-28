@@ -719,6 +719,10 @@ namespace SurviveTheHuntClient
                     }
                 }
                 IntensityChanged = IntensityTracker.Tick(RNG, hunterSubjects.ToArray());
+                if(IntensityChanged)
+                {
+                    TriggerServerEvent(Events.Server.ReceiveNewMusicIntensity, IntensityTracker.CurrentTier);
+                }
                 //CfxVector3 overhead = TrackedEntity.Position + TrackedEntity.UpVector * 5f;
                 //DrawMarker(2, overhead.X, overhead.Y, overhead.Z, 0f, 0f, 0f, 0f, 0f, 0f, 1f, 1f, 1f, 255, 0, 0, 192, false, true, 2, false, null, null, false);
                 //TrackedSubject.Pos = TrackedEntity.Position;
