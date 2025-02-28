@@ -142,5 +142,11 @@ namespace SurviveTheHuntServer
             KillFeedServerPayload killfeedPayload = KillFeedDispatcher.GetKillFeedPayload(killInfo, GameState, RNG);
             TriggerClientEvent(Events.Client.DisplayKill, KillFeedServerPayload.Serialize(killfeedPayload));
         }
+
+        [EventHandler(Events.Server.ReceiveNewMusicIntensity)]
+        public void BroadcastNewMusicIntensity(uint intensity)
+        {
+            TriggerClientEvent(Events.Client.ReceiveNewMusicIntensity, intensity);
+        }
     }
 }

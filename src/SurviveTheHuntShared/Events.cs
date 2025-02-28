@@ -67,6 +67,11 @@ namespace SurviveTheHuntShared
             /// </summary>
             public const string DisplayKill = "sth:displayKill";
 
+            /// <summary>
+            /// A client-side event that will sync the IntensityTracker with info from the hunted client relayed via the server.
+            /// </summary>
+            public const string ReceiveNewMusicIntensity = "sth:recvNewMusicIntensity";
+
             public const string SpawnCars = "sth:spawnCars";
             public const string Heal = "sth:heal";
             public const string Respawn = "sth:respawn";
@@ -85,6 +90,11 @@ namespace SurviveTheHuntShared
             public const string ClientStarted = "sth:clientStarted";
             public const string RequestStartHunt = "sth:startHunt";
             public const string ReceiveHuntedClock = "sth:receiveClockFromHuntedPlayer";
+
+            /// <summary>
+            /// A server-side event triggered by the hunted client to relay the new intensity info to hunter players.
+            /// </summary>
+            public const string ReceiveNewMusicIntensity = "sth:recvNewMusicIntensityFromHuntedPlayer";
 
             /// <summary>
             /// A newly joined client will trigger this server event, which will then send <see cref="Client.ReceiveClockSyncRequest"/> to the hunted player,

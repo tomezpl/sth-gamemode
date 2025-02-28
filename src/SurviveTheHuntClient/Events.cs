@@ -3,6 +3,7 @@ using System;
 using Events = SurviveTheHuntShared.Events;
 using static CitizenFX.Core.Native.API;
 using SurviveTheHuntShared;
+using SurviveTheHuntClient.Helpers;
 
 namespace SurviveTheHuntClient
 {
@@ -68,6 +69,15 @@ namespace SurviveTheHuntClient
             }
 
             EndTextCommandThefeedPostMpticker(true, true);
+        }
+
+        [EventHandler(Events.Client.ReceiveNewMusicIntensity)]
+        public void ReceiveNewMusicIntensity(uint intensityTier)
+        {
+            if (PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunters)
+            {
+                IntensityChanged = IntensityTracker.SetTier((IntensityTracker.Tier)intensityTier);
+            }
         }
     }
 }

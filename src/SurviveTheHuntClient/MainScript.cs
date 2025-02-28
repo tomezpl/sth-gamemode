@@ -94,6 +94,8 @@ namespace SurviveTheHuntClient
         private IntensityTracker.SubjectState TrackedSubject = new IntensityTracker.SubjectState();
         private Entity TrackedEntity = null;
 
+        private bool IntensityChanged = false;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -203,7 +205,7 @@ namespace SurviveTheHuntClient
                     }
                 }), false);
 
-                RegisterCommand("pursuit", new Action(() =>
+                /*RegisterCommand("pursuit", new Action(() =>
                 {
                     MusicPlayer.PlayMusic(MusicPlayer.AllEvents.Pursuit);
                 }), false);
@@ -256,7 +258,7 @@ namespace SurviveTheHuntClient
                         TrackedSubject.Heading = TrackedEntity.Heading;
                         TrackedSubject.Velocity = TrackedEntity.Velocity;
                     }
-                }), false);
+                }), false);*/
 
                 Action spawnCarsAction = new Action(async () =>
                 {
@@ -699,24 +701,39 @@ namespace SurviveTheHuntClient
             BoundsTracker.Tick();
             WastedAnim.Tick();
 
-            bool intensityChanged = false;
-            if(TrackedEntity?.Exists() == true)
+            //bool intensityChanged = false;
+            //if(TrackedEntity?.Exists() == true)
+            if(PlayerState.Team == Teams.Team.Hunted)
             {
-                CfxVector3 overhead = TrackedEntity.Position + TrackedEntity.UpVector * 5f;
-                DrawMarker(2, overhead.X, overhead.Y, overhead.Z, 0f, 0f, 0f, 0f, 0f, 0f, 1f, 1f, 1f, 255, 0, 0, 192, false, true, 2, false, null, null, false);
-                TrackedSubject.Pos = TrackedEntity.Position;
-                TrackedSubject.Velocity = TrackedEntity.Velocity;
-                TrackedSubject.Heading = TrackedEntity.Heading;
-                IntensityTracker.SubjectState.Result result = TrackedSubject.CalculateScoreFull(Game.PlayerPed.Position, Game.PlayerPed.Heading, Game.PlayerPed.Velocity, out float score);
-                intensityChanged = IntensityTracker.Tick(RNG, TrackedSubject);
-                SendNuiMessage($"{{\"score\": {score}, \"speedFraction\": {result.SpeedFraction}, \"headingSine\": {result.HeadingSine}, \"proximity\": {result.InvDistance}, \"sight\": {result.LineOfSight}}}");
+                List<IntensityTracker.SubjectState> hunterSubjects = new List<IntensityTracker.SubjectState>(GetNumberOfPlayers() - 1);
+                foreach(Player player in Players)
+                {
+                    if(player != Player.Local && player.Character.Exists())
+                    {
+                        IntensityTracker.SubjectState subject = new IntensityTracker.SubjectState();
+                        int pedId = player.Character.Handle;
+                        subject.Pos = GetEntityCoords(pedId, false);
+                        subject.Velocity = GetEntityVelocity(pedId);
+                        subject.Heading = GetEntityHeading(pedId);
+                        hunterSubjects.Add(subject);
+                    }
+                }
+                IntensityChanged = IntensityTracker.Tick(RNG, hunterSubjects.ToArray());
+                //CfxVector3 overhead = TrackedEntity.Position + TrackedEntity.UpVector * 5f;
+                //DrawMarker(2, overhead.X, overhead.Y, overhead.Z, 0f, 0f, 0f, 0f, 0f, 0f, 1f, 1f, 1f, 255, 0, 0, 192, false, true, 2, false, null, null, false);
+                //TrackedSubject.Pos = TrackedEntity.Position;
+                //TrackedSubject.Velocity = TrackedEntity.Velocity;
+                //TrackedSubject.Heading = TrackedEntity.Heading;
+                //IntensityTracker.SubjectState.Result result = TrackedSubject.CalculateScoreFull(Game.PlayerPed.Position, Game.PlayerPed.Heading, Game.PlayerPed.Velocity, out float score);
+                //intensityChanged = IntensityTracker.Tick(RNG, TrackedSubject);
+                //SendNuiMessage($"{{\"score\": {score}, \"speedFraction\": {result.SpeedFraction}, \"headingSine\": {result.HeadingSine}, \"proximity\": {result.InvDistance}, \"sight\": {result.LineOfSight}}}");
             }
             else
             {
-                intensityChanged =IntensityTracker.Tick(RNG);
+                //intensityChanged = IntensityTracker.Tick(RNG);
             }
 
-            if(intensityChanged)
+            if(IntensityChanged)
             {
                 Debug.WriteLine($"Intensity changed to {IntensityTracker.CurrentTier}");
                 switch(IntensityTracker.CurrentTier)
@@ -731,6 +748,7 @@ namespace SurviveTheHuntClient
                         MusicPlayer.PlayMusic(MusicPlayer.AllEvents.Pursuit);
                         break;
                 }
+                IntensityChanged = false;
             }
 
             Wait(0);

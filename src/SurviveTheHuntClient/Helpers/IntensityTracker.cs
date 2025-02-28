@@ -14,7 +14,7 @@ namespace SurviveTheHuntClient.Helpers
     {
         private const float MinDistanceScore = 0.3f;
         private const float MinTotalScore = 1.85f;
-        private const float MinActivationSeconds = 5f;
+        private const float MinActivationSeconds = 8.5f;
         private const float MinSecondsCooldown = 10f;
         private const float MaxSecondsCooldown = 30f;
 
@@ -32,6 +32,20 @@ namespace SurviveTheHuntClient.Helpers
         private static Tier currentTier = Tier.None;
 
         internal static Tier CurrentTier { get => currentTier; }
+
+        /// <summary>
+        /// Sets the current tier and returns true if it was different.
+        /// </summary>
+        /// <param name="tier"></param>
+        /// <returns></returns>
+        internal static bool SetTier(Tier tier)
+        {
+            bool changed = tier != currentTier;
+
+            currentTier = tier;
+
+            return changed;
+        }
 
 
         /// <summary>
