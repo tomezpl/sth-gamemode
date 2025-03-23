@@ -28,7 +28,7 @@ namespace SurviveTheHuntServer
         /// </summary>
         protected Dictionary<string, Action<dynamic>> STHEvents;
 
-        private readonly HuntedQueue HuntedPlayerQueue = null;
+        private readonly IHuntedQueue HuntedPlayerQueue = null;
 
         private ServerConfig Config;
 
@@ -95,7 +95,7 @@ namespace SurviveTheHuntServer
 
         protected void PlayerJoining([FromSource] Player player, string oldId)
         {
-            if(string.IsNullOrWhiteSpace(player?.Name))
+            if (string.IsNullOrWhiteSpace(player?.Name))
             {
                 Console.WriteLine("Joining player name was null");
             }
@@ -110,7 +110,7 @@ namespace SurviveTheHuntServer
 
         private async Task UpdateLoop()
         {
-            if(DateTime.UtcNow >= LastTimeSync + SharedConstants.TimeSyncInterval)
+            if (DateTime.UtcNow >= LastTimeSync + SharedConstants.TimeSyncInterval)
             {
                 TriggerClientEvent(Events.Client.ReceiveTimeSync, new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
                 LastTimeSync = DateTime.UtcNow;
@@ -125,7 +125,7 @@ namespace SurviveTheHuntServer
                     NotifyWinner();
                 }
 
-                if(DateTime.UtcNow - GameState.Hunt.LastPingTime >= SharedConstants.HuntedPingInterval)
+                if (DateTime.UtcNow - GameState.Hunt.LastPingTime >= SharedConstants.HuntedPingInterval)
                 {
                     GameState.Hunt.LastPingTime = DateTime.UtcNow;
                     float radius = 200f;
@@ -179,49 +179,58 @@ namespace SurviveTheHuntServer
                             return;
                         }
 
-                        // Check if a specific player was requested when the hunt was started.
-                        int? requestedPlayer = null;
+                        // Set default arguments and try to read them from the event payload.
+                        int[] args = { (int)HuntedQueueType.SingleHunted };
                         try
                         {
-                            requestedPlayer = data as int?;
-                        }
-                        catch
-                        {
-                            requestedPlayer = null;
-                        }
+                            args = data;
+                        } catch { }
 
                         Player randomPlayer = null;
-                        if(requestedPlayer != null)
+                        if(HuntedPlayerQueue.Type == HuntedQueueType.SingleHunted)
                         {
-                            foreach(Player player in Players)
+                            // Check if a specific player was requested when the hunt was started.
+                            int? requestedPlayer = null;
+                            try
                             {
-                                if(player.Handle == requestedPlayer.Value.ToString())
+                                requestedPlayer = args[1];
+                            }
+                            catch
+                            {
+                                requestedPlayer = null;
+                            }
+
+                            if(requestedPlayer != null)
+                            {
+                                foreach(Player player in Players)
                                 {
-                                    randomPlayer = player;
-                                    break;
+                                    if(player.Handle == requestedPlayer.Value.ToString())
+                                    {
+                                        randomPlayer = player;
+                                        break;
+                                    }
                                 }
                             }
+
+                            if(randomPlayer == null)
+                            {
+                                randomPlayer = Hunt.ChooseRandomPlayer(Players, ref GameState);
+                            }
+
+                            GameState.Hunt.LastHuntedPlayer = randomPlayer;
+
+                            TriggerClientEvent(randomPlayer, Events.Client.NotifyHuntedPlayer);
+                            TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerServerId = int.Parse(randomPlayer.Handle) });
                         }
-                        
-                        if(randomPlayer == null)
-                        {
-                            randomPlayer = Hunt.ChooseRandomPlayer(Players, ref GameState);
-                        }
-
-                        GameState.Hunt.LastHuntedPlayer = randomPlayer;
-
-                        TriggerClientEvent(randomPlayer, Events.Client.NotifyHuntedPlayer);
-                        TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerServerId = int.Parse(randomPlayer.Handle) });
-
                         ulong prepPhaseSeconds = (ulong)GetConvarInt("sth_prepPhaseDuration", SharedConstants.DefaultPrepPhaseSeconds);
 
                         SetConvarReplicated(SharedConstants.CharCreatorBlockCreatorConvar, "true");
 
                         GameState.Hunt.Begin(randomPlayer, prepPhaseSeconds);
 
-                        TriggerClientEvent(Events.Client.HuntStartedByServer, new 
-                        { 
-                            EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture), 
+                        TriggerClientEvent(Events.Client.HuntStartedByServer, new
+                        {
+                            EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture),
                             NextNotification = (float)prepPhaseSeconds + (float)SharedConstants.HuntedPingInterval.TotalSeconds,
                             PrepPhaseDuration = prepPhaseSeconds
                         });

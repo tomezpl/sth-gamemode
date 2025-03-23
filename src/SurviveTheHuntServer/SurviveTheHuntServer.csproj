@@ -50,7 +50,9 @@
     <Compile Include="Constants.cs" />
     <Compile Include="Events.cs" />
     <Compile Include="GameState.cs" />
-    <Compile Include="Helpers\HuntedQueue.cs" />
+    <Compile Include="Helpers\FFAHuntedQueue.cs" />
+    <Compile Include="Helpers\IHuntedQueue.cs" />
+    <Compile Include="Helpers\SingleHuntedQueue.cs" />
     <Compile Include="Extensions\TeamPlugins.cs" />
     <Compile Include="Helpers\KillFeedDispatcher.cs" />
     <Compile Include="Helpers\WeaponLoadout.cs" />

@@ -9,6 +9,7 @@ using SurviveTheHuntShared;
 using System.Collections.Generic;
 using LemonUI.Elements;
 using LemonUI.Tools;
+using SurviveTheHuntShared.Core;
 
 namespace SurviveTheHuntClient.UI
 {
@@ -327,11 +328,11 @@ namespace SurviveTheHuntClient.UI
         {
             if (SelectPlayerItem.SelectedIndex != 0)
             {
-                TriggerServerEvent(Events.Server.RequestStartHunt, GetPlayerServerId(SelectablePlayerHandles[SelectPlayerItem.SelectedIndex]));
+                TriggerServerEvent(Events.Server.RequestStartHunt, (int)HuntedQueueType.SingleHunted, GetPlayerServerId(SelectablePlayerHandles[SelectPlayerItem.SelectedIndex]));
             }
             else
             {
-                TriggerServerEvent(Events.Server.RequestStartHunt);
+                TriggerServerEvent(Events.Server.RequestStartHunt, (int)HuntedQueueType.SingleHunted);
             }
             MainMenu.Visible = false;
             StartHuntMenu.Visible = false;

@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntShared.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,8 +15,10 @@ namespace SurviveTheHuntServer.Helpers
     /// <para>Every time a random player is requested, use <see cref="PopNext"/> to return a reference to their <see cref="Player"/> object and remove them from the queue.</para>
     /// <para>The queue can be reshuffled at any moment by calling <see cref="Shuffle"/>.</para>
     /// </summary>
-    public class HuntedQueue : IEnumerable<Player>
+    internal class SingleHuntedQueue : IHuntedQueue
     {
+        public HuntedQueueType Type { get =>  HuntedQueueType.SingleHunted;}
+
         /// <summary>
         /// Current queue of players.
         /// </summary>
@@ -35,7 +38,7 @@ namespace SurviveTheHuntServer.Helpers
         /// Creates a queue instance by initialising it with the provided <paramref name="playerHandles"/>.
         /// </summary>
         /// <param name="playerHandles">List of players to consider. Typically this will be <see cref="BaseScript.Players"/>.</param>
-        public HuntedQueue(IEnumerable<Player> playerHandles)
+        public SingleHuntedQueue(IEnumerable<Player> playerHandles)
         {
             Init(playerHandles);
         }

@@ -13,16 +13,34 @@ namespace SurviveTheHuntServer
     /// </summary>
     public static class Hunt
     {
-        private static HuntedQueue HuntedPlayerQueue = new HuntedQueue(Enumerable.Empty<Player>());
+        private static IHuntedQueue HuntedPlayerQueue = new SingleHuntedQueue(Enumerable.Empty<Player>());
 
         /// <summary>
         /// Initialises a randomised hunted player queue using <paramref name="playerHandles"/> and provides a reference to the initialised queue.
         /// </summary>
         /// <param name="playerHandles">A list of players to consider, typically all players (<see cref="BaseScript.Players"/>).</param>
-        /// <returns>A reference to the <see cref="HuntedQueue"/> used to determine hunted player order.</returns>
-        public static HuntedQueue InitHuntedQueue(IEnumerable<Player> playerHandles)
+        /// <returns>A reference to the <see cref="SingleHuntedQueue"/> used to determine hunted player order.</returns>
+        internal static IHuntedQueue InitHuntedQueue(IEnumerable<Player> playerHandles, HuntedQueueType type = HuntedQueueType.SingleHunted)
         {
-            HuntedPlayerQueue.Init(playerHandles);
+            bool needsInit = true;
+            if (HuntedPlayerQueue.Type != type) {
+                switch (type)
+                {
+                    case HuntedQueueType.SingleHunted:
+                        HuntedPlayerQueue = new SingleHuntedQueue(playerHandles);
+                        needsInit = false;
+                        break;
+                    case HuntedQueueType.FreeForAll:
+                        HuntedPlayerQueue = new FFAHuntedQueue(playerHandles);
+                        needsInit = false;
+                        break;
+                }
+            }
+
+            if(needsInit)
+            {
+                HuntedPlayerQueue.Init(playerHandles);
+            }
 
             return HuntedPlayerQueue;
         }
@@ -35,7 +53,7 @@ namespace SurviveTheHuntServer
         /// <returns>Handle for player to use as next hunted player.</returns>
         public static Player ChooseRandomPlayer(PlayerList players, ref GameState gameState)
         {
-            if(HuntedPlayerQueue.QueueSize == 0)
+            if(HuntedPlayerQueue.Type == HuntedQueueType.SingleHunted && ((SingleHuntedQueue)HuntedPlayerQueue).QueueSize == 0)
             {
                 HuntedPlayerQueue.Init(players);
                 Debug.WriteLine($"Reinitialising the hunted queue with ${players.Count()} players!");
