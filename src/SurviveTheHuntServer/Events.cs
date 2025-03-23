@@ -9,6 +9,7 @@ using SurviveTheHuntShared;
 using SurviveTheHuntShared.Core;
 using SurviveTheHuntServer.Helpers;
 using System.Dynamic;
+using System.Globalization;
 
 namespace SurviveTheHuntServer
 {
@@ -20,7 +21,7 @@ namespace SurviveTheHuntServer
         {
             Debug.WriteLine($"{resourceName} resource started!");
 
-            if(resourceName == SharedConstants.ResourceName)
+            if (resourceName == SharedConstants.ResourceName)
             {
                 // Reload the config file every time the resource is started.
                 Config = ServerConfig.FromJsonFile();
@@ -41,7 +42,8 @@ namespace SurviveTheHuntServer
         {
             Debug.WriteLine($"Received vehicleNetIdsPacked: {vehicleNetIdsPacked}");
             int validNetIdCount = 0;
-            int[] vehicleNetIds = vehicleNetIdsPacked.Split(';').Select((netIdStr) => {
+            int[] vehicleNetIds = vehicleNetIdsPacked.Split(';').Select((netIdStr) =>
+            {
                 Debug.WriteLine(netIdStr);
                 if (int.TryParse(netIdStr, out int netId))
                 {
@@ -55,7 +57,7 @@ namespace SurviveTheHuntServer
                 }
             }).ToArray();
 
-            if(validNetIdCount > 0)
+            if (validNetIdCount > 0)
             {
                 Debug.WriteLine($"Overwriting SpawnedVehicles with {vehicleNetIds.Length} netIds");
                 SpawnedVehicles.Clear();
@@ -73,7 +75,7 @@ namespace SurviveTheHuntServer
                 vehicleNetIdsPacked += $"{netId};";
             }
 
-            if(vehicleNetIdsPacked.Length > 1)
+            if (vehicleNetIdsPacked.Length > 1)
             {
                 // Remove trailing semicolon.
                 vehicleNetIdsPacked = vehicleNetIdsPacked.Remove(vehicleNetIdsPacked.Length - 1, 1);
@@ -95,7 +97,7 @@ namespace SurviveTheHuntServer
             {
                 TriggerClientEvent(Events.Client.ReceiveDeleteVehicle, vehicleNetId);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Debug.WriteLine($"Couldn't delete vehicle: {ex.ToString()}");
             }
@@ -141,6 +143,82 @@ namespace SurviveTheHuntServer
             // Broadcast a killfeed message.
             KillFeedServerPayload killfeedPayload = KillFeedDispatcher.GetKillFeedPayload(killInfo, GameState, RNG);
             TriggerClientEvent(Events.Client.DisplayKill, KillFeedServerPayload.Serialize(killfeedPayload));
+        }
+
+        [EventHandler(Events.Server.RequestStartHunt)]
+        public void HuntRequested(int huntType, int? huntedPlayer)
+        {
+            // Prevent the next hunt from being started too quick.
+            if (GameState.Hunt.IsStarted || (GameState.Hunt.NextHuntStartTime != null && GameState.Hunt.NextHuntStartTime > DateTime.UtcNow))
+            {
+                return;
+            }
+
+            // Set default arguments and try to read them from the event payload.
+            int?[] args = { (int)HuntedQueueType.SingleHunted };
+            try
+            {
+                args = new int?[] { huntType, null };
+                args[1] = huntedPlayer;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"couldn't parse args: {ex}");
+            }
+
+            Player randomPlayer = null;
+            if (HuntedPlayerQueue.Type == HuntedQueueType.SingleHunted)
+            {
+                // Check if a specific player was requested when the hunt was started.
+                int? requestedPlayer = null;
+                try
+                {
+                    requestedPlayer = args[1];
+                }
+                catch
+                {
+                    requestedPlayer = null;
+                }
+
+                if (requestedPlayer != null)
+                {
+                    foreach (Player player in Players)
+                    {
+                        if (player.Handle == requestedPlayer.Value.ToString())
+                        {
+                            randomPlayer = player;
+                            break;
+                        }
+                    }
+                }
+
+                if (randomPlayer == null)
+                {
+                    randomPlayer = Hunt.ChooseRandomPlayer(Players, ref GameState);
+                }
+
+                GameState.Hunt.LastHuntedPlayer = randomPlayer;
+
+                TriggerClientEvent(randomPlayer, Events.Client.NotifyHuntedPlayer);
+                TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerServerId = int.Parse(randomPlayer.Handle) });
+            }
+            ulong prepPhaseSeconds = (ulong)GetConvarInt("sth_prepPhaseDuration", SharedConstants.DefaultPrepPhaseSeconds);
+
+            SetConvarReplicated(SharedConstants.CharCreatorBlockCreatorConvar, "true");
+
+            GameState.Hunt.Begin(randomPlayer, prepPhaseSeconds);
+
+            TriggerClientEvent(Events.Client.HuntStartedByServer, new
+            {
+                EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture),
+                NextNotification = (float)prepPhaseSeconds + (float)SharedConstants.HuntedPingInterval.TotalSeconds,
+                PrepPhaseDuration = prepPhaseSeconds
+            });
+
+            foreach (Player player in Players)
+            {
+                JoinTeam(player, player.Handle == randomPlayer.Handle ? Teams.Team.Hunted : Teams.Team.Hunters);
+            }
         }
     }
 }
