@@ -69,5 +69,14 @@ namespace SurviveTheHuntClient
 
             EndTextCommandThefeedPostMpticker(true, true);
         }
+
+        [EventHandler(Events.Client.ReceiveFFAHuntedTarget)]
+        public void ReceiveFFAHuntedTarget(int huntedPlayerServerId)
+        {
+            GameState.Hunt.HuntedPlayer = new Player(GetPlayerFromServerId(huntedPlayerServerId));
+            Debug.WriteLine($"Hunting {GameState.Hunt.HuntedPlayer.Name} ({GameState.Hunt.HuntedPlayer.Handle})");
+            GameState.CurrentObjective = " is the hunted! Track them down. And watch your back...";
+            HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+        }
     }
 }

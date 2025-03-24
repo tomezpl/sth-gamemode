@@ -28,7 +28,7 @@ namespace SurviveTheHuntServer
         /// </summary>
         protected Dictionary<string, Action<dynamic>> STHEvents;
 
-        private readonly IHuntedQueue HuntedPlayerQueue = null;
+        private IHuntedQueue HuntedPlayerQueue = null;
 
         private ServerConfig Config;
 
@@ -72,6 +72,17 @@ namespace SurviveTheHuntServer
 
         protected void PlayerDisconnected([FromSource] Player player, string reason)
         {
+            // If this is an FFA game then find new targets for players who were hunting this player
+            if(HuntedPlayerQueue.Type == HuntedQueueType.FreeForAll)
+            {
+                FFAHuntedQueue ffaQueue = (FFAHuntedQueue)HuntedPlayerQueue;
+                List<Player> playersToNotify = ffaQueue.RemoveTarget(player);
+                foreach (Player playerToNotify in playersToNotify)
+                {
+                    ffaQueue.SetCurrentPlayer(playerToNotify);
+                    TriggerClientEvent(playerToNotify, Events.Client.ReceiveFFAHuntedTarget, ffaQueue.PopNext());
+                }
+            }
             HuntedPlayerQueue.RemovePlayer(player);
 
             if (GameState.Hunt.IsStarted && player != null && GameState.Hunt.HuntedPlayer?.Handle == player.Handle)
@@ -133,14 +144,36 @@ namespace SurviveTheHuntServer
                     float offsetX = (((float)RNG.NextDouble() * 2f) - 1f) * playerLocationRadius;
                     float offsetY = (((float)RNG.NextDouble() * 2f) - 1f) * playerLocationRadius;
 
-                    TriggerClientEvent(Events.Client.ShowPingOnMap, new
+                    if (HuntedPlayerQueue.Type == HuntedQueueType.SingleHunted)
                     {
-                        CreationDate = GameState.Hunt.LastPingTime.ToString("F", CultureInfo.InvariantCulture),
-                        PlayerServerId = GameState.Hunt.HuntedPlayer.Handle,
-                        Radius = radius,
-                        OffsetX = offsetX,
-                        OffsetY = offsetY
-                    });
+                        TriggerClientEvent(Events.Client.ShowPingOnMap, new
+                        {
+                            CreationDate = GameState.Hunt.LastPingTime.ToString("F", CultureInfo.InvariantCulture),
+                            PlayerServerId = GameState.Hunt.HuntedPlayer.Handle,
+                            Radius = radius,
+                            OffsetX = offsetX,
+                            OffsetY = offsetY
+                        });
+                    }
+                    else if (HuntedPlayerQueue.Type == HuntedQueueType.FreeForAll)
+                    {
+                        FFAHuntedQueue ffaQueue = (FFAHuntedQueue)HuntedPlayerQueue;
+                        foreach (Player player in Players)
+                        {
+                            ffaQueue.SetCurrentPlayer(player);
+                            if(ffaQueue.CurrentTarget != null)
+                            {
+                                TriggerClientEvent(player, Events.Client.ShowPingOnMap, new 
+                                {
+                                    CreationDate = GameState.Hunt.LastPingTime.ToString("F", CultureInfo.InvariantCulture),
+                                    PlayerServerId = ffaQueue.CurrentTarget.Handle,
+                                    Radius = radius,
+                                    OffsetX = offsetX,
+                                    OffsetY = offsetY
+                                });
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -168,13 +201,6 @@ namespace SurviveTheHuntServer
                         Console.WriteLine($"Cleaning clothes for {Players[playerId].Name}");
 
                         TriggerClientEvent(Events.Client.ReceiveCleanClothes, new { PlayerId = playerId });
-                    })
-                },
-                {
-                    Events.Server.BroadcastHuntedZone.EventName(), new Action<dynamic>(data =>
-                    {
-                        Vector3 pos = data.Position;
-                        TriggerClientEvent(Events.Client.NotifyAboutHuntedZone, new { PlayerServerId = GameState.Hunt.HuntedPlayer.Handle, Position = pos, NextNotification = (float)SharedConstants.HuntedPingInterval.TotalSeconds });
                     })
                 }
             };

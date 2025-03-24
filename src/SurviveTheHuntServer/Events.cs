@@ -33,7 +33,7 @@ namespace SurviveTheHuntServer
         public void ClientStarted([FromSource] Player player)
         {
             BroadcastConfig(player, Config);
-            SendGameState(player, GameState);
+            SendGameState(player, GameState, HuntedPlayerQueue);
             SyncVehicles(SpawnedVehicles);
         }
 
@@ -113,6 +113,7 @@ namespace SurviveTheHuntServer
         [EventHandler(Events.Server.HuntedClockSyncRequested)]
         public void RequestHuntedClockResync()
         {
+            // TODO: this won't work for FFA
             if (GameState.Hunt?.IsStarted == true && GameState.Hunt?.HuntedPlayer != null)
             {
                 Debug.WriteLine($"Requesting in-game clock to be re-synced from the hunted player");
@@ -128,13 +129,29 @@ namespace SurviveTheHuntServer
             int playerId = data.PlayerId;
             KillFeedClientPayload killInfo = data.KillInfo;
 
-            Console.WriteLine($"Player died: {GetPlayerName($"{playerId}")}");
+            Debug.WriteLine($"Player died: {GetPlayerName($"{playerId}")}");
 
             // Did the hunted player die?
             if (Hunt.CheckPlayerDeath(Players[playerId], ref GameState))
             {
                 NotifyWinner();
                 ResetTeams();
+            }
+
+            if(GameState.Hunt.IsStarted && GameState.Hunt.GameMode == HuntedQueueType.FreeForAll)
+            {
+                FFAHuntedQueue ffaQueue = (FFAHuntedQueue)HuntedPlayerQueue;
+                List<Player> playersToNotify = ffaQueue.RemoveTarget(Players[playerId]);
+                foreach(Player player in playersToNotify)
+                {
+                    ffaQueue.SetCurrentPlayer(player);
+                    Player newTarget = ffaQueue.PopNext();
+                    Debug.WriteLine($"new target for {player.Name} ({player.Handle}) is {newTarget?.Name} ({newTarget?.Handle})");
+                    if (newTarget != null)
+                    {
+                        TriggerClientEvent(player, Events.Client.ReceiveFFAHuntedTarget, int.Parse(newTarget.Handle));
+                    }
+                }
             }
 
             // Mark the player's death location with a blip for everyone.
@@ -146,7 +163,7 @@ namespace SurviveTheHuntServer
         }
 
         [EventHandler(Events.Server.RequestStartHunt)]
-        public void HuntRequested(int huntType, int? huntedPlayer)
+        public void HuntRequested([FromSource] Player source, int huntType, int? huntedPlayer)
         {
             // Prevent the next hunt from being started too quick.
             if (GameState.Hunt.IsStarted || (GameState.Hunt.NextHuntStartTime != null && GameState.Hunt.NextHuntStartTime > DateTime.UtcNow))
@@ -164,6 +181,27 @@ namespace SurviveTheHuntServer
             catch (Exception ex)
             {
                 Debug.WriteLine($"couldn't parse args: {ex}");
+            }
+
+            Debug.WriteLine($"huntType {huntType}");
+
+            // Instantiate the correct queue
+            if(args.Length >= 1)
+            {
+                switch (args[0])
+                {
+                    case (int)HuntedQueueType.SingleHunted:
+                        if(HuntedPlayerQueue.Type != HuntedQueueType.SingleHunted)
+                        {
+                            Debug.WriteLine("Creating a SingleHuntedQueue");
+                            HuntedPlayerQueue = new SingleHuntedQueue(Players);
+                        }
+                        break;
+                    case (int)HuntedQueueType.FreeForAll:
+                        Debug.WriteLine("Creating an FFAQueue");
+                        HuntedPlayerQueue = new FFAHuntedQueue(Players);
+                        break;
+                }
             }
 
             Player randomPlayer = null;
@@ -200,24 +238,79 @@ namespace SurviveTheHuntServer
                 GameState.Hunt.LastHuntedPlayer = randomPlayer;
 
                 TriggerClientEvent(randomPlayer, Events.Client.NotifyHuntedPlayer);
-                TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerServerId = int.Parse(randomPlayer.Handle) });
+                TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerServerId = int.Parse(randomPlayer.Handle), IsFFA = false });
+            }
+            else if(HuntedPlayerQueue.Type == HuntedQueueType.FreeForAll)
+            {
+                TriggerClientEvent(Events.Client.NotifyHuntedPlayer);
+                /*foreach (Player player in Players)
+                {
+                    FFAHuntedQueue ffaQueue = (FFAHuntedQueue)HuntedPlayerQueue;
+                    ffaQueue.SetCurrentPlayer(player);
+                    Player target = ffaQueue.PopNext();
+                    if(target != null)
+                    {
+                        Debug.WriteLine($"{player.Name} ({player.Handle}) will hunt {target.Name} ({target.Handle})");
+                    }
+                }*/
             }
             ulong prepPhaseSeconds = (ulong)GetConvarInt("sth_prepPhaseDuration", SharedConstants.DefaultPrepPhaseSeconds);
 
             SetConvarReplicated(SharedConstants.CharCreatorBlockCreatorConvar, "true");
 
-            GameState.Hunt.Begin(randomPlayer, prepPhaseSeconds);
+            Debug.WriteLine($"Starting a {HuntedPlayerQueue.Type} hunt");
+            GameState.Hunt.Begin(randomPlayer, prepPhaseSeconds, HuntedPlayerQueue.Type);
 
+            Debug.WriteLine($"Sending HuntStartedByServer, source = {source}");
             TriggerClientEvent(Events.Client.HuntStartedByServer, new
             {
                 EndTime = GameState.Hunt.EndTime.ToString("F", CultureInfo.InvariantCulture),
                 NextNotification = (float)prepPhaseSeconds + (float)SharedConstants.HuntedPingInterval.TotalSeconds,
-                PrepPhaseDuration = prepPhaseSeconds
+                PrepPhaseDuration = prepPhaseSeconds,
+                GameMode = (int)HuntedPlayerQueue.Type,
+                Requester = int.Parse(source.Handle)
             });
 
             foreach (Player player in Players)
             {
-                JoinTeam(player, player.Handle == randomPlayer.Handle ? Teams.Team.Hunted : Teams.Team.Hunters);
+                JoinTeam(player, randomPlayer != null && player.Handle != randomPlayer.Handle ? Teams.Team.Hunted : Teams.Team.Hunters);
+            }
+        }
+
+        [EventHandler(Events.Server.RequestFFAHuntedTarget)]
+        public void FFAHuntTargetRequested([FromSource] Player hunter)
+        {
+            FFAHuntedQueue queue = (FFAHuntedQueue)HuntedPlayerQueue;
+            queue.SetCurrentPlayer(hunter);
+            Player target = queue.PopNext();
+            if (target != null)
+            {
+                Debug.WriteLine($"{hunter.Name} ({hunter.Handle}) will hunt {target.Name} ({target.Handle})");
+                TriggerClientEvent(hunter, Events.Client.ReceiveFFAHuntedTarget, int.Parse(target.Handle));
+            }
+        }
+
+        [EventHandler(Events.Server.BroadcastHuntedZone)]
+        public void BroadcastHuntedZone([FromSource] Player source, float posX, float posY, float posZ)
+        {
+            Vector3 pos = new Vector3(posX, posY, posZ);
+            dynamic payload = new { PlayerServerId = source.Handle, Position = pos, NextNotification = (float)SharedConstants.HuntedPingInterval.TotalSeconds };
+
+            if (HuntedPlayerQueue.Type == HuntedQueueType.SingleHunted)
+            {
+                TriggerClientEvent(Events.Client.NotifyAboutHuntedZone, payload);
+            }
+            else
+            {
+                foreach(Player player in Players)
+                {
+                    FFAHuntedQueue ffaQueue = (FFAHuntedQueue)HuntedPlayerQueue;
+                    ffaQueue.SetCurrentPlayer(player);
+                    if(ffaQueue.CurrentTarget == source)
+                    {
+                        TriggerClientEvent(player, Events.Client.NotifyAboutHuntedZone, payload);
+                    }
+                }
             }
         }
     }

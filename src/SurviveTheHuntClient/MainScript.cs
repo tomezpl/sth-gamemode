@@ -91,6 +91,14 @@ namespace SurviveTheHuntClient
         private uint? HunterGroupHash = null;
         private uint? HuntedGroupHash = null;
 
+        private float FFATargetTimeWaited = 0f;
+        private float FFATargetRequestTimeDelay = 0f;
+        
+        /// <summary>
+        /// If true, then <see cref="FFATargetTimeWaited"/> should be advanced until it reaches <see cref="FFATargetRequestTimeDelay"/> at which point the next FFA target should be requested.
+        /// </summary>
+        private bool PendingFFATargetRequest = false;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -448,6 +456,17 @@ namespace SurviveTheHuntClient
             KillTracker.Reset();
 
             WastedAnim.StopShowing();
+
+            Debug.WriteLine($"IsInProgress {GameState.Hunt.IsInProgress} GameMode {GameState.Hunt.GameMode}");
+            if(GameState.Hunt.IsInProgress && GameState.Hunt.GameMode == HuntedQueueType.FreeForAll)
+            {
+                GameState.Hunt.HuntedPlayer = null;
+                
+                PendingFFATargetRequest = true;
+                // Wait between 1-5s before requesting an FFA target.
+                FFATargetRequestTimeDelay = RNG.Next(1, 6);
+                Debug.WriteLine($"Will request a new FFA target in {FFATargetRequestTimeDelay}s");
+            }
         }
 
         /// <summary>
@@ -615,6 +634,17 @@ namespace SurviveTheHuntClient
             BoundsTracker.Tick();
             WastedAnim.Tick();
 
+            if(PendingFFATargetRequest)
+            {
+                FFATargetTimeWaited += GetFrameTime();
+
+                if(FFATargetTimeWaited >= FFATargetRequestTimeDelay)
+                {
+                    RequestFFAHuntedTarget();
+                    PendingFFATargetRequest = false;
+                }
+            }
+
             Wait(0);
         }
 
@@ -742,6 +772,8 @@ namespace SurviveTheHuntClient
             GameState.Hunt.IsStarted = true;
             GameState.Hunt.HuntedPlayer = huntedPlayer;
 
+            bool isFFA = GameState.Hunt.GameMode == HuntedQueueType.FreeForAll;
+
             switch (playerTeam)
             {
                 case Teams.Team.Hunters:
@@ -750,16 +782,23 @@ namespace SurviveTheHuntClient
                     PlayerState.Team = Teams.Team.Hunters;
                     break;
                 case Teams.Team.Hunted:
-                    GameState.CurrentObjective = "Survive";
+                    GameState.CurrentObjective = !isFFA ? "Survive" : null;
                     PlayerState.Team = Teams.Team.Hunted;
                     break;
             }
 
             PlayerState.TakeAwayWeapons(ref playerPed);
             AmmoCheckTimer = 0;
+            RequestFFAHuntedTarget();
         }
 
-        private void HuntStartedByServer(float secondsTillPing, DateTime endTime, TimeSpan? prepPhase = null)
+        private void RequestFFAHuntedTarget()
+        {
+            Debug.WriteLine("Requesting an FFA target");
+            TriggerServerEvent(Events.Server.RequestFFAHuntedTarget);
+        }
+
+        private void HuntStartedByServer(float secondsTillPing, DateTime endTime, TimeSpan? prepPhase = null, HuntedQueueType gameMode = HuntedQueueType.SingleHunted)
         {
             TriggerEvent(Events.Client.CharCreatorForceExit);
 
@@ -771,6 +810,7 @@ namespace SurviveTheHuntClient
             GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(secondsTillPing);
             GameState.Hunt.InitialEndTime = endTime;
             GameState.Hunt.PrepPhaseEndTime = Utility.CurrentTime + prepPhase.Value;
+            GameState.Hunt.GameMode = gameMode;
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
 
             // Heal the player when the hunt is started.
@@ -779,12 +819,6 @@ namespace SurviveTheHuntClient
             ApplyMaxHealth(true);
             BeginTextCommandDisplayHelp(huntStartedHealthRestoredString);
             EndTextCommandDisplayHelp(0, false, true, 5000);
-
-            // Sync time
-            if (PlayerState.Team == Teams.Team.Hunted && ConvarHelper.GetBoolean(GetConvar(SharedConstants.SyncTimeOnHuntStartConvar, "true")))
-            {
-                TriggerServerEvent(Events.Server.ReceiveHuntedClock, GetClockHours(), GetClockMinutes(), GetClockSeconds());
-            }
         }
 
         /// <summary>
@@ -849,7 +883,18 @@ namespace SurviveTheHuntClient
 
                         ulong prepPhaseDuration = (ulong)data.PrepPhaseDuration;
 
-                        HuntStartedByServer(secondsTillPing, endTime, TimeSpan.FromSeconds(prepPhaseDuration));
+                        int gameModeType = data.GameMode;
+
+                        int requesterServerId = data.Requester;
+
+                        HuntStartedByServer(secondsTillPing, endTime, TimeSpan.FromSeconds(prepPhaseDuration), (HuntedQueueType)gameModeType);
+
+                        // Sync time
+                        bool shouldSyncTime = gameModeType == (int)HuntedQueueType.SingleHunted ? PlayerState.Team == Teams.Team.Hunted : Game.Player.ServerId == requesterServerId;
+                        if (shouldSyncTime && ConvarHelper.GetBoolean(GetConvar(SharedConstants.SyncTimeOnHuntStartConvar, "true")))
+                        {
+                            TriggerServerEvent(Events.Server.ReceiveHuntedClock, GetClockHours(), GetClockMinutes(), GetClockSeconds());
+                        }
                     })
                 },
                 {
@@ -860,7 +905,7 @@ namespace SurviveTheHuntClient
                         if(playerServerId == Game.Player.ServerId)
                         {
                             CfxVector3 position = GetEntityCoords(PlayerPedId(), false);
-                            TriggerServerEvent(Events.Server.BroadcastHuntedZone, new { Position = position });
+                            TriggerServerEvent(Events.Server.BroadcastHuntedZone, position.X, position.Y, position.Z);
                         }
                     })
                 },
@@ -1037,6 +1082,7 @@ namespace SurviveTheHuntClient
                 return;
             }
 
+            bool allowFriendlyFire = GameState.Hunt.IsInProgress && GameState.Hunt.GameMode == HuntedQueueType.FreeForAll;
             NetworkSetFriendlyFireOption(false);
 
             if (DoesEntityExist(PlayerPedId()))
@@ -1048,11 +1094,17 @@ namespace SurviveTheHuntClient
             {
                 if (GameState.Hunt?.IsInProgress == true)
                 {
+                    int localPlayerId = PlayerId();
                     foreach (Player player in Players)
                     {
                         if (player.Character.Exists())
                         {
-                            SetPedRelationshipGroupHash(player.Character.Handle, GameState.Hunt.HuntedPlayer.Handle == player.Handle ? HuntedGroupHash.Value : HunterGroupHash.Value);
+                            uint groupHash = HunterGroupHash.Value;
+                            if((allowFriendlyFire && player.Handle != localPlayerId) || GameState.Hunt.HuntedPlayer?.Handle == player.Handle)
+                            {
+                                groupHash = HuntedGroupHash.Value;
+                            }
+                            SetPedRelationshipGroupHash(player.Character.Handle, groupHash);
                         }
                     }
                 }

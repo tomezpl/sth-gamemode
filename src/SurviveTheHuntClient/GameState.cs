@@ -21,6 +21,8 @@ namespace SurviveTheHuntClient
 
         public class HuntDetails
         {
+            public HuntedQueueType GameMode = HuntedQueueType.SingleHunted;
+
             /// <summary>
             /// Has the hunt been started?
             /// </summary>
@@ -192,18 +194,23 @@ namespace SurviveTheHuntClient
     public partial class MainScript
     {
         [EventHandler(SurviveTheHuntShared.Events.Client.ReceiveGameState)]
-        public void ReceiveGameState(bool isStarted, int huntedPlayerServerId, long startTimeTicks, long endTimeTicks, long lastPingTimeTicks, long prepPhaseEndTicks)
+        public void ReceiveGameState(bool isStarted, int huntedQueueType, int huntedPlayerServerId, long startTimeTicks, long endTimeTicks, long lastPingTimeTicks, long prepPhaseEndTicks)
         {
             Debug.WriteLine("Received game state");
-            if (huntedPlayerServerId != int.MinValue && NetworkIsPlayerConnected(GetPlayerFromServerId(huntedPlayerServerId)))
+            if (NetworkIsPlayerConnected(GetPlayerFromServerId(huntedPlayerServerId)))
             {
-                Player huntedPlayer = new Player(GetPlayerFromServerId(huntedPlayerServerId));
-                Debug.WriteLine($"Game state: isStarted={isStarted}, huntedPlayer={huntedPlayer.Name}, startTime={new DateTime(startTimeTicks)}, endTime={new DateTime(endTimeTicks)}, lastPingTime={new DateTime(lastPingTimeTicks)}");
+                Player huntedPlayer = huntedPlayerServerId != int.MinValue ? new Player(GetPlayerFromServerId(huntedPlayerServerId)) : null;
+                Debug.WriteLine($"Game state: isStarted={isStarted}, gameMode={(HuntedQueueType)huntedQueueType}, huntedPlayer={huntedPlayer?.Name}, startTime={new DateTime(startTimeTicks)}, endTime={new DateTime(endTimeTicks)}, lastPingTime={new DateTime(lastPingTimeTicks)}");
                 
                 // TODO: shouldn't this use Utility.CurrentTime instead of DateTime.UtcNow?
                 float secondsTillPing = (float)((new DateTime(lastPingTimeTicks, DateTimeKind.Utc) + SharedConstants.HuntedPingInterval) - DateTime.UtcNow).TotalSeconds;
-                HuntStartedByServer(secondsTillPing, new DateTime(endTimeTicks, DateTimeKind.Utc), new DateTime(prepPhaseEndTicks, DateTimeKind.Utc) - Utility.CurrentTime);
-                NotifyTeam(huntedPlayer == Player.Local ? Teams.Team.Hunted : Teams.Team.Hunters, huntedPlayer);
+                HuntStartedByServer(secondsTillPing, new DateTime(endTimeTicks, DateTimeKind.Utc), new DateTime(prepPhaseEndTicks, DateTimeKind.Utc) - Utility.CurrentTime, (HuntedQueueType)huntedQueueType);
+                Teams.Team playerTeam = Teams.Team.Hunted;
+                if(huntedPlayer != Player.Local && huntedPlayer != null)
+                {
+                    playerTeam = Teams.Team.Hunters;
+                }
+                NotifyTeam(playerTeam, huntedPlayer);
             }
         }
     }

@@ -70,6 +70,8 @@ namespace SurviveTheHuntShared
             public const string SpawnCars = "sth:spawnCars";
             public const string Heal = "sth:heal";
             public const string Respawn = "sth:respawn";
+
+            public const string ReceiveFFAHuntedTarget = "sth:recvFFAHuntTarget";
         }
 
         /// <summary>
@@ -91,6 +93,11 @@ namespace SurviveTheHuntShared
             /// which in turn sends back the in-game clock value to the server, which will finally send it back to the newly joined client.
             /// </summary>
             public const string HuntedClockSyncRequested = "sth:huntedClockSyncRequested";
+
+            /// <summary>
+            /// In FFA mode, each client should request a new target.
+            /// </summary>
+            public const string RequestFFAHuntedTarget = "sth:requestedFFAHuntTarget";
         }
     }
 }

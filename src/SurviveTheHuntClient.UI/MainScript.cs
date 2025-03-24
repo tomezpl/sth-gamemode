@@ -66,6 +66,16 @@ namespace SurviveTheHuntClient.UI
         private int SpawnCarsActivatedCount = 0;
         private const string SpawnCarsDescription = "Request a fresh batch of rides.";
 
+        private readonly KeyValuePair<string, string>[] GameModes =
+        {
+            new KeyValuePair<string, string>("Classic", "The vanilla Survive the Hunt experience. One hunted player running from a whole server of hunters."),
+            
+            // Yes this is a Slow Horses reference and if you don't like it you can sniff on Lamb's farts
+            new KeyValuePair<string, string>("Moscow Rules", "A free-for-all twist on Survive the Hunt. Everyone is a hunter. Everyone is the hunted.\n\nMoscow rules: watch your back. London rules: cover your arse.")
+        };
+
+        private NativeListItem<string> GameModeList = new NativeListItem<string>("Game Mode");
+
         private static class Textures
         {
             internal struct Texture
@@ -236,6 +246,28 @@ namespace SurviveTheHuntClient.UI
             HelpMenu.Closed += HelpMenu_Closed;
 
             MainMenu.SelectedIndexChanged += MainMenu_SelectedIndexChanged;
+
+            foreach(KeyValuePair<string, string> titleAndDescription in GameModes)
+            {
+                GameModeList.Add(titleAndDescription.Key);
+            }
+            GameModeList.ItemChanged += GameModeChanged;
+            StartHuntMenu.Add(0, GameModeList);
+        }
+
+        private void GameModeChanged(object sender, ItemChangedEventArgs<string> e)
+        {
+            GameModeList.Description = GameModes[e.Index].Value;
+
+            // Remove the player list from FFA
+            if(e.Index != 0)
+            {
+                StartHuntMenu.Remove(SelectPlayerItem);
+            }
+            else if(!StartHuntMenu.Items.Contains(GameModeList))
+            {
+                StartHuntMenu.Add(StartHuntMenu.Items.IndexOf(GameModeList) + 1, SelectPlayerItem);
+            }
         }
 
         private void MainMenu_SelectedIndexChanged(object sender, SelectedEventArgs e)
@@ -326,13 +358,13 @@ namespace SurviveTheHuntClient.UI
 
         private void StartHuntClicked(object sender, EventArgs e)
         {
-            if (SelectPlayerItem.SelectedIndex != 0)
+            if (GameModeList.SelectedIndex == 0 && SelectPlayerItem.SelectedIndex != 0)
             {
                 TriggerServerEvent(Events.Server.RequestStartHunt, (int)HuntedQueueType.SingleHunted, GetPlayerServerId(SelectablePlayerHandles[SelectPlayerItem.SelectedIndex]));
             }
             else
             {
-                TriggerServerEvent(Events.Server.RequestStartHunt, (int)HuntedQueueType.SingleHunted);
+                TriggerServerEvent(Events.Server.RequestStartHunt, GameModeList.SelectedIndex == 0 ? (int)HuntedQueueType.SingleHunted : (int)HuntedQueueType.FreeForAll);
             }
             MainMenu.Visible = false;
             StartHuntMenu.Visible = false;

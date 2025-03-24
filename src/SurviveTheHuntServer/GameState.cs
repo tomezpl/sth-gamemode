@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntServer.Helpers;
 using SurviveTheHuntShared.Core;
 using System;
 using static CitizenFX.Core.Native.API;
@@ -17,6 +18,8 @@ namespace SurviveTheHuntServer
             /// Has the hunt started?
             /// </summary>
             public bool IsStarted { get; set; } = false;
+
+            public HuntedQueueType GameMode = HuntedQueueType.SingleHunted;
 
             /// <summary>
             /// The team that should win when the hunt ends.
@@ -68,10 +71,19 @@ namespace SurviveTheHuntServer
             /// Starts the hunt for a given player.
             /// </summary>
             /// <param name="huntedPlayer"></param>
-            public void Begin(Player huntedPlayer, ulong prepPhaseSeconds = 0)
+            public void Begin(Player huntedPlayer, ulong prepPhaseSeconds = 0, HuntedQueueType gameMode = HuntedQueueType.SingleHunted)
             {
                 IsStarted = true;
-                HuntedPlayer = huntedPlayer;
+                GameMode = gameMode;
+                switch (gameMode)
+                {
+                    case HuntedQueueType.SingleHunted:
+                        HuntedPlayer = huntedPlayer;
+                        break;
+                    case HuntedQueueType.FreeForAll:
+                        HuntedPlayer = null;
+                        break;
+                }
                 WinningTeam = Teams.Team.Hunted;
                 StartTime = DateTime.UtcNow;
                 LastPingTime = DateTime.UtcNow + TimeSpan.FromSeconds(prepPhaseSeconds) - SharedConstants.HuntedPingInterval;
@@ -85,6 +97,7 @@ namespace SurviveTheHuntServer
             /// <param name="winningTeam">Team that should win this hunt.</param>
             public void End(Teams.Team winningTeam)
             {
+                // TODO: for FFA, we'd have to actually track number of hunts & deaths to determine the winner, so everyone will be named a winner for now
                 WinningTeam = winningTeam;
                 IsStarted = false;
                 HuntedPlayer = null;
@@ -100,14 +113,22 @@ namespace SurviveTheHuntServer
 
     public partial class MainScript
     {
-        public void SendGameState(Player player, GameState gameState)
+        internal void SendGameState(Player player, GameState gameState, IHuntedQueue huntedQueue)
         {
+            Player huntedPlayer = gameState.Hunt.HuntedPlayer;
+            if(huntedQueue.Type == HuntedQueueType.FreeForAll)
+            {
+                ((FFAHuntedQueue)huntedQueue).SetCurrentPlayer(player);
+                huntedPlayer = huntedQueue.PopNext();
+            }
+
             TriggerClientEvent
             (
                 player, 
                 SurviveTheHuntShared.Events.Client.ReceiveGameState, 
-                gameState.Hunt.IsStarted, 
-                gameState.Hunt.HuntedPlayer != null ? int.Parse(gameState.Hunt.HuntedPlayer.Handle) : int.MinValue, 
+                gameState.Hunt.IsStarted,
+                (int)gameState.Hunt.GameMode,
+                huntedPlayer != null ? int.Parse(huntedPlayer.Handle) : int.MinValue, 
                 gameState.Hunt.StartTime.Ticks, gameState.Hunt.EndTime.Ticks, 
                 gameState.Hunt.LastPingTime.Ticks, 
                 gameState.Hunt.PrepPhaseEndTime.Ticks
@@ -115,7 +136,8 @@ namespace SurviveTheHuntServer
 
             if(gameState.Hunt.IsStarted)
             {
-                JoinTeam(player, Teams.Team.Hunters);
+                // In FFA every player is considered the hunted
+                JoinTeam(player, gameState.Hunt.GameMode == HuntedQueueType.FreeForAll ? Teams.Team.Hunted : Teams.Team.Hunters);
             }
         }
     }
