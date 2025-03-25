@@ -158,20 +158,32 @@ namespace SurviveTheHuntServer
                     else if (HuntedPlayerQueue.Type == HuntedQueueType.FreeForAll)
                     {
                         FFAHuntedQueue ffaQueue = (FFAHuntedQueue)HuntedPlayerQueue;
+                        Dictionary<Player, dynamic> targetsToNotify = new Dictionary<Player, dynamic>();
                         foreach (Player player in Players)
                         {
                             ffaQueue.SetCurrentPlayer(player);
-                            if(ffaQueue.CurrentTarget != null)
+                            Player currentTarget = ffaQueue.CurrentTarget;
+                            if(currentTarget != null)
                             {
-                                TriggerClientEvent(player, Events.Client.ShowPingOnMap, new 
+                                dynamic payload = new
                                 {
                                     CreationDate = GameState.Hunt.LastPingTime.ToString("F", CultureInfo.InvariantCulture),
-                                    PlayerServerId = ffaQueue.CurrentTarget.Handle,
+                                    PlayerServerId = currentTarget.Handle,
                                     Radius = radius,
                                     OffsetX = offsetX,
                                     OffsetY = offsetY
-                                });
+                                };
+                                TriggerClientEvent(player, Events.Client.ShowPingOnMap, payload);
+                                if(!targetsToNotify.ContainsKey(currentTarget))
+                                {
+                                    targetsToNotify.Add(currentTarget, payload);
+                                }
                             }
+                        }
+
+                        foreach(KeyValuePair<Player, dynamic> targetToNotify in targetsToNotify)
+                        {
+                            TriggerClientEvent(targetToNotify.Key, Events.Client.ShowPingOnMap, targetToNotify.Value);
                         }
                     }
                 }

@@ -242,7 +242,7 @@ namespace SurviveTheHuntServer
             }
             else if(HuntedPlayerQueue.Type == HuntedQueueType.FreeForAll)
             {
-                TriggerClientEvent(Events.Client.NotifyHuntedPlayer);
+                TriggerClientEvent(Events.Client.NotifyHuntedPlayer, new {IsFFA = true});
                 /*foreach (Player player in Players)
                 {
                     FFAHuntedQueue ffaQueue = (FFAHuntedQueue)HuntedPlayerQueue;
@@ -302,10 +302,12 @@ namespace SurviveTheHuntServer
             }
             else
             {
+                Debug.WriteLine($"Source is {source.Name} ({source.Handle})");
                 foreach(Player player in Players)
                 {
                     FFAHuntedQueue ffaQueue = (FFAHuntedQueue)HuntedPlayerQueue;
                     ffaQueue.SetCurrentPlayer(player);
+                    Debug.WriteLine($"{player.Name} ({player.Handle})'s current target is {ffaQueue.CurrentTarget?.Name} ({ffaQueue.CurrentTarget.Handle})");
                     if(ffaQueue.CurrentTarget == source)
                     {
                         TriggerClientEvent(player, Events.Client.NotifyAboutHuntedZone, payload);

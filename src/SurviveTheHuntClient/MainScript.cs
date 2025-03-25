@@ -768,11 +768,15 @@ namespace SurviveTheHuntClient
 
         private void NotifyTeam(Teams.Team playerTeam, Player huntedPlayer)
         {
+            bool isFFA = GameState.Hunt.GameMode == HuntedQueueType.FreeForAll;
+
             Ped playerPed = Game.PlayerPed;
             GameState.Hunt.IsStarted = true;
-            GameState.Hunt.HuntedPlayer = huntedPlayer;
 
-            bool isFFA = GameState.Hunt.GameMode == HuntedQueueType.FreeForAll;
+            if (!isFFA)
+            {
+                GameState.Hunt.HuntedPlayer = huntedPlayer;
+            }
 
             switch (playerTeam)
             {
@@ -789,7 +793,11 @@ namespace SurviveTheHuntClient
 
             PlayerState.TakeAwayWeapons(ref playerPed);
             AmmoCheckTimer = 0;
-            RequestFFAHuntedTarget();
+
+            if (isFFA)
+            {
+                RequestFFAHuntedTarget();
+            }
         }
 
         private void RequestFFAHuntedTarget()
@@ -839,6 +847,20 @@ namespace SurviveTheHuntClient
                 {
                     Events.Client.NotifyHuntedPlayer.EventName(), new Action<dynamic>(data =>
                     {
+                        bool isFFA = false;
+                        try
+                        {
+                            isFFA = data.IsFFA;
+                        } catch
+                        {
+                            isFFA = false;
+                        }
+
+                        if(isFFA)
+                        {
+                            GameState.Hunt.GameMode = HuntedQueueType.FreeForAll;
+                        }
+
                         NotifyTeam(Teams.Team.Hunted, Game.Player);
                     })
                 },
@@ -901,7 +923,11 @@ namespace SurviveTheHuntClient
                     Events.Client.ShowPingOnMap.EventName(), new Action<dynamic>(data =>
                     {
                         int playerServerId = int.Parse(data.PlayerServerId);
-                        HuntUI.CreateRadiusBlipForPlayer(new Player(GetPlayerFromServerId(playerServerId)), data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
+                        // TODO: in FFA we currently only display one radius blip, and that's for the target. the local player's radius is not displayed
+                        if(playerServerId != Game.Player.ServerId || GameState.Hunt.GameMode != HuntedQueueType.FreeForAll)
+                        {
+                            HuntUI.CreateRadiusBlipForPlayer(new Player(GetPlayerFromServerId(playerServerId)), data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
+                        }
                         if(playerServerId == Game.Player.ServerId)
                         {
                             CfxVector3 position = GetEntityCoords(PlayerPedId(), false);
