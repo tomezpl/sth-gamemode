@@ -122,7 +122,7 @@ namespace SurviveTheHuntClient
 
                 if (gameState.Hunt.IsInProgress)
                 {
-                    if (playerState.Team == Team.Hunters)
+                    if (playerState.Team == Team.Hunters || (gameState.Hunt.GameMode == SurviveTheHuntShared.Core.HuntedQueueType.FreeForAll && gameState.Hunt.HuntedPlayer != null))
                     {
                         // Make the next text component colour yellow, as it'll contain the hunted player's name.
                         SetColourOfNextTextComponent(12);
