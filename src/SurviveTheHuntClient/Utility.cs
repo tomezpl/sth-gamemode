@@ -16,6 +16,19 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Stores the current UTC time, accounting for the server desync.
         /// </summary>
-        public static DateTime CurrentTime { get { return DateTime.UtcNow + ServerTimeOffset; } }
+        public static DateTime CurrentTime
+        {
+            get
+            {
+                try
+                {
+                    return DateTime.UtcNow + ServerTimeOffset;
+                }
+                catch 
+                {
+                    return DateTime.UtcNow;
+                }
+            }
+        }
     }
 }

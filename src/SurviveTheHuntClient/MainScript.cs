@@ -815,9 +815,9 @@ namespace SurviveTheHuntClient
                 prepPhase = TimeSpan.Zero;
             }
 
-            GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(secondsTillPing);
+            GameState.Hunt.NextMugshotTime = DateTime.UtcNow + TimeSpan.FromSeconds(secondsTillPing);
             GameState.Hunt.InitialEndTime = endTime;
-            GameState.Hunt.PrepPhaseEndTime = Utility.CurrentTime + prepPhase.Value;
+            GameState.Hunt.PrepPhaseEndTime = DateTime.UtcNow + prepPhase.Value;
             GameState.Hunt.GameMode = gameMode;
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
 
@@ -942,7 +942,7 @@ namespace SurviveTheHuntClient
                         Player player = new Player(GetPlayerFromServerId(playerServerId));
                         string playerName = player.Name;
                         float nextNotificationTimeout = data.NextNotification;
-                        GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(nextNotificationTimeout);
+                        GameState.Hunt.NextMugshotTime = DateTime.UtcNow + TimeSpan.FromSeconds(nextNotificationTimeout);
                         HuntUI.NotifyAboutHuntedZone(player, data.Position, ref GameState);
                     })
                 },
@@ -950,7 +950,7 @@ namespace SurviveTheHuntClient
                     Events.Client.ReceiveTimeSync.EventName(), new Action<dynamic>(data =>
                     {
                         string currentServerTimeStr = data.CurrentServerTime;
-                        DateTime currentServerTime = DateTime.ParseExact(currentServerTimeStr, "F", CultureInfo.InvariantCulture);
+                        DateTime currentServerTime = new DateTime(long.Parse(currentServerTimeStr));
                         Utility.ServerTimeOffset = currentServerTime - DateTime.UtcNow;
                     })
                 }

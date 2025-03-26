@@ -51,7 +51,7 @@ namespace SurviveTheHuntClient
             /// <summary>
             /// Is the prep phase still active?
             /// </summary>
-            public bool IsPrepPhase { get { return Utility.CurrentTime < PrepPhaseEndTime; } }
+            public bool IsPrepPhase { get { return DateTime.UtcNow < PrepPhaseEndTime; } }
 
             /// <summary>
             /// Currently hunted player.
@@ -66,12 +66,12 @@ namespace SurviveTheHuntClient
             /// <summary>
             /// The currently hunted player's mugshot texture generation time.
             /// </summary>
-            public DateTime LastHuntedMugshotGeneration { get; set; } = Utility.CurrentTime;
+            public DateTime LastHuntedMugshotGeneration { get; set; } = DateTime.UtcNow;
 
             /// <summary>
             /// Expected time for the next ping.
             /// </summary>
-            public DateTime NextMugshotTime { get; set; } = Utility.CurrentTime;
+            public DateTime NextMugshotTime { get; set; } = DateTime.UtcNow;
 
             /// <summary>
             /// Time when hunt is meant to end & state be reset.
@@ -162,7 +162,7 @@ namespace SurviveTheHuntClient
                 }
 
                 // If the mugshot texture has been unregistered, generate a new one.
-                if (HuntedPlayerMugshot == null)
+                if (HuntedPlayerMugshot == null && HuntedPlayer?.Character?.Exists() == true)
                 {
                     Debug.WriteLine("Generating a mugshot!");
                     HuntedPlayerMugshot = new Texture() { Id = RegisterPedheadshot(HuntedPlayer.Character.Handle) };
@@ -170,7 +170,7 @@ namespace SurviveTheHuntClient
                 }
 
                 // If the mugshot texture doesn't have a TXD string assigned yet, check that it's ready and assign it if so.
-                if (!HuntedPlayerMugshot.IsValid)
+                if (HuntedPlayerMugshot?.IsValid == false)
                 {
                     if(IsPedheadshotReady(HuntedPlayerMugshot.Id) && IsPedheadshotValid(HuntedPlayerMugshot.Id))
                     {

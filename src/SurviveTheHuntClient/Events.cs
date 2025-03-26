@@ -68,6 +68,25 @@ namespace SurviveTheHuntClient
             }
 
             EndTextCommandThefeedPostMpticker(true, true);
+
+            if(GameState.Hunt.GameMode == SurviveTheHuntShared.Core.HuntedQueueType.FreeForAll)
+            {
+                if(int.TryParse(payload.KillInfo.VictimServerId, out int victimServerId) && victimServerId == GameState.Hunt.HuntedPlayer?.ServerId)
+                {
+                    BeginTextCommandThefeedPost("STRING");
+                    AddTextComponentSubstringPlayerName($"Your target {GetPlayerName(GetPlayerFromServerId(victimServerId))} has died. Standby for new mission...");
+                    EndTextCommandThefeedPostMpticker(true, true);
+
+                    PendingFFATargetRequest = true;
+
+                    // Wait between 5-10s for a new target.
+                    FFATargetRequestTimeDelay = RNG.Next(5, 11);
+                    FFATargetTimeWaited = 0f;
+                    BeginTextCommandPrint("CURRENT_OBJECTIVE");
+                    AddTextComponentString("");
+                    EndTextCommandPrint(1, true);
+                }
+            }
         }
 
         [EventHandler(Events.Client.ReceiveFFAHuntedTarget)]

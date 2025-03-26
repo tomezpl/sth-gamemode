@@ -126,7 +126,7 @@ namespace SurviveTheHuntClient
                     {
                         // Make the next text component colour yellow, as it'll contain the hunted player's name.
                         SetColourOfNextTextComponent(12);
-                        AddTextComponentString(gameState.Hunt.HuntedPlayer.Name);
+                        AddTextComponentString($"{gameState.Hunt.HuntedPlayer.Name} ({gameState.Hunt.HuntedPlayer.Handle})");
                     }
                 }
 
@@ -206,7 +206,7 @@ namespace SurviveTheHuntClient
                     }
                     else
                     {
-                        remainingTime = gameState.Hunt.PrepPhaseEndTime - Utility.CurrentTime;
+                        remainingTime = gameState.Hunt.PrepPhaseEndTime - DateTime.UtcNow;
                         header = "PREP PHASE";
                     }
 
@@ -376,7 +376,7 @@ namespace SurviveTheHuntClient
                 }
 
                 string zoneName = GetLabelText(GetNameOfZone(position.X, position.Y, position.Z));
-                string message = $"{playerName} is somewhere in {zoneName} right now.";
+                string message = $"{playerName} ({player?.Handle}) is somewhere in {zoneName} right now.";
                 BeginTextCommandThefeedPost("STRING");
                 if (gameState?.Hunt?.HuntedPlayerMugshot?.IsValid == true)
                 {

@@ -142,7 +142,7 @@ namespace SurviveTheHuntServer
             {
                 FFAHuntedQueue ffaQueue = (FFAHuntedQueue)HuntedPlayerQueue;
                 List<Player> playersToNotify = ffaQueue.RemoveTarget(Players[playerId]);
-                foreach(Player player in playersToNotify)
+                /*foreach(Player player in playersToNotify)
                 {
                     ffaQueue.SetCurrentPlayer(player);
                     Player newTarget = ffaQueue.PopNext();
@@ -151,7 +151,7 @@ namespace SurviveTheHuntServer
                     {
                         TriggerClientEvent(player, Events.Client.ReceiveFFAHuntedTarget, int.Parse(newTarget.Handle));
                     }
-                }
+                }*/
             }
 
             // Mark the player's death location with a blip for everyone.
@@ -307,7 +307,7 @@ namespace SurviveTheHuntServer
                 {
                     FFAHuntedQueue ffaQueue = (FFAHuntedQueue)HuntedPlayerQueue;
                     ffaQueue.SetCurrentPlayer(player);
-                    Debug.WriteLine($"{player.Name} ({player.Handle})'s current target is {ffaQueue.CurrentTarget?.Name} ({ffaQueue.CurrentTarget.Handle})");
+                    Debug.WriteLine($"{player.Name} ({player.Handle})'s current target is {ffaQueue.CurrentTarget?.Name} ({ffaQueue.CurrentTarget?.Handle})");
                     if(ffaQueue.CurrentTarget == source)
                     {
                         TriggerClientEvent(player, Events.Client.NotifyAboutHuntedZone, payload);

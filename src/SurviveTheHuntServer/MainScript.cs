@@ -113,7 +113,7 @@ namespace SurviveTheHuntServer
             else
             {
                 Console.WriteLine($"{player.Name} is joining; syncing time offset now.");
-                TriggerClientEvent(player, Events.Client.ReceiveTimeSync, new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
+                TriggerClientEvent(player, Events.Client.ReceiveTimeSync, new { CurrentServerTime = $"{DateTime.UtcNow.Ticks}" });
 
                 HuntedPlayerQueue.AddPlayer(player);
             }
@@ -123,7 +123,7 @@ namespace SurviveTheHuntServer
         {
             if (DateTime.UtcNow >= LastTimeSync + SharedConstants.TimeSyncInterval)
             {
-                TriggerClientEvent(Events.Client.ReceiveTimeSync, new { CurrentServerTime = DateTime.UtcNow.ToString("F", CultureInfo.InvariantCulture) });
+                TriggerClientEvent(Events.Client.ReceiveTimeSync, new { CurrentServerTime = $"{DateTime.UtcNow.Ticks}" });
                 LastTimeSync = DateTime.UtcNow;
             }
 
