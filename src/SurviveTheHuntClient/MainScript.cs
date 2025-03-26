@@ -1109,11 +1109,11 @@ namespace SurviveTheHuntClient
             }
 
             bool allowFriendlyFire = GameState.Hunt.IsInProgress && GameState.Hunt.GameMode == HuntedQueueType.FreeForAll;
-            NetworkSetFriendlyFireOption(false);
+            NetworkSetFriendlyFireOption(allowFriendlyFire);
 
             if (DoesEntityExist(PlayerPedId()))
             {
-                SetCanAttackFriendly(PlayerPedId(), false, false);
+                SetCanAttackFriendly(PlayerPedId(), allowFriendlyFire, false);
             }
 
             if (HunterGroupHash.HasValue && HuntedGroupHash.HasValue)
