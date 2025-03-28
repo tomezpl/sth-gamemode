@@ -29,9 +29,34 @@ namespace SurviveTheHuntServer.Helpers
 
         private List<Player> _allPlayers = new List<Player>();
 
+        // The first queue of players to hunt (so that when the hunt starts, everyone has a unique target)
+        private List<Player> _firstQueue = new List<Player>();
+
+        private static Random _rng = new Random();
+
         internal FFAHuntedQueue(IEnumerable<Player> players)
         {
             Init(players);
+            PrepareFirstQueue(players);
+        }
+
+        private void PrepareFirstQueue(IEnumerable<Player> players)
+        {
+            _firstQueue.Clear();
+
+            List<Player> queue = new List<Player>();
+            foreach(Player player in players)
+            {
+                queue.Add(player);
+            }
+
+            // Shuffle
+            while(queue.Count > 0)
+            {
+                Player player = queue[_rng.Next(0, queue.Count)];
+                _firstQueue.Add(player);
+                queue.Remove(player);
+            }
         }
 
         public void SetCurrentPlayer(Player currentPlayer)
@@ -93,44 +118,52 @@ namespace SurviveTheHuntServer.Helpers
 
             Player next = null;
 
-            // if we only have one possible target then that's our only choice
-            if (queue.QueueSize == 1)
+            Player targetInFirstQueue = _firstQueue.Find(player => player != _currentPlayer);
+            if (targetInFirstQueue != null)
             {
-                next = queue.PopNext();
-                queue.Init(_allPlayers.Where(p => p != _currentPlayer));
-            }
-            // if we've exhausted the queue, reinitialise it and attempt to pick again
-            else if(queue.QueueSize == 0)
-            {
-                queue.Init(_allPlayers.Where(p => p != _currentPlayer));
-                if(queue.QueueSize != 0)
-                {
-                    next = PopNext();
-                }
+                next = targetInFirstQueue;
             }
             else
             {
-                next = queue.PopNext();
-
-                bool queueReinitialisedOnce = queue.QueueSize == 0;
-                if(queueReinitialisedOnce)
-                {
-                    queue.Init(_allPlayers.Where(p => p != _currentPlayer && p != lastHunted));
-                }
-
-                // Try to avoid picking someone who was just our target, or someone who's currently someone's target
-                while(next == lastHunted || _currentTargets.ContainsValue(next))
+                // if we only have one possible target then that's our only choice
+                if (queue.QueueSize == 1)
                 {
                     next = queue.PopNext();
-                    if(queue.QueueSize == 0 && !queueReinitialisedOnce)
+                    queue.Init(_allPlayers.Where(p => p != _currentPlayer));
+                }
+                // if we've exhausted the queue, reinitialise it and attempt to pick again
+                else if (queue.QueueSize == 0)
+                {
+                    queue.Init(_allPlayers.Where(p => p != _currentPlayer));
+                    if (queue.QueueSize != 0)
                     {
-                        queueReinitialisedOnce = true;
+                        next = PopNext();
+                    }
+                }
+                else
+                {
+                    next = queue.PopNext();
+
+                    bool queueReinitialisedOnce = queue.QueueSize == 0;
+                    if (queueReinitialisedOnce)
+                    {
                         queue.Init(_allPlayers.Where(p => p != _currentPlayer && p != lastHunted));
                     }
-                    else if(queue.QueueSize == 0)
+
+                    // Try to avoid picking someone who was just our target, or someone who's currently someone's target
+                    while (next == lastHunted || _currentTargets.ContainsValue(next))
                     {
-                        // break if the queue got reinitialised twice, otherwise we may go into an infinite loop (cause we can't find an ideal pick)
-                        break;
+                        next = queue.PopNext();
+                        if (queue.QueueSize == 0 && !queueReinitialisedOnce)
+                        {
+                            queueReinitialisedOnce = true;
+                            queue.Init(_allPlayers.Where(p => p != _currentPlayer && p != lastHunted));
+                        }
+                        else if (queue.QueueSize == 0)
+                        {
+                            // break if the queue got reinitialised twice, otherwise we may go into an infinite loop (cause we can't find an ideal pick)
+                            break;
+                        }
                     }
                 }
             }

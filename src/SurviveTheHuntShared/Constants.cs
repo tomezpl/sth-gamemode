@@ -273,5 +273,10 @@ namespace SurviveTheHuntShared
         /// Number of milliseconds to wait before allowing a hunt to be started again.
         /// </summary>
         public const ushort HuntStartCooldown = 10 * 1000;
+
+        /// <summary>
+        /// The new FFA target's "server ID" if there is no target available for a player (the client should keep retrying every few seconds)
+        /// </summary>
+        public const string NoAvailableFFATargetServerId = "WAITING";
     }
 }

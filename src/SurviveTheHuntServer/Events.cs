@@ -288,6 +288,11 @@ namespace SurviveTheHuntServer
                 Debug.WriteLine($"{hunter.Name} ({hunter.Handle}) will hunt {target.Name} ({target.Handle})");
                 TriggerClientEvent(hunter, Events.Client.ReceiveFFAHuntedTarget, int.Parse(target.Handle));
             }
+            else
+            {
+                Debug.WriteLine($"No target available for {hunter.Name}.");
+                TriggerClientEvent(hunter, Events.Client.ReceiveFFAHuntedTarget, SharedConstants.NoAvailableFFATargetServerId);
+            }
         }
 
         [EventHandler(Events.Server.BroadcastHuntedZone)]

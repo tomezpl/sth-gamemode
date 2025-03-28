@@ -90,12 +90,40 @@ namespace SurviveTheHuntClient
         }
 
         [EventHandler(Events.Client.ReceiveFFAHuntedTarget)]
-        public void ReceiveFFAHuntedTarget(int huntedPlayerServerId)
+        public void ReceiveFFAHuntedTarget(string huntedPlayerServerId)
         {
-            GameState.Hunt.HuntedPlayer = new Player(GetPlayerFromServerId(huntedPlayerServerId));
-            Debug.WriteLine($"Hunting {GameState.Hunt.HuntedPlayer.Name} ({GameState.Hunt.HuntedPlayer.Handle})");
-            GameState.CurrentObjective = " is the hunted! Track them down. And watch your back...";
+            bool needToRetry = false;
+
+            // TODO: the obvious downside of this is that we can still be assigned a player who hasn't spawned in yet,
+            // which means they won't have a ped yet. Ideally we should only be adding players to the FFA queue once they've spawned in for the first time.
+            if (huntedPlayerServerId == SurviveTheHuntShared.Constants.NoAvailableFFATargetServerId)
+            {
+                GameState.Hunt.HuntedPlayer = null;
+                GameState.CurrentObjective = "Searching for targets...";
+                needToRetry = true;
+            }
+            else
+            {
+                GameState.Hunt.HuntedPlayer = new Player(GetPlayerFromServerId(int.Parse(huntedPlayerServerId)));
+                if (GameState.Hunt.HuntedPlayer.Handle != -1)
+                {
+                    Debug.WriteLine($"Hunting {GameState.Hunt.HuntedPlayer.Name} ({GameState.Hunt.HuntedPlayer.Handle})");
+                    GameState.CurrentObjective = " is the hunted! Track them down. And watch your back...";
+                }
+                else
+                {
+                    GameState.Hunt.HuntedPlayer = null;
+                    needToRetry = true;
+                }
+            }
             HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+
+            if(needToRetry)
+            {
+                PendingFFATargetRequest = true;
+                FFATargetTimeWaited = 0f;
+                FFATargetRequestTimeDelay = RNG.Next(5, 11);
+            }
         }
     }
 }

@@ -72,18 +72,33 @@ namespace SurviveTheHuntServer
 
         protected void PlayerDisconnected([FromSource] Player player, string reason)
         {
+            List<Player> playersToNotify = null;
+
             // If this is an FFA game then find new targets for players who were hunting this player
-            if(HuntedPlayerQueue.Type == HuntedQueueType.FreeForAll)
+            if (HuntedPlayerQueue.Type == HuntedQueueType.FreeForAll)
             {
                 FFAHuntedQueue ffaQueue = (FFAHuntedQueue)HuntedPlayerQueue;
-                List<Player> playersToNotify = ffaQueue.RemoveTarget(player);
+                playersToNotify = ffaQueue.RemoveTarget(player);
+            }
+            HuntedPlayerQueue.RemovePlayer(player);
+
+            if(HuntedPlayerQueue.Type == HuntedQueueType.FreeForAll && playersToNotify != null)
+            {
+                FFAHuntedQueue ffaQueue = (FFAHuntedQueue)HuntedPlayerQueue;
                 foreach (Player playerToNotify in playersToNotify)
                 {
                     ffaQueue.SetCurrentPlayer(playerToNotify);
-                    TriggerClientEvent(playerToNotify, Events.Client.ReceiveFFAHuntedTarget, ffaQueue.PopNext());
+                    Player newTarget = ffaQueue.PopNext();
+                    if (newTarget != null && int.TryParse(newTarget.Handle, out int newTargetServerId))
+                    {
+                        TriggerClientEvent(playerToNotify, Events.Client.ReceiveFFAHuntedTarget, newTargetServerId);
+                    }
+                    else
+                    {
+                        TriggerClientEvent(playerToNotify, Events.Client.ReceiveFFAHuntedTarget, SharedConstants.NoAvailableFFATargetServerId);
+                    }
                 }
             }
-            HuntedPlayerQueue.RemovePlayer(player);
 
             if (GameState.Hunt.IsStarted && player != null && GameState.Hunt.HuntedPlayer?.Handle == player.Handle)
             {
