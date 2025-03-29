@@ -469,7 +469,7 @@ namespace SurviveTheHuntClient
                     continue;
                 }
 
-                if(gameState.Hunt.IsStarted && (playerState.Team == Team.Hunted || ped == gameState.Hunt.HuntedPlayer.Character.Handle) && !GameState.IsPedTooFar(new Ped(ped)))
+                if(gameState.Hunt.IsStarted && (playerState.Team == Team.Hunted || ped == gameState.Hunt.HuntedPlayer?.Character?.Handle) && !GameState.IsPedTooFar(new Ped(ped)))
                 {
                     // Hide the blip if it's within the play area bounds and the player is on the opposite team.
                     Blip blip = PlayerBlips[ped].blip;

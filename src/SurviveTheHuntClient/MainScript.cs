@@ -401,7 +401,27 @@ namespace SurviveTheHuntClient
             int randomPedIndex = RNG.Next(0, SharedConstants.DefaultPlayerPeds.Length);
             string randomPed = SharedConstants.DefaultPlayerPeds[randomPedIndex];
 
-            Exports["spawnmanager"].spawnPlayer(new { x = spawnLoc.X, y = spawnLoc.Y, z = spawnLoc.Z, model = randomPed });
+            float[] furthestFromAnyPedSpawn = new float[] { SharedConstants.DockSpawn.X, SharedConstants.DockSpawn.Y, SharedConstants.DockSpawn.Z, 0f };
+            if (GameState.Hunt.IsInProgress)
+            {
+                float furthestFromAnyPedDistance = 0f;
+
+                List<float[]> shuffledSpawnPoints = new List<float[]>(Constants.SpawnPoints);
+                shuffledSpawnPoints.Sort((a, b) => RNG.Next(-1, 2));
+
+                furthestFromAnyPedSpawn = shuffledSpawnPoints[0];
+            }
+            // TODO: pick based on distance from other players
+            /*
+            for(int i = 0; i < Constants.SpawnPoints.Length; i++)
+            {
+                if(furthestFromAnyPedDistance == 0f)
+                {
+                    furthestFromAnyPedSpawn = shuffledSpawnPoints[i];
+                }
+            }*/
+
+            Exports["spawnmanager"].spawnPlayer(new { x = furthestFromAnyPedSpawn[0], y = furthestFromAnyPedSpawn[1], z = furthestFromAnyPedSpawn[2], heading = furthestFromAnyPedSpawn[3], model = randomPed });
 
             // Pick a random GTAO character clipset.
             bool isFemale = randomPed.StartsWith("a_f");
