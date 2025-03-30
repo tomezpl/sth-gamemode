@@ -94,6 +94,8 @@ namespace SurviveTheHuntClient
         private float FFATargetTimeWaited = 0f;
         private float FFATargetRequestTimeDelay = 0f;
         
+        private bool WasPrepPhaseLastFrame = false;
+        
         /// <summary>
         /// If true, then <see cref="FFATargetTimeWaited"/> should be advanced until it reaches <see cref="FFATargetRequestTimeDelay"/> at which point the next FFA target should be requested.
         /// </summary>
@@ -675,6 +677,44 @@ namespace SurviveTheHuntClient
                     PendingFFATargetRequest = false;
                 }
             }
+
+            int localPlayer = PlayerId();
+            if (GameState.Hunt.IsPrepPhase)
+            {
+                foreach(Player player in Players)
+                {
+                    if(player.Handle != localPlayer)
+                    {
+                        if (player.Character?.Exists() == true)
+                        {
+                            SetEntityLocallyInvisible(player.Character.Handle);
+                            Vehicle currentVeh = player.Character.CurrentVehicle;
+                            if(currentVeh?.Exists() == true)
+                            {
+                                SetEntityLocallyInvisible(currentVeh.Handle);
+                            }
+                        }
+                    }
+                }
+
+                WasPrepPhaseLastFrame = true;
+            }
+            else if(WasPrepPhaseLastFrame)
+            {
+                foreach (Player player in Players)
+                {
+                    if (player.Handle != localPlayer)
+                    {
+                        if (player.Character?.Exists() == true)
+                        {
+                            SetEntityLocallyVisible(player.Character.Handle);
+                        }
+                    }
+                        }
+
+                WasPrepPhaseLastFrame = false;
+            }
+
 
             Wait(0);
         }
