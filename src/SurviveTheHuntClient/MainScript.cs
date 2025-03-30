@@ -529,6 +529,17 @@ namespace SurviveTheHuntClient
 
         protected async Task UpdateLoop()
         {
+            float deltaTime = GetFrameTime();
+
+            try
+            {
+                TimeHelper.Tick(deltaTime);
+            }
+            catch(Exception ex)
+            {
+                Debug.WriteLine($"ERROR [TimeHelper.Tick()]: {ex}");
+            }
+
             if (Game.PlayerPed != null)
             {
                 ResetPlayerStamina(PlayerId());
@@ -835,7 +846,12 @@ namespace SurviveTheHuntClient
                 prepPhase = TimeSpan.Zero;
             }
 
-            GameState.Hunt.NextMugshotTime = DateTime.UtcNow + TimeSpan.FromSeconds(secondsTillPing);
+            Debug.WriteLine($"Mugshot will re-generate in {Convert.ToUInt32((secondsTillPing * 1000f) * 0.75f)}ms");
+            TimeHelper.AddTimeout(Convert.ToUInt32((secondsTillPing * 1000f) * 0.75f), new Action(() =>
+            {
+                Debug.WriteLine("Mugshot marked as stale for the first time");
+                GameState.Hunt.MugshotIsStale = true;
+            }));
             GameState.Hunt.InitialEndTime = endTime;
             GameState.Hunt.PrepPhaseEndTime = DateTime.UtcNow + prepPhase.Value;
             GameState.Hunt.GameMode = gameMode;
@@ -962,7 +978,14 @@ namespace SurviveTheHuntClient
                         Player player = new Player(GetPlayerFromServerId(playerServerId));
                         string playerName = player.Name;
                         float nextNotificationTimeout = data.NextNotification;
-                        GameState.Hunt.NextMugshotTime = DateTime.UtcNow + TimeSpan.FromSeconds(nextNotificationTimeout);
+
+                        Debug.WriteLine($"Mugshot will re-generate in {Convert.ToUInt32((nextNotificationTimeout * 1000f) * 0.75f)}ms");
+                        // Schedule the next mugshot to be generated once the next ping is 75% through, just to give it enough time to generate an up-to-date picture in time for the ping
+                        TimeHelper.AddTimeout(Convert.ToUInt32((nextNotificationTimeout * 1000f) * 0.75f), new Action(() =>
+                        {
+                            Debug.WriteLine("Marking mugshot as stale");
+                            GameState.Hunt.MugshotIsStale = true;
+                        }));
                         HuntUI.NotifyAboutHuntedZone(player, data.Position, ref GameState);
                     })
                 },

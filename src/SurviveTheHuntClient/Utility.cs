@@ -16,6 +16,7 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Stores the current UTC time, accounting for the server desync.
         /// </summary>
+        [Obsolete("Use TimeHelper instead.")]
         public static DateTime CurrentTime
         {
             get

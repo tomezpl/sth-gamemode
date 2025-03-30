@@ -54,6 +54,7 @@
     <Compile Include="Helpers\NativeHelpers.cs" />
     <Compile Include="Helpers\PlayerPassenger.cs" />
     <Compile Include="Helpers\SyncedVehicle.cs" />
+    <Compile Include="Helpers\TimeHelper.cs" />
     <Compile Include="Helpers\WantedLevelHelper.cs" />
     <Compile Include="Helpers\WastedAnim.cs" />
     <Compile Include="Helpers\WeaponAttachments.cs" />

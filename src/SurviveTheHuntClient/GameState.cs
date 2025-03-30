@@ -64,16 +64,6 @@ namespace SurviveTheHuntClient
             public Texture HuntedPlayerMugshot { get; set; } = null;
 
             /// <summary>
-            /// The currently hunted player's mugshot texture generation time.
-            /// </summary>
-            public DateTime LastHuntedMugshotGeneration { get; set; } = DateTime.UtcNow;
-
-            /// <summary>
-            /// Expected time for the next ping.
-            /// </summary>
-            public DateTime NextMugshotTime { get; set; } = DateTime.UtcNow;
-
-            /// <summary>
             /// Time when hunt is meant to end & state be reset.
             /// This includes the delay for displaying the win/loss text.
             /// </summary>
@@ -101,6 +91,11 @@ namespace SurviveTheHuntClient
             /// This can be used for checking if the hunt has only just started.
             /// </summary>
             public bool WasHuntInProgressLastFrame { get => _wasHuntInProgressLastFrame; }
+
+            /// <summary>
+            /// Should the mugshot be re-rendered?
+            /// </summary>
+            public bool MugshotIsStale = false;
 
             /// <summary>
             /// Ends the hunt and resets the state so that it can be started again.
@@ -151,14 +146,10 @@ namespace SurviveTheHuntClient
                 }
 
                 // If the mugshot texture requires regeneration, unregister it.
-                if(HuntedPlayerMugshot != null && Utility.CurrentTime >= NextMugshotTime - SharedConstants.MugshotGenerationTimeout)
+                if(HuntedPlayerMugshot != null && MugshotIsStale)
                 {
                     UnregisterPedheadshot(HuntedPlayerMugshot.Id);
                     HuntedPlayerMugshot = null;
-
-                    // "Predict" the next mugshot time for now (the actual time will be sent down from the server in an event, but it's a fixed interval)
-                    // This is just to prevent the mugshot being re-registered on every tick (that would be bad...)
-                    NextMugshotTime = NextMugshotTime + (NextMugshotTime - LastHuntedMugshotGeneration);
                 }
 
                 // If the mugshot texture has been unregistered, generate a new one.
@@ -166,7 +157,7 @@ namespace SurviveTheHuntClient
                 {
                     Debug.WriteLine("Generating a mugshot!");
                     HuntedPlayerMugshot = new Texture() { Id = RegisterPedheadshot(HuntedPlayer.Character.Handle) };
-                    LastHuntedMugshotGeneration = Utility.CurrentTime;
+                    MugshotIsStale = false;
                 }
 
                 // If the mugshot texture doesn't have a TXD string assigned yet, check that it's ready and assign it if so.
