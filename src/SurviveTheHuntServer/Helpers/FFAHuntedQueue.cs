@@ -37,25 +37,24 @@ namespace SurviveTheHuntServer.Helpers
         internal FFAHuntedQueue(IEnumerable<Player> players)
         {
             Init(players);
-            PrepareFirstQueue(players);
         }
 
         private void PrepareFirstQueue(IEnumerable<Player> players)
         {
             _firstQueue.Clear();
 
-            List<Player> queue = new List<Player>();
+            List<Player> tempQueue = new List<Player>();
             foreach(Player player in players)
             {
-                queue.Add(player);
+                tempQueue.Add(player);
             }
 
             // Shuffle
-            while(queue.Count > 0)
+            while(tempQueue.Count > 0)
             {
-                Player player = queue[_rng.Next(0, queue.Count)];
+                Player player = tempQueue[_rng.Next(0, tempQueue.Count)];
                 _firstQueue.Add(player);
-                queue.Remove(player);
+                tempQueue.Remove(player);
             }
         }
 
@@ -122,6 +121,7 @@ namespace SurviveTheHuntServer.Helpers
             if (targetInFirstQueue != null)
             {
                 next = targetInFirstQueue;
+                _firstQueue.Remove(targetInFirstQueue);
             }
             else
             {
@@ -202,6 +202,8 @@ namespace SurviveTheHuntServer.Helpers
                     playerQueue.Value.AddPlayer(player);
                 }
             }
+
+            PrepareFirstQueue(_allPlayers);
         }
 
         /// <summary>
@@ -233,6 +235,8 @@ namespace SurviveTheHuntServer.Helpers
             {
                 AddPlayer(player);
             }
+
+            PrepareFirstQueue(players);
         }
 
         public void RemovePlayer(Player player)
@@ -241,6 +245,7 @@ namespace SurviveTheHuntServer.Helpers
             _playerQueues.Remove(player);
             _lastHunted.Remove(player);
             _currentTargets.Remove(player);
+            _firstQueue.Remove(player);
 
             foreach (KeyValuePair<Player, SingleHuntedQueue> playerQueue in _playerQueues)
             {
