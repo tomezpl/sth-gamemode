@@ -79,5 +79,15 @@ namespace SurviveTheHuntClient
                 IntensityChanged = IntensityTracker.SetTier((IntensityTracker.Tier)intensityTier);
             }
         }
+
+        [EventHandler(Events.Client.ReceiveVehicleSpawnPermission)]
+        public void VehicleSpawnPermissionReceived(bool canSpawn)
+        {
+            if (!IsSpawningCars && canSpawn)
+            {
+                IsSpawningCars = true;
+                SpawnCars();
+            }
+        }
     }
 }

@@ -50,6 +50,7 @@
     <Compile Include="Constants.cs" />
     <Compile Include="Events.cs" />
     <Compile Include="GameState.cs" />
+    <Compile Include="Helpers\CarSpawner.cs" />
     <Compile Include="Helpers\HuntedQueue.cs" />
     <Compile Include="Extensions\TeamPlugins.cs" />
     <Compile Include="Helpers\KillFeedDispatcher.cs" />

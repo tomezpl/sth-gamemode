@@ -36,6 +36,33 @@ namespace SurviveTheHuntServer
             SyncVehicles(SpawnedVehicles);
         }
 
+        [EventHandler(Events.Server.RequestSpawnVehiclesPermission)]
+        public void VehicleSpawnRequested([FromSource] Player player)
+        {
+            Debug.WriteLine($"{player.Name} is requesting to spawn cars");
+            bool canSpawn = CarSpawner.RequestSpawn(player.Handle);
+            if(canSpawn)
+            {
+                Debug.WriteLine($"{player.Name} (server ID {player.Handle}) is allowed to spawn cars, will time out in {CarSpawner.SpawnLockTimeoutSeconds}s");
+            }
+            else
+            {
+                Debug.WriteLine($"{player.Name} (server ID {player.Handle}) is not allowed to spawn cars as someone else is currently spawning.");
+            }
+
+            TriggerClientEvent(player, Events.Client.ReceiveVehicleSpawnPermission, canSpawn);
+        }
+
+        [EventHandler(Events.Server.NotifySpawnedVehicles)]
+        public void AcknowledgeSpawnedVehicles([FromSource] Player player)
+        {
+            bool unlocked = CarSpawner.Unlock(player.Handle);
+            if(unlocked)
+            {
+                Debug.WriteLine($"{player.Name} (server ID {player.Handle} has finished spawning vehicles");
+            }
+        }
+
         [EventHandler(Events.Server.RequestSyncVehicles)]
         public void SyncVehiclesRequested([FromSource] Player player, string vehicleNetIdsPacked)
         {
