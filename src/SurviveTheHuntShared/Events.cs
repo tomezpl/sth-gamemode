@@ -70,6 +70,8 @@ namespace SurviveTheHuntShared
             public const string SpawnCars = "sth:spawnCars";
             public const string Heal = "sth:heal";
             public const string Respawn = "sth:respawn";
+
+            public const string ReceiveVehicleSpawnPermission = "sth:recvSpawnVehiclesPerm";
         }
 
         /// <summary>
@@ -81,6 +83,8 @@ namespace SurviveTheHuntShared
             public const string RequestDeleteVehicle = "sth:reqDeleteVehicle";
             public const string PlayerDied = "sth:playerDied";
             public const string BroadcastHuntedZone = "sth:broadcastHuntedZone";
+            public const string RequestSpawnVehiclesPermission = "sth:reqSpawnVehicles";
+            public const string NotifySpawnedVehicles = "sth:ackSpawnedVehicles";
             public const string RequestSyncVehicles = "sth:reqSyncVehicles";
             public const string ClientStarted = "sth:clientStarted";
             public const string RequestStartHunt = "sth:startHunt";

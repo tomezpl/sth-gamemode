@@ -179,14 +179,9 @@ namespace SurviveTheHuntClient
                     TriggerServerEvent(Events.Server.RequestStartHunt);
                 }), false);
 
-                Action spawnCarsAction = new Action(async () =>
+                Action spawnCarsAction = new Action(() =>
                 {
-                    if (!IsSpawningCars)
-                    {
-                        IsSpawningCars = true;
-                        await SpawnCars();
-                        IsSpawningCars = false;
-                    }
+                    TriggerServerEvent(Events.Server.RequestSpawnVehiclesPermission);
                 });
                 RegisterCommand("spawncars", spawnCarsAction, false);
                 EventHandlers[Events.Client.SpawnCars] += spawnCarsAction;
@@ -384,6 +379,9 @@ namespace SurviveTheHuntClient
                 counter++;
             }
             SpawnedVehiclesNeedSync = true;
+
+            IsSpawningCars = false;
+            TriggerServerEvent(Events.Server.NotifySpawnedVehicles);
         }
 
         protected void AutoSpawnCallback()

@@ -3,6 +3,7 @@ using System;
 using Events = SurviveTheHuntShared.Events;
 using static CitizenFX.Core.Native.API;
 using SurviveTheHuntShared;
+using System.Threading.Tasks;
 
 namespace SurviveTheHuntClient
 {
@@ -68,6 +69,16 @@ namespace SurviveTheHuntClient
             }
 
             EndTextCommandThefeedPostMpticker(true, true);
+        }
+
+        [EventHandler(Events.Client.ReceiveVehicleSpawnPermission)]
+        public void VehicleSpawnPermissionReceived(bool canSpawn)
+        {
+            if (!IsSpawningCars && canSpawn)
+            {
+                IsSpawningCars = true;
+                SpawnCars();
+            }
         }
     }
 }
