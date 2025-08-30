@@ -618,7 +618,40 @@ namespace SurviveTheHuntClient
 
             PlayerState.HandleTeleportToSpawn();
 
+            ApplyPedFlags();
+            
             Wait(0);
+        }
+
+        /// <summary>
+        /// Applies certain useful ped flags.
+        /// </summary>
+        private void ApplyPedFlags()
+        {
+            int playerPed = PlayerPedId();
+
+            // CPED_CONFIG_FLAG_LeaveEngineOnWhenExitingVehicles = 241
+            SetPedConfigFlag(playerPed, 241, true);
+
+            // No clue if these actually do anything on a player ped...
+            SetDriverAbility(playerPed, 1f);
+            SetDriverRacingModifier(playerPed, 1f);
+
+            // https://vhub.wiki/enums/PED_RESET_FLAGS
+            // According to the wiki this should make the local player enter/exit vehicle faster like in GTAO
+            SetPedResetFlag(playerPed, 237, true);
+            // This should prevent the ped from going into still pose... not sure what that means tho but I guess also desirable?
+            SetPedResetFlag(playerPed, 236, true);
+            // Prevent going into shunt
+            SetPedResetFlag(playerPed, 287, true);
+            // Allow ped variations in vehicles
+            SetPedResetFlag(playerPed, 326, true);
+            // Reduce vehicle ram control loss (not sure if this actually applies to other players)
+            SetPedResetFlag(playerPed, 327, true);
+            // Disable dust off animations
+            SetPedResetFlag(playerPed, 334, true);
+            // Allow ped props in vehicles so hats stay on
+            SetPedResetFlag(playerPed, 337, true);
         }
 
         private void RunPedChangedChecks()
