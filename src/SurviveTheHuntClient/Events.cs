@@ -80,5 +80,32 @@ namespace SurviveTheHuntClient
                 SpawnCars();
             }
         }
+
+        [EventHandler(Events.Client.TeleportToSpawn)]
+        public void TeleportToSpawn()
+        {
+            if (!PlayerState.IsInSafeZone)
+            {
+                if (GameState.Hunt?.IsInProgress != true)
+                {
+                    if (PlayerState.TeleportPlayerStage == Constants.TeleportPlayerStage.None)
+                    {
+                        PlayerState.TeleportPlayerStage = Constants.TeleportPlayerStage.ZoomOut;
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Cannot teleport to spawn as Player is already teleporting");
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine("Requested teleport to spawn, but game hunt is currently in progress");
+                }
+            }
+            else
+            {
+                Debug.WriteLine("Requested teleport to spawn, but player is already within the spawn area bounds (safe zone)");
+            }
+        }
     }
 }

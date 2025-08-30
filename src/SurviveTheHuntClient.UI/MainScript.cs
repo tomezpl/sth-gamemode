@@ -33,6 +33,7 @@ namespace SurviveTheHuntClient.UI
         private NativeMenu RespawnMenu;
         private NativeSubmenuItem RespawnMenuItem;
         private NativeItem RespawnConfirmButton;
+        private NativeItem TeleportToStartingAreaButton;
 
         private NativeMenu VehicleOptionsMenu;
         private NativeSubmenuItem VehicleOptionsMenuItem;
@@ -204,6 +205,9 @@ namespace SurviveTheHuntClient.UI
             RespawnMenu.Add(RespawnConfirmButton);
             RespawnConfirmButton.Activated += RespawnConfirmed;
             HealButton.Activated += HealButtonClicked;
+            TeleportToStartingAreaButton = new NativeItem("Return to Starting Area", "Immediately return to the starting area at Terminal, LS.");
+            TeleportToStartingAreaButton.Activated += TeleportToSpawnClicked;
+            PlayerMenu.Add(TeleportToStartingAreaButton);
 
             StartHuntButton.Activated += StartHuntClicked;
             CharacterButton.Activated += CharacterMenuClicked;
@@ -235,6 +239,12 @@ namespace SurviveTheHuntClient.UI
             HelpMenu.Closed += HelpMenu_Closed;
 
             MainMenu.SelectedIndexChanged += MainMenu_SelectedIndexChanged;
+        }
+
+        private void TeleportToSpawnClicked(object sender, EventArgs e)
+        {
+            TriggerEvent(Events.Client.TeleportToSpawn);
+            PlayerMenu.Visible = false;
         }
 
         private void MainMenu_SelectedIndexChanged(object sender, SelectedEventArgs e)

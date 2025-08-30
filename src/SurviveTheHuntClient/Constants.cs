@@ -105,5 +105,12 @@ namespace SurviveTheHuntClient
             public const string Hunters = "hunter_group";
             public const string Hunted = "hunted_group";
         }
+
+        public enum TeleportPlayerStage
+        {
+            None,
+            ZoomOut,
+            ZoomIn
+        }
     }
 }

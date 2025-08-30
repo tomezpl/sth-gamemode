@@ -14,7 +14,7 @@ namespace SurviveTheHuntClient
         /// <para>Does the player have weapons?</para>
         /// <para>This is refreshed on each respawn.</para>
         /// </summary>
-        public bool WeaponsGiven { get; set; } = false;
+        public bool WeaponsGiven = false;
 
         /// <summary>
         /// Has the player's weapon been unequipped yet (e.g. due to being in a vehicle)?
@@ -25,7 +25,7 @@ namespace SurviveTheHuntClient
         /// <para>Was the player's death reported to the server yet?</para>
         /// <para>This is refreshed on each respawn.</para>
         /// </summary>
-        public bool DeathReported { get; set; } = false;
+        public bool DeathReported = false;
 
         /// <summary>
         /// Should the player's death be reported to the server?
@@ -40,17 +40,28 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// The team the local player is on.
         /// </summary>
-        public Teams.Team Team { get; set; } = Teams.Team.Hunters;
+        public Teams.Team Team = Teams.Team.Hunters;
 
         /// <summary>
         /// Is the player currently waiting to be teleported to spawn because of the hunt starting?
         /// </summary>
-        public bool WaitingToTeleportToSpawn { get; set; } = false;
+        public bool WaitingToTeleportToSpawn = false;
 
         /// <summary>
         /// Is the player currently in a character creator screen? This allows the creator resource to gracefully exit the screen before triggering the teleport etc.
         /// </summary>
         public bool IsInCharacterCreator = false;
+
+        /// <summary>
+        /// The stage that the player is currently in with regards to their request to teleport back to spawn.
+        /// <remarks>This is NOT related to <see cref="WaitingToTeleportToSpawn"/>. In this case this is supposed to support the player's ability to teleport back to spawn outside of a hunt session.</remarks>
+        /// </summary>
+        public Constants.TeleportPlayerStage TeleportPlayerStage = Constants.TeleportPlayerStage.None;
+
+        /// <summary>
+        /// Is the player currently within the safezone bounds?
+        /// </summary>
+        public bool IsInSafeZone = false;
 
         /// <summary>
         /// Manages the state of the bigmap widget on the HUD.
@@ -63,7 +74,7 @@ namespace SurviveTheHuntClient
             /// How much time has passed (in miliseconds) since <see cref="Show"/> was called.
             /// </summary>
             /// <remarks>A value below 0 will prevent the timer from advancing.</remarks>
-            public int TimeSinceActivated { get; set; } = -1;
+            public int TimeSinceActivated = -1;
 
             public void Show()
             {
@@ -93,7 +104,7 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// The local player's <see cref="BigmapState"/> used to show and hide the bigmap HUD widget as needed.
         /// </summary>
-        public BigmapState Bigmap { get; set; } = new BigmapState();
+        public BigmapState Bigmap = new BigmapState();
 
         /// <summary>
         /// Removes weapons from a player ped.
@@ -166,6 +177,74 @@ namespace SurviveTheHuntClient
                 SetCurrentPedWeapon(playerPed.Handle, LastWeaponEquipped, true);
                 SetPedCanSwitchWeapon(playerPed.Handle, true);
                 ForcedUnarmed = false;
+            }
+        }
+
+        private Constants.TeleportPlayerStage _previousTickTeleportStage = Constants.TeleportPlayerStage.None;
+        private int _teleportedEntity = -1;
+
+        public void HandleTeleportToSpawn()
+        {
+            // Reset state once player switch has finished
+            if(TeleportPlayerStage == Constants.TeleportPlayerStage.ZoomIn && !IsPlayerSwitchInProgress())
+            {
+                TeleportPlayerStage = Constants.TeleportPlayerStage.None;
+            }
+
+            // Load collision at the spawn so that the player doesn't fall through the map
+            if(TeleportPlayerStage == Constants.TeleportPlayerStage.ZoomOut || (TeleportPlayerStage == Constants.TeleportPlayerStage.ZoomIn && IsPlayerSwitchInProgress()))
+            {
+                RequestCollisionAtCoord(SurviveTheHuntShared.Constants.DockSpawn.X, SurviveTheHuntShared.Constants.DockSpawn.Y, SurviveTheHuntShared.Constants.DockSpawn.Z);
+            }
+
+            // Once we've zoomed out, move the player to the spawn, but don't progress to the ZoomIn stage until collision has loaded there
+            if(_previousTickTeleportStage == TeleportPlayerStage && TeleportPlayerStage == Constants.TeleportPlayerStage.ZoomOut && IsPlayerSwitchInProgress() && GetPlayerSwitchState() != 0)
+            {
+                SetEntityCoords(_teleportedEntity, SurviveTheHuntShared.Constants.DockSpawn.X, SurviveTheHuntShared.Constants.DockSpawn.Y, SurviveTheHuntShared.Constants.DockSpawn.Z, false, false, false, false);
+                if (HasCollisionLoadedAroundEntity(_teleportedEntity))
+                {
+                    TeleportPlayerStage = Constants.TeleportPlayerStage.ZoomIn;
+                }
+            }
+
+            if(_previousTickTeleportStage != TeleportPlayerStage)
+            {
+                switch(TeleportPlayerStage)
+                {
+                    case Constants.TeleportPlayerStage.ZoomOut:
+                        if(_previousTickTeleportStage == Constants.TeleportPlayerStage.None)
+                        {
+                            Vehicle veh = Game.PlayerPed.CurrentVehicle;
+                            
+                            // Need to teleport the player together with the vehicle if they are inside one
+                            int playerPed = PlayerPedId();
+                            int entity = -1;
+                            if (veh?.Exists() == true)
+                            {
+                                entity = veh.Handle;
+                            }
+                            else
+                            {
+                                entity = playerPed;
+                            }
+                            _teleportedEntity = entity;
+
+                            // Freeze the player/vehicle for the duration of the switch, so they don't fall through the map
+                            FreezeEntityPosition(_teleportedEntity, true);
+                            SwitchOutPlayer(PlayerPedId(), 0, 1);
+                        }
+                        break;
+                    case Constants.TeleportPlayerStage.ZoomIn:
+                        if(_previousTickTeleportStage == Constants.TeleportPlayerStage.ZoomOut)
+                        {
+                            // Unfreeze
+                            FreezeEntityPosition(_teleportedEntity, false);
+                            SwitchInPlayer(PlayerPedId());
+                        }
+                        break;
+                }
+
+                _previousTickTeleportStage = TeleportPlayerStage;
             }
         }
     }
