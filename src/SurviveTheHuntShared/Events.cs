@@ -72,6 +72,8 @@ namespace SurviveTheHuntShared
             public const string Respawn = "sth:respawn";
 
             public const string ReceiveVehicleSpawnPermission = "sth:recvSpawnVehiclesPerm";
+
+            public const string TeleportToSpawn = "sth:goToSpawn";
         }
 
         /// <summary>

@@ -577,6 +577,8 @@ namespace SurviveTheHuntClient
             bool isPrepPhase = (GameState.Hunt.IsStarted && GameState.Hunt.IsPrepPhase);
             bool shouldProtectionsApply = isPrepPhase || inSafeZone;
 
+            PlayerState.IsInSafeZone = inSafeZone;
+
             if (wasHuntStartedLastFrame && !inSafeZone)
             {
                 PlayerState.WaitingToTeleportToSpawn = true;
@@ -613,6 +615,8 @@ namespace SurviveTheHuntClient
             BoundsTracker.Tick();
             WastedAnim.Tick();
             VehicleWeaponsTracker.Tick();
+
+            PlayerState.HandleTeleportToSpawn();
 
             Wait(0);
         }
