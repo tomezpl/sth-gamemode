@@ -612,6 +612,7 @@ namespace SurviveTheHuntClient
             KillTracker.Tick();
             BoundsTracker.Tick();
             WastedAnim.Tick();
+            VehicleWeaponsTracker.Tick();
 
             Wait(0);
         }
