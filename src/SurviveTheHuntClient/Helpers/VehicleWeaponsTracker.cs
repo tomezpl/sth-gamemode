@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Interfaces;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Helpers
@@ -6,19 +7,26 @@ namespace SurviveTheHuntClient.Helpers
     /// <summary>
     /// Helper for disabling weaponised vehicles' guns
     /// </summary>
-    internal static class VehicleWeaponsTracker
+    internal class VehicleWeaponsTracker : ITickable
     {
-        internal static void Tick()
+        public void Tick(float deltaTime)
         {
-            Vehicle veh = Game.PlayerPed.CurrentVehicle;
-            if(veh?.Exists() == true && DoesVehicleHaveWeapons(veh.Handle))
+            foreach (Player player in PlayerList.Players)
             {
-                uint weapon = uint.MaxValue;
-
-                // If the player ped has a vehicle weapon equipped, disable it
-                if(GetCurrentPedVehicleWeapon(Game.PlayerPed.Handle, ref weapon))
+                if (player.IsAlive && player.Character.Exists())
                 {
-                    DisableVehicleWeapon(true, weapon, veh.Handle, Game.PlayerPed.Handle);
+                    Ped ped = player.Character;
+                    Vehicle veh = ped.CurrentVehicle;
+                    if (veh?.Exists() == true && DoesVehicleHaveWeapons(veh.Handle))
+                    {
+                        uint weapon = uint.MaxValue;
+
+                        // If the player ped has a vehicle weapon equipped, disable it
+                        if (GetCurrentPedVehicleWeapon(ped.Handle, ref weapon))
+                        {
+                            DisableVehicleWeapon(true, weapon, veh.Handle, ped.Handle);
+                        }
+                    }
                 }
             }
         }

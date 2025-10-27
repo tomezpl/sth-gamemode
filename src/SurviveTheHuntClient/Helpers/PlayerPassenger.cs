@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,15 +9,15 @@ using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Helpers
 {
-    internal static class PlayerPassenger
+    internal class PlayerPassenger : ITickable
     {
-        private static float SecondsEnterControlHeld = 0f;
+        private float SecondsEnterControlHeld = 0f;
         private const float PassengerEntryActivationSeconds = 0.25f;
         private const int PassengerEntryActivationFrames = 10;
 
-        private static int FramesEnterControlHeld = 0;
-        private static bool IsGettingInAsPassenger = false;
-        private static int VehicleToEnterAsPassenger = 0;
+        private int FramesEnterControlHeld = 0;
+        private bool IsGettingInAsPassenger = false;
+        private int VehicleToEnterAsPassenger = 0;
 
         private static readonly int[] Buses =
         {
@@ -25,7 +26,7 @@ namespace SurviveTheHuntClient.Helpers
             GetHashKey("coach")
         };
 
-        internal static void Tick()
+        public void Tick(float deltaTime)
         {
             if(IsGettingInAsPassenger)
             {

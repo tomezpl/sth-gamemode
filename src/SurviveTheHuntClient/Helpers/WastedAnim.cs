@@ -1,23 +1,24 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Interfaces;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Helpers
 {
-    internal static class WastedAnim
+    internal class WastedAnim : ITickable
     {
-        private static bool NeedsToPlayWastedScaleform = false;
+        private bool NeedsToPlayWastedScaleform = false;
         private const string GfxName = "generic";
         private const string ScaleformName = "MP_BIG_MESSAGE_FREEMODE";
         private const string MethodName = "SHOW_SHARD_WASTED_MP_MESSAGE";
 
-        private static int? ScaleformHandle = null;
-        private static bool ShouldShow = false;
+        private int? ScaleformHandle = null;
+        private bool ShouldShow = false;
 
         private const float SecondsTillShard = 0.4f;
-        private static float SecondsPassedSinceDeath = 0f;
-        private static int? CurrentSoundId = null;
+        private float SecondsPassedSinceDeath = 0f;
+        private int? CurrentSoundId = null;
 
-        internal static void NotifyDeath()
+        internal void NotifyDeath()
         {
             NeedsToPlayWastedScaleform = true;
             ShouldShow = true;
@@ -35,13 +36,13 @@ namespace SurviveTheHuntClient.Helpers
             PlaySoundFrontend(CurrentSoundId.Value, "MP_Flash", "WastedSounds", true);
         }
 
-        internal static void StopShowing()
+        internal void StopShowing()
         {
             ShouldShow = false;
             NeedsToPlayWastedScaleform = false;
         }
 
-        internal static void Tick()
+        public void Tick(float deltaTime)
         {
             if(NeedsToPlayWastedScaleform && ScaleformHandle.HasValue && HasScaleformMovieLoaded(ScaleformHandle.Value))
             {

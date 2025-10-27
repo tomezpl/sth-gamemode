@@ -17,6 +17,7 @@ using SharedConstants = SurviveTheHuntShared.Constants;
 using SurviveTheHuntShared.Core;
 using SurviveTheHuntShared;
 using System.Xml;
+using SurviveTheHuntClient.Interfaces;
 
 namespace SurviveTheHuntClient
 {
@@ -91,6 +92,13 @@ namespace SurviveTheHuntClient
         private uint? HunterGroupHash = null;
         private uint? HuntedGroupHash = null;
 
+        private readonly KillTracker KillTracker;
+        private readonly BoundsTracker BoundsTracker;
+        private readonly WastedAnim WastedAnim;
+        private readonly PlayerPassenger PlayerPassenger = new PlayerPassenger();
+
+        private readonly ITickable[] Tickables;
+
         public MainScript()
         {
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
@@ -104,6 +112,17 @@ namespace SurviveTheHuntClient
             }
 
             DeathBlips = new DeathBlips(GetConvarInt("sth_deathbliplifespan", SharedConstants.DefaultDeathBlipLifespan));
+
+            KillTracker = new KillTracker();
+            BoundsTracker = new BoundsTracker();
+            WastedAnim = new WastedAnim();
+            Tickables = new ITickable[]
+            {
+                KillTracker,
+                BoundsTracker,
+                WastedAnim,
+                new VehicleWeaponsTracker()
+            };
         }
 
         protected void OnResourceStopping(string resourceName)
@@ -488,6 +507,8 @@ namespace SurviveTheHuntClient
 
         protected async Task UpdateLoop()
         {
+            float deltaTime = Game.LastFrameTime;
+
             if (Game.PlayerPed != null)
             {
                 ResetPlayerStamina(PlayerId());
@@ -517,7 +538,7 @@ namespace SurviveTheHuntClient
             HuntUI.UpdateTeammateBlips(Players, ref GameState, ref PlayerState);
 
             // PlayerPassenger needs to tick before the weapons are updated because we need to check if the hunted player can driveby.
-            PlayerPassenger.Tick();
+            PlayerPassenger.Tick(deltaTime);
             PlayerState.UpdateWeapons(Game.PlayerPed);
 
             // Check and report player death to the server if needed.
@@ -611,10 +632,10 @@ namespace SurviveTheHuntClient
 
             UpdateRelationships();
 
-            KillTracker.Tick();
-            BoundsTracker.Tick();
-            WastedAnim.Tick();
-            VehicleWeaponsTracker.Tick();
+            foreach(ITickable tickable in Tickables)
+            {
+                tickable.Tick(deltaTime);
+            }
 
             PlayerState.HandleTeleportToSpawn();
 

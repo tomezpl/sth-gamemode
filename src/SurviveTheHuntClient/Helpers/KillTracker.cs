@@ -1,28 +1,29 @@
 ﻿using CitizenFX.Core;
 using CitizenFX.Core.Native;
+using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntShared;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Helpers
 {
-    internal static class KillTracker
+    internal class KillTracker : ITickable
     {
         public const float AttackerTimeout = 5f;
 
-        internal static float TimeSinceLastDamage = 0f;
+        internal float TimeSinceLastDamage = 0f;
 
-        internal static int? LastAttacker = null;
+        internal int? LastAttacker = null;
 
-        internal static int LastTickHealth = 0;
+        internal int LastTickHealth = 0;
 
-        internal static void Reset()
+        internal void Reset()
         {
             LastAttacker = null;
             LastTickHealth = 0;
             TimeSinceLastDamage = 0f;
         }
 
-        internal static void Tick()
+        public void Tick(float deltaTime)
         {
             int playerPed = PlayerPedId();
 
@@ -62,7 +63,7 @@ namespace SurviveTheHuntClient.Helpers
             }
         }
 
-        internal static KillFeedClientPayload GetKillInfo()
+        internal KillFeedClientPayload GetKillInfo()
         {
             if(TimeSinceLastDamage < AttackerTimeout && LastAttacker.HasValue)
             {

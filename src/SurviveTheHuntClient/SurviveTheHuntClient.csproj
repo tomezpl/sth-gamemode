@@ -60,6 +60,7 @@
     <Compile Include="Helpers\WeaponAttachments.cs" />
     <Compile Include="HuntUI.cs" />
     <Compile Include="Integrations\LbgCharNeo.cs" />
+    <Compile Include="Interfaces\ITickable.cs" />
     <Compile Include="MainScript.cs" />
     <Compile Include="PlayerState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
