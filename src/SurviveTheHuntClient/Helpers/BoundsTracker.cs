@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Interfaces;
 using System;
 using static CitizenFX.Core.Native.API;
 using SharedConstants = SurviveTheHuntShared.Constants;
@@ -9,14 +10,14 @@ namespace SurviveTheHuntClient.Helpers
     /// Helper class that runs logic for checking the local player's proximity to play area limits
     /// and displaying the appropriate UI elements to help them avoid detection.
     /// </summary>
-    internal static class BoundsTracker
+    internal class BoundsTracker : ITickable
     {
-        private static int? PlayAreaBlip = null;
-        private static bool WasApproachingBoundsLastTick = false;
+        private int? PlayAreaBlip = null;
+        private bool WasApproachingBoundsLastTick = false;
         private const int ApproachingOutOfBoundsNotificationDuration = 20;
-        private static float TimePassedSinceLastOOBNotification = 0;
+        private float TimePassedSinceLastOOBNotification = 0;
 
-        internal static void Init()
+        internal void Init()
         {
             const float yOffset = 0f;
             PlayAreaBlip = AddBlipForArea(-100f , (SharedConstants.DockSpawn.Y + SharedConstants.OutOfBoundsYLimit) * .5f + yOffset, SharedConstants.DockSpawn.Z, 4250f, Math.Abs(SharedConstants.OutOfBoundsYLimit - SharedConstants.DockSpawn.Y) + Math.Abs(yOffset) * .5f);
@@ -25,7 +26,7 @@ namespace SurviveTheHuntClient.Helpers
             SetBlipColour(PlayAreaBlip.Value, (int)colour);
         }
 
-        internal static void Tick()
+        public void Tick(float deltaTime)
         {
             bool approachingBounds = CheckIsApproachingBounds();
             if (approachingBounds != WasApproachingBoundsLastTick && PlayAreaBlip.HasValue)
