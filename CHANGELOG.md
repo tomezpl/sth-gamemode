@@ -1,3 +1,21 @@
+# 1.4.0
+## Features
+- Added [lbg-char-neo](https://github.com/tomezpl/lbg-char-neo) integration to enable GTAO character model customisation. ([#63](https://github.com/tomezpl/sth-gamemode/issues/63))
+- Added auto health regen in the starting area and a `/heal` command. ([#60](https://github.com/tomezpl/sth-gamemode/issues/60))
+- Added a solid blip for the hunted radius that shows if the radius blip is outside radar bounds. ([#58](https://github.com/tomezpl/sth-gamemode/issues/58))
+- Added support for team chat using [fivem-chat-hook-teams](https://github.com/tomezpl/fivem-chat-hook-teams). ([#70](https://github.com/tomezpl/sth-gamemode/issues/70))
+- Added killfeed messages. ([#73](https://github.com/tomezpl/sth-gamemode/issues/73))
+- Added support for weapon attachments in `configs/team_loadouts.json`. ([#78](https://github.com/tomezpl/sth-gamemode/issues/78))
+- Added a gamemode menu. ([#46](https://github.com/tomezpl/sth-gamemode/issues/46))
+- Updated default weapon loadout.
+  - Hunters now receive an SMG instead of Combat PDW
+  - Hunted player receives a silenced sniper rifle with 3 bullets.
+
+## Bug Fixes
+- Fixed wanted level briefly being given to the player. ([#68](https://github.com/tomezpl/sth-gamemode/issues/68))
+- Fixed cars not being cleaned up on resource restart. ([#82](https://github.com/tomezpl/sth-gamemode/issues/82))
+- Fixed friendly fire being active between hunters. ([#75](https://github.com/tomezpl/sth-gamemode/issues/75))
+
 # 1.3.0
 ## Features
 - Added support for joining matches in progress. ([#15](https://github.com/tomezpl/sth-gamemode/issues/15))

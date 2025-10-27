@@ -7,7 +7,7 @@
         "weapon_smokegrenade": 5,
         "weapon_pumpshotgun_mk2": 20,
         "weapon_heavypistol": 400,
-        "weapon_combatpdw": 20
+        "weapon_smg": 30
       }
     }
   ],
@@ -21,7 +21,10 @@
         "weapon_stickybomb": 5,
         "weapon_sniperrifle": {
           "ammo": 3,
-          "attachments": [ "suppressor", "COMPONENT_SNIPERRIFLE_VARMOD_LUXE" ]
+          "attachments": [
+            "suppressor",
+            "COMPONENT_SNIPERRIFLE_VARMOD_LUXE"
+          ]
         },
         "weapon_knife": 1
       }
