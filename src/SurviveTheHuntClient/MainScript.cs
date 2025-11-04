@@ -661,10 +661,6 @@ namespace SurviveTheHuntClient
             // https://vhub.wiki/enums/PED_RESET_FLAGS
             // According to the wiki this should make the local player enter/exit vehicle faster like in GTAO
             SetPedResetFlag(playerPed, 237, true);
-            // This should prevent the ped from going into still pose... not sure what that means tho but I guess also desirable?
-            SetPedResetFlag(playerPed, 236, true);
-            // Prevent going into shunt
-            SetPedResetFlag(playerPed, 287, true);
             // Allow ped variations in vehicles
             SetPedResetFlag(playerPed, 326, true);
             // Reduce vehicle ram control loss (not sure if this actually applies to other players)
