@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - '*'
+      - 'experimental/*'
     tags-ignore:
       - v*.*.*
 

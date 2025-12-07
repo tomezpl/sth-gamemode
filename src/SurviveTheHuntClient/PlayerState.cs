@@ -113,7 +113,12 @@ namespace SurviveTheHuntClient
         /// <param name="takeAll">Should all weapons be removed, or just the ones given to the player by the gamemode?</param>
         public void TakeAwayWeapons(ref Ped playerPed)
         {
-            RemoveAllPedWeapons(playerPed.Handle, true);
+            TakeAwayWeapons(playerPed.Handle);
+        }
+
+        public void TakeAwayWeapons(int playerPedHandle)
+        {
+            RemoveAllPedWeapons(playerPedHandle, true);
 
             WeaponsGiven = false;
             ForcedUnarmed = false;
@@ -142,17 +147,25 @@ namespace SurviveTheHuntClient
         /// Manages the player's weapons - forces unarmed while in vehicles (to prevent drive-by), reequips the last used weapon after getting out of a vehicle, etc.
         /// </summary>
         /// <param name="playerPed">The player ped whose weapons should be updated.</param>
-        public void UpdateWeapons(Ped playerPed)
+        public void UpdateWeapons(Ped playerPed, bool forceAllowWeapons = false)
         {
             // Give (or reset) a player's weapons if needed.
-            if(!WeaponsGiven)
+            if(!WeaponsGiven && !forceAllowWeapons)
             {
                 GiveWeapons(ref playerPed);
             }
 
-            // Weapons aren't allowed in vehicles.
-            // However, the hunted player should be able to driveby if they're a passenger.
-            bool weaponsAllowed = (!playerPed.IsGettingIntoAVehicle && !playerPed.IsInVehicle()) || (Team == Teams.Team.Hunted && playerPed.SeatIndex >= 0);
+            bool weaponsAllowed = false;
+            if (forceAllowWeapons)
+            {
+                weaponsAllowed = true;
+            }
+            else
+            {
+                // Weapons aren't allowed in vehicles.
+                // However, the hunted player should be able to driveby if they're a passenger.
+                weaponsAllowed = (!playerPed.IsGettingIntoAVehicle && !playerPed.IsInVehicle()) || (Team == Teams.Team.Hunted && playerPed.SeatIndex >= 0);
+            }
 
             // If the player has a weapon equipped, store the weapon in LastWeaponEquipped so we keep track in case we need to re-equip it.
             if(weaponsAllowed && !ForcedUnarmed)

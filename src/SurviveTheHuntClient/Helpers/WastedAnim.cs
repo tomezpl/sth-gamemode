@@ -1,5 +1,6 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Interfaces;
+using System;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Helpers
@@ -17,6 +18,15 @@ namespace SurviveTheHuntClient.Helpers
         private const float SecondsTillShard = 0.4f;
         private float SecondsPassedSinceDeath = 0f;
         private int? CurrentSoundId = null;
+
+        internal delegate void ExecutePluginsDelegate(Action<Plugin> plugin);
+
+        private ExecutePluginsDelegate ExecutePlugins;
+
+        internal WastedAnim(ExecutePluginsDelegate executePlugins)
+        {
+            ExecutePlugins = executePlugins;
+        }
 
         internal void NotifyDeath()
         {
@@ -46,10 +56,20 @@ namespace SurviveTheHuntClient.Helpers
         {
             if(NeedsToPlayWastedScaleform && ScaleformHandle.HasValue && HasScaleformMovieLoaded(ScaleformHandle.Value))
             {
+                string customWastedText = null;
+
+                ExecutePlugins(plugin =>
+                {
+                    if(customWastedText == null)
+                    {
+                        customWastedText = plugin.CustomWastedText;
+                    }
+                });
+
                 Debug.WriteLine("Playing scaleform!");
                 NeedsToPlayWastedScaleform = false;
                 BeginScaleformMovieMethod(ScaleformHandle.Value, MethodName);
-                PushScaleformMovieMethodParameterString(GetLabelText("RESPAWN_W"));
+                PushScaleformMovieMethodParameterString(customWastedText ?? GetLabelText("RESPAWN_W"));
                 PushScaleformMovieMethodParameterString("");
                 PushScaleformMovieMethodParameterInt(13);
                 PushScaleformMovieMethodParameterBool(false);
