@@ -45,6 +45,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants.cs" />
+    <Compile Include="Constants\Xmas\XmasClothing.cs" />
+    <Compile Include="Constants\Xmas\XmasPresents.cs" />
+    <Compile Include="Constants\Xmas\XmasSantaSpawns.cs" />
+    <Compile Include="Constants\Xmas\XmasTutorials.cs" />
+    <Compile Include="Constants\Xmas\XmasVehicles.cs" />
     <Compile Include="Events.cs" />
     <Compile Include="GameState.cs" />
     <Compile Include="Helpers\BoundsTracker.cs" />
@@ -58,10 +63,20 @@
     <Compile Include="Helpers\VehicleWeaponsTracker.cs" />
     <Compile Include="Helpers\WastedAnim.cs" />
     <Compile Include="Helpers\WeaponAttachments.cs" />
+    <Compile Include="Helpers\XmasModifier.cs" />
     <Compile Include="HuntUI.cs" />
     <Compile Include="Integrations\LbgCharNeo.cs" />
+    <Compile Include="Models\DynamicTickable.cs" />
+    <Compile Include="Models\Plugin.cs" />
     <Compile Include="Interfaces\ITickable.cs" />
     <Compile Include="MainScript.cs" />
+    <Compile Include="Models\UI\LabelledItem.cs" />
+    <Compile Include="Models\UI\TextSequenceItem.cs" />
+    <Compile Include="Models\XmasModifier\PresentSpawner.cs" />
+    <Compile Include="Models\XmasModifier\PrezzieLocation.cs" />
+    <Compile Include="Models\XmasModifier\PrezzieState.cs" />
+    <Compile Include="Models\XmasModifier\SleighStorageVehicle.cs" />
+    <Compile Include="Models\XmasModifier\SpawnLocation.cs" />
     <Compile Include="PlayerState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="HelperClasses.cs" />

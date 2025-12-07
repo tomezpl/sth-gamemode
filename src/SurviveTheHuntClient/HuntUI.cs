@@ -1,5 +1,7 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Helpers;
+using SurviveTheHuntClient.Interfaces;
+using SurviveTheHuntClient.Models.UI;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -10,6 +12,9 @@ namespace SurviveTheHuntClient
 {
     public static class HuntUI
     {
+        internal delegate void ExecutePluginsDelegate(Action<Plugin> plugin);
+        internal static ExecutePluginsDelegate ExecutePlugins;
+
         /// <summary>
         /// Blip handle used for showing the hunted player's radius.
         /// </summary>
@@ -113,14 +118,15 @@ namespace SurviveTheHuntClient
         /// <param name="gameState">Reference to this client's <see cref="GameState"/>.</param>
         /// <param name="playerState">Reference to this client's <see cref="PlayerState"/>.</param>
         /// <param name="ended">Pass true if the game is ending - this will make sure the objective text disappears on time.</param>
-        public static void DisplayObjective(ref GameState gameState, ref PlayerState playerState, bool ended = false)
+        public static void DisplayObjective(ref GameState gameState, ref PlayerState playerState, bool ended = false, bool skipAddingHuntedName = false)
         {
             if (!string.IsNullOrWhiteSpace(gameState.CurrentObjective))
             {
                 AddTextEntry("CURRENT_OBJECTIVE", "~a~~a~");
+
                 BeginTextCommandPrint("CURRENT_OBJECTIVE");
 
-                if (gameState.Hunt.IsInProgress)
+                if (gameState.Hunt.IsInProgress && !skipAddingHuntedName)
                 {
                     if (playerState.Team == Team.Hunters)
                     {
@@ -146,6 +152,8 @@ namespace SurviveTheHuntClient
                     // If the game isn't ending yet, display the text for the remaining hunt time.
                     objectiveTextDuration = Convert.ToInt32((gameState.Hunt.InitialEndTime - Utility.CurrentTime).TotalMilliseconds);
                 }
+
+                Debug.WriteLine($"Rendering objective {gameState.CurrentObjective}");
 
                 // Execute the text command.
                 EndTextCommandPrint(objectiveTextDuration, true);
@@ -224,21 +232,50 @@ namespace SurviveTheHuntClient
             AddTextComponentString($"{header}  00:00");
             float timebarWidth = EndTextCommandGetWidth(true);
 
+            float verticalOrigin = 0.855f;
+            const float horizOrigin = 0.94f;
+            const float spritePadding = -0.02f;
+            const float titleOffset = -0.01f;
+            const float valueOffset = -0.02f;
+            const float timerbarHeight = 0.06f * 0.5f * 1.4f;
+            const float timerbarGap = 0.012f;
+
             // Load and draw the timerbar using the rect width we've measured.
             RequestStreamedTextureDict("timerbars", true);
             if (HasStreamedTextureDictLoaded("timerbars"))
             {
-                DrawSprite("timerbars", "all_black_bg", 0.92f, 0.855f, timebarWidth, 0.06f * 0.5f * 1.4f, 0f, 255, 255, 255, 128);
+                DrawSprite("timerbars", "all_black_bg", horizOrigin + spritePadding, verticalOrigin, timebarWidth, 0.06f * 0.5f * 1.4f, 0f, 255, 255, 255, 128);
             }
 
             // Draw the time string on top of the timerbar.
             BeginTextCommandDisplayText("STRING");
             AddTextComponentString(timeStr);
-            EndTextCommandDisplayText(0.94f, 0.835f);
+            EndTextCommandDisplayText(horizOrigin, verticalOrigin + valueOffset);
             SetTextScale(0, 0.35f);
             BeginTextCommandDisplayText("STRING");
             AddTextComponentString(header);
-            EndTextCommandDisplayText(0.94f - timebarWidth / 2.35f, 0.845f);
+            EndTextCommandDisplayText(horizOrigin - timebarWidth / 2.35f, verticalOrigin + titleOffset);
+
+            ExecutePlugins(plugin =>
+            {
+                LabelledItem[] items = plugin.UICurrentItems;
+                foreach(LabelledItem item in items)
+                {
+                    verticalOrigin -= timerbarHeight + timerbarGap;
+
+                    DrawSprite("timerbars", "all_black_bg", horizOrigin + spritePadding, verticalOrigin, timebarWidth, 0.06f * 0.5f * 1.4f, 0f, 255, 255, 255, 128);
+
+                    SetTextScale(0f, 0.55f);
+                    BeginTextCommandDisplayText("STRING");
+                    AddTextComponentString(item.Value);
+                    EndTextCommandDisplayText(horizOrigin, verticalOrigin + valueOffset);
+                    SetTextScale(0, 0.35f);
+                    BeginTextCommandDisplayText("STRING");
+                    AddTextComponentString(item.Label);
+                    EndTextCommandDisplayText(horizOrigin - timebarWidth / 2.35f, verticalOrigin + titleOffset);
+                }
+            });
+
             SetTextScale(0, 1f);
         }
 

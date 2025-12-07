@@ -37,7 +37,12 @@ namespace SurviveTheHuntShared.Utils
 
         public static float Dot(Vector3 a, Vector3 b)
         {
-            return a.X * b.X + a.Y * b.Y + a.Z * b.Z;
+            return Dot(a.X, a.Y, a.Z, b.X, b.Y, b.Z);
+        }
+
+        public static float Dot(float aX, float aY, float aZ, float bX, float bY, float bZ)
+        {
+            return aX * bX + aY * bY + aZ * bZ;
         }
 
         public static Vector3 Zero { get => new Vector3(); }

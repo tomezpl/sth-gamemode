@@ -128,7 +128,7 @@ namespace SurviveTheHuntServer
                 if(DateTime.UtcNow - GameState.Hunt.LastPingTime >= SharedConstants.HuntedPingInterval)
                 {
                     GameState.Hunt.LastPingTime = DateTime.UtcNow;
-                    float radius = 200f;
+                    float radius = GetConvarInt("sth_huntedPingRadius", 200);
                     float playerLocationRadius = radius * 0.875f;
                     float offsetX = (((float)RNG.NextDouble() * 2f) - 1f) * playerLocationRadius;
                     float offsetY = (((float)RNG.NextDouble() * 2f) - 1f) * playerLocationRadius;

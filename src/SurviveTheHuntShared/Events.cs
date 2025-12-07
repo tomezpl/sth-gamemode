@@ -74,6 +74,13 @@ namespace SurviveTheHuntShared
             public const string ReceiveVehicleSpawnPermission = "sth:recvSpawnVehiclesPerm";
 
             public const string TeleportToSpawn = "sth:goToSpawn";
+
+            public const string XmasReceivePresentsLocations = "sth:xmas:recvPrezzieLocations";
+            public const string XmasReceiveDeliveryUpdate = "sth:xmas:recvDeliveryUpdate";
+            public const string XmasReceiveCapturableUpdate = "sth:xmas:recvCapturableUpdate";
+            public const string XmasReceiveHuntedCaptured = "sth:xmas:recvHuntedCaptured";
+            public const string XmasReceiveSleighSpawn = "sth:xmas:recvSleighSpawn";
+            public const string XmasReceiveSantaSpawn = "sth:xmas:recvSantaSpawn";
         }
 
         /// <summary>
@@ -97,6 +104,13 @@ namespace SurviveTheHuntShared
             /// which in turn sends back the in-game clock value to the server, which will finally send it back to the newly joined client.
             /// </summary>
             public const string HuntedClockSyncRequested = "sth:huntedClockSyncRequested";
+
+            public const string XmasBroadcastPresentsLocations = "sth:xmas:broadcastPrezzies";
+            public const string XmasNotifyDeliveredPresent = "sth:xmas:notifyPrezzieDelivery";
+            public const string XmasBroadcastHuntedCapturableState = "sth:xmas:broadcastCapturableState";
+            public const string XmasBroadcastHuntedCaptured = "sth:xmas:broadcastCaptured";
+            public const string XmasBroadcastSleighSpawn = "sth:xmas:broadcastSleigh";
+            public const string XmasBroadcastSantaSpawn = "sth:xmas:broadcastSantaSpawn";
         }
     }
 }

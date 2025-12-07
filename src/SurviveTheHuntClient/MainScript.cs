@@ -16,7 +16,6 @@ using static CitizenFX.Core.Native.API;
 using SharedConstants = SurviveTheHuntShared.Constants;
 using SurviveTheHuntShared.Core;
 using SurviveTheHuntShared;
-using System.Xml;
 using SurviveTheHuntClient.Interfaces;
 
 namespace SurviveTheHuntClient
@@ -97,7 +96,9 @@ namespace SurviveTheHuntClient
         private readonly WastedAnim WastedAnim;
         private readonly PlayerPassenger PlayerPassenger = new PlayerPassenger();
 
-        private readonly ITickable[] Tickables;
+        private readonly List<ITickable> Tickables;
+        internal readonly List<ITickable> TickablesToRemove = new List<ITickable>();
+        private readonly Plugin[] Plugins;
 
         public MainScript()
         {
@@ -115,14 +116,33 @@ namespace SurviveTheHuntClient
 
             KillTracker = new KillTracker();
             BoundsTracker = new BoundsTracker();
-            WastedAnim = new WastedAnim();
-            Tickables = new ITickable[]
+            WastedAnim = new WastedAnim(ExecutePlugins);
+
+            XmasModifier XmasModifierPlugin = new XmasModifier(TriggerEvent, TriggerServerEvent, ref PlayerState);
+
+            Tickables = new List<ITickable>
             {
                 KillTracker,
                 BoundsTracker,
                 WastedAnim,
-                new VehicleWeaponsTracker()
+                new VehicleWeaponsTracker(ExecutePlugins),
+                XmasModifierPlugin
             };
+
+            Plugins = new Plugin[]
+            {
+                XmasModifierPlugin
+            };
+
+            HuntUI.ExecutePlugins = ExecutePlugins;
+        }
+
+        internal void ExecutePlugins(Action<Plugin> pluginAction)
+        {
+            foreach(Plugin plugin in Plugins)
+            {
+                pluginAction(plugin);
+            }
         }
 
         protected void OnResourceStopping(string resourceName)
@@ -155,6 +175,10 @@ namespace SurviveTheHuntClient
                 UnregisterPedheadshot(GameState.Hunt.HuntedPlayerMugshot.Id);
                 GameState.Hunt.HuntedPlayerMugshot = null;
             }
+
+            ExecutePlugins(plugin => plugin.OnResourceStopping());
+
+            TickablesToRemove.Clear();
         }
 
         protected void OnClientGameTypeStart(string resourceName)
@@ -245,6 +269,12 @@ namespace SurviveTheHuntClient
                 SetBlipDisplay(SafeZoneRadiusBlipHandle, 6);
 
                 BoundsTracker.Init();
+
+                RegisterCommand("coords", new Action(() =>
+                {
+                    CfxVector3 pos = Player.Local.Character.Position;
+                    Debug.WriteLine($"X = {pos.X}, Y = {pos.Y}, Z = {pos.Z}");
+                }), false);
             }
         }
 
@@ -308,9 +338,22 @@ namespace SurviveTheHuntClient
                 SpawnedVehicles.Remove(deletedVehicle);
             }
 
+            // Allow plugins to override the spawn points.
+            Coord[] carSpawnPointsOverride = null;
+            ExecutePlugins(plugin =>
+            {
+                Coord[] overrides = plugin.CarSpawnPointsOverride;
+                if(overrides != null)
+                {
+                    carSpawnPointsOverride = overrides;
+                }
+            });
+
+            Coord[] carSpawnPoints = carSpawnPointsOverride ?? SharedConstants.CarSpawnPoints;
+
             // Ignore non-empty vehicles so that there are only ever 26 vehicles spawned at a time,
             // and that we don't lose vehicle handles when spawning new cars.
-            int maxNewCarCount = SharedConstants.CarSpawnPoints.Length - SpawnedVehicles.Count;
+            int maxNewCarCount = carSpawnPoints.Length - SpawnedVehicles.Count;
             List<VehicleHash> carsToSpawn = new List<VehicleHash>(maxNewCarCount);
 
             Debug.WriteLine($"{maxNewCarCount} new cars will be created");
@@ -350,7 +393,7 @@ namespace SurviveTheHuntClient
                     }
                 }
 
-                Coord spawnPoint = SharedConstants.CarSpawnPoints[counter];
+                Coord spawnPoint = carSpawnPoints[counter];
                 Vector3 spawnPos = spawnPoint.Position;
 
                 Vehicle spawnedVehicle = new Vehicle(CreateVehicle((uint)vehicle, spawnPos.X, spawnPos.Y, spawnPos.Z, spawnPoint.Heading, true, true));
@@ -446,7 +489,17 @@ namespace SurviveTheHuntClient
             if(GameState.Hunt.IsInProgress || GameState.Hunt.IsEnding)
             {
                 Debug.WriteLine($"GameState: Hunt.IsInProgress: {GameState.Hunt.IsInProgress}, Hunt.IsEnding: {GameState.Hunt.IsEnding}");
-                HuntUI.DisplayObjective(ref GameState, ref PlayerState, GameState.Hunt.IsEnding);
+
+                bool skipAddingPlayerName = false;
+                ExecutePlugins(plugin =>
+                {
+                    if (!skipAddingPlayerName)
+                    {
+                        skipAddingPlayerName = plugin.SkipAddingPlayerNameInObjective;
+                    }
+                });
+
+                HuntUI.DisplayObjective(ref GameState, ref PlayerState, GameState.Hunt.IsEnding, skipAddingHuntedName: skipAddingPlayerName);
             }
 
             // Set the player's max health.
@@ -465,6 +518,8 @@ namespace SurviveTheHuntClient
             KillTracker.Reset();
 
             WastedAnim.StopShowing();
+
+            ExecutePlugins(plugin => plugin.OnPlayerSpawned());
         }
 
         /// <summary>
@@ -539,7 +594,35 @@ namespace SurviveTheHuntClient
 
             // PlayerPassenger needs to tick before the weapons are updated because we need to check if the hunted player can driveby.
             PlayerPassenger.Tick(deltaTime);
-            PlayerState.UpdateWeapons(Game.PlayerPed);
+
+            bool shouldDisableVehicleWeapons = true;
+            int playerPed = PlayerPedId();
+            uint vehicleWeapon = 0;
+            int playerVehicle = GetVehiclePedIsIn(playerPed, false);
+            if(playerVehicle == 0)
+            {
+                playerVehicle = GetVehiclePedIsEntering(playerPed);
+            }
+            if (playerVehicle != 0)
+            {
+                GetCurrentPedVehicleWeapon(playerPed, ref vehicleWeapon);
+                ExecutePlugins(plugin =>
+                {
+                    bool? allowed = plugin.IsVehicleWeaponAllowed(playerVehicle, vehicleWeapon);
+                    if (allowed == true)
+                    {
+                        shouldDisableVehicleWeapons = false;
+                    }
+                    else if (allowed == false)
+                    {
+                        shouldDisableVehicleWeapons = true;
+                    }
+                });
+            }
+            if (shouldDisableVehicleWeapons)
+            {
+                PlayerState.UpdateWeapons(Game.PlayerPed, forceAllowWeapons: !shouldDisableVehicleWeapons);
+            }
 
             // Check and report player death to the server if needed.
             if(PlayerState.ReportDeathNextTick)
@@ -607,7 +690,13 @@ namespace SurviveTheHuntClient
 
             bool canLeaveSpawn = (!isPrepPhase || PlayerState.Team == Teams.Team.Hunted) && !PlayerState.WaitingToTeleportToSpawn;
 
-            ApplySafeZoneProtection(shouldProtectionsApply, canLeaveSpawn, spawnPos, SharedConstants.DefaultSpawnSafeZoneRadius);
+            bool anyPluginRequiresInvincibility = false;
+            ExecutePlugins(plugin =>
+            {
+                anyPluginRequiresInvincibility = anyPluginRequiresInvincibility || plugin.DoesPlayerNeedInvincibility;
+            });
+
+            ApplySafeZoneProtection(shouldProtectionsApply || anyPluginRequiresInvincibility, canLeaveSpawn, spawnPos, SharedConstants.DefaultSpawnSafeZoneRadius);
             if(!canLeaveSpawn)
             {
                 Vector3 spawn = SharedConstants.DockSpawn;
@@ -636,6 +725,12 @@ namespace SurviveTheHuntClient
             {
                 tickable.Tick(deltaTime);
             }
+
+            foreach(ITickable tickable in TickablesToRemove)
+            {
+                Tickables.Remove(tickable);
+            }
+            TickablesToRemove.Clear();
 
             PlayerState.HandleTeleportToSpawn();
 
@@ -686,9 +781,9 @@ namespace SurviveTheHuntClient
             }
         }
 
-        void ApplySafeZoneProtection(bool protectionActive, bool canLeaveSpawn, CfxVector3 safeZoneOrigin, float safeZoneRadius)
+        void ApplySafeZoneProtection(bool setInvincible, bool canLeaveSpawn, CfxVector3 safeZoneOrigin, float safeZoneRadius)
         {
-            SetPlayerInvincible(PlayerId(), protectionActive);
+            SetPlayerInvincible(PlayerId(), setInvincible);
 
             // It's CRITICAL that you ensure this statement only runs if SpawnedOnce is true.
             // Otherwise, players joining in progress will get softlocked without an error because the game will attempt to teleport them
@@ -762,6 +857,8 @@ namespace SurviveTheHuntClient
                 GameState.Hunt.End(ref PlayerState);
                 GameState.CurrentObjective = "";
             }
+
+            ExecutePlugins(plugin => plugin.OnHuntEnded(GameState, PlayerState));
         }
 
         /// <summary>
@@ -838,6 +935,8 @@ namespace SurviveTheHuntClient
             {
                 TriggerServerEvent(Events.Server.ReceiveHuntedClock, GetClockHours(), GetClockMinutes(), GetClockSeconds());
             }
+
+            ExecutePlugins(p => p.OnHuntStarted(GameState, PlayerState));
         }
 
         /// <summary>
@@ -879,6 +978,21 @@ namespace SurviveTheHuntClient
                     Events.Client.NotifyWinner.EventName(), new Action<dynamic>(data =>
                     {
                         int winningTeam = data.WinningTeam;
+
+                        Teams.Team? winningTeamOverride = null;
+                        ExecutePlugins(plugin =>
+                        {
+                            if(winningTeamOverride == null)
+                            {
+                                winningTeamOverride = plugin.WinningTeamOverride;
+                            }
+                        });
+
+                        if(winningTeamOverride != null)
+                        {
+                            winningTeam = (int)(winningTeamOverride.Value);
+                        }
+
                         GameState.Hunt.IsOver = true;
                         if((Teams.Team)winningTeam == PlayerState.Team)
                         {
@@ -908,8 +1022,22 @@ namespace SurviveTheHuntClient
                 {
                     Events.Client.ShowPingOnMap.EventName(), new Action<dynamic>(data =>
                     {
+                        bool shouldShowPing = true;
+                        ExecutePlugins(plugin =>
+                        {
+                            if(shouldShowPing && !plugin.CanPingShow)
+                            {
+                                shouldShowPing = false;
+                            }
+                        });
+
                         int playerServerId = int.Parse(data.PlayerServerId);
-                        HuntUI.CreateRadiusBlipForPlayer(new Player(GetPlayerFromServerId(playerServerId)), data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
+
+                        if(shouldShowPing)
+                        {
+                            HuntUI.CreateRadiusBlipForPlayer(new Player(GetPlayerFromServerId(playerServerId)), data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
+                        }
+
                         if(playerServerId == Game.Player.ServerId)
                         {
                             CfxVector3 position = GetEntityCoords(PlayerPedId(), false);
@@ -1071,6 +1199,7 @@ namespace SurviveTheHuntClient
             SetClockTime(hours, minutes, seconds);
             NetworkOverrideClockTime(hours, minutes, seconds);
             Debug.WriteLine($"Time is {GetClockHours().ToString().PadLeft(2, '0')}:{GetClockMinutes().ToString().PadLeft(2, '0')}:{GetClockSeconds().ToString().PadLeft(2, '0')}");
+            ExecutePlugins(plugin => plugin.OnClockReceived(hours, minutes, seconds));
         }
 
         public float TimeSinceLastRelationshipGroupUpdate = 0;

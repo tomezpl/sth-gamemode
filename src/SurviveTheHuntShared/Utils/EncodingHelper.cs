@@ -15,5 +15,10 @@ namespace SurviveTheHuntShared.Utils
 
             return (char)((c2 << 8) | c1);
         }
+
+        public static int HexFromRgba(byte r, byte g, byte b, byte a)
+        {
+            return (r << 24) | (g << 16) | (b << 8) | a;
+        }
     }
 }
