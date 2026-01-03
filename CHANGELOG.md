@@ -1,3 +1,22 @@
+# 1.5.0
+## Features
+- Added a "Return to Spawn" button. ([#108](https://github.com/tomezpl/sth-gamemode/pull/108))
+- Added the "wasted" screen. ([#100](https://github.com/tomezpl/sth-gamemode/pull/100))
+- Added the ability to drive-by from passenger seat as the hunted player. ([#99](https://github.com/tomezpl/sth-gamemode/pull/99))
+- Added a "Help & Tips" menu. ([#98](https://github.com/tomezpl/sth-gamemode/pull/98))
+- Added menu option to turn vehicle engine off. ([#94](https://github.com/tomezpl/sth-gamemode/pull/94))
+- Added ability to enter vehicles as passenger. ([#93](https://github.com/tomezpl/sth-gamemode/pull/93))
+- Added randomised horns and liveries. ([#91](https://github.com/tomezpl/sth-gamemode/pull/91))
+- Added a play area blip that shows when approaching the play area limits. ([#88](https://github.com/tomezpl/sth-gamemode/pull/88))
+
+## Tweaks
+- Made exiting vehicles faster. ([#109](https://github.com/tomezpl/sth-gamemode/pull/109)) ([#114](https://github.com/tomezpl/sth-gamemode/pull/114))
+- Updated vehicle spawn list. ([#102](https://github.com/tomezpl/sth-gamemode/pull/102))
+
+## Bug Fixes
+- Fixed an exploit that allowed to use vehicle weapons. ([#107](https://github.com/tomezpl/sth-gamemode/pull/107)) ([#112](https://github.com/tomezpl/sth-gamemode/pull/112))
+- Fixed simultaneous car spawn issue. ([#104](https://github.com/tomezpl/sth-gamemode/pull/104))
+
 # 1.4.0
 ## Features
 - Added [lbg-char-neo](https://github.com/tomezpl/lbg-char-neo) integration to enable GTAO character model customisation. ([#63](https://github.com/tomezpl/sth-gamemode/issues/63))
