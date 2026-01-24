@@ -1,168 +1,23 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Attributes;
 using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Models.UI;
-using SurviveTheHuntClient.Models.XmasModifier;
+using SurviveTheHuntClient.Plugins.Xmas.Models;
 using SurviveTheHuntShared.Core;
 using System;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 
-namespace SurviveTheHuntClient
+namespace SurviveTheHuntClient.Plugins.Xmas
 {
-    public partial class MainScript
-    {
-        [EventHandler(SurviveTheHuntShared.Events.Client.XmasReceivePresentsLocations)]
-        public void ReceivePresentsLocations(List<object> locationIndices)
-        {
-            ExecutePlugins(plugin =>
-            {
-                if(plugin is Helpers.XmasModifier xmasModifier)
-                {
-                    PrezzieLocation[] locations = new PrezzieLocation[locationIndices.Count];
-                    for(int i = 0; i < locations.Length; i++)
-                    {
-                        locations[i] = Helpers.XmasModifier.Constants.PresentsLocations[(int)locationIndices[i]];
-                    }
-                    xmasModifier.OnPresentsLocationsReceived(locations);
-                }
-            });
-        }
-
-        [EventHandler(SurviveTheHuntShared.Events.Client.XmasReceiveDeliveryUpdate)]
-        public void ReceiveXmasDeliveryUpdate(List<object> deliveredIndices, List<object> remainingIndices)
-        {
-            bool done = false;
-
-            Debug.WriteLine($"Received delivery update: {deliveredIndices.Count} delivered, {remainingIndices.Count} remaining");
-
-            int[] deliveredIndicesInts = new int[deliveredIndices.Count];
-            for(int i = 0; i < deliveredIndicesInts.Length; i++) 
-            { 
-                deliveredIndicesInts[i] = (int)deliveredIndices[i]; 
-            }
-
-            int[] remainingIndicesInts = new int[remainingIndices.Count];
-            for (int i = 0; i < remainingIndicesInts.Length; i++)
-            {
-                remainingIndicesInts[i] = (int)remainingIndices[i];
-            }
-
-            ExecutePlugins(plugin =>
-            {
-                if(!done && plugin is Helpers.XmasModifier xmasModifier)
-                {
-                    done = true;
-                    xmasModifier.OnDeliveryUpdate(deliveredIndicesInts, remainingIndicesInts, ref GameState);
-                }
-            });
-        }
-
-        [EventHandler(SurviveTheHuntShared.Events.Client.XmasReceiveCapturableUpdate)]
-        public void ReceiveXmasHuntedCapturableUpdate(int huntedServerId, bool isCapturable)
-        {
-            bool done = false;
-
-            ExecutePlugins(plugin =>
-            {
-                if(!done && plugin is Helpers.XmasModifier xmasModifier)
-                {
-                    done = true;
-                    xmasModifier.OnCapturableUpdate(GetPlayerFromServerId(huntedServerId), isCapturable);
-                }
-            });
-        }
-
-        [EventHandler(SurviveTheHuntShared.Events.Client.XmasReceiveHuntedCaptured)]
-        public void ReceiveXmasHuntedCaptured(int capturedServerId)
-        {
-            bool done = false;
-
-            ExecutePlugins(plugin =>
-            {
-                if (!done && plugin is Helpers.XmasModifier xmasModifier)
-                {
-                    done = true;
-                    xmasModifier.OnHuntedWasCaptured(GetPlayerFromServerId(capturedServerId), ref PlayerState);
-                }
-            });
-        }
-
-        [EventHandler(SurviveTheHuntShared.Events.Client.XmasReceiveSleighSpawn)]
-        public void ReceiveXmasSleighSpawn(Int64 sleighServerIdsPair)
-        {
-            int oppressorNetId = (int)(sleighServerIdsPair >> (sizeof(int) * 8));
-            int sleighNetId = (int)sleighServerIdsPair;
-
-            Debug.WriteLine($"{nameof(ReceiveXmasSleighSpawn)}({nameof(oppressorNetId)}: {oppressorNetId}, {nameof(sleighNetId)}: {sleighNetId})");
-            
-            bool done = false;
-
-            Helpers.XmasModifier xmasModifier = null;
-
-            ExecutePlugins(plugin =>
-            {
-                if (!done && plugin is Helpers.XmasModifier xmasModifierTemp)
-                {
-                    xmasModifier = xmasModifierTemp;
-                    done = true;
-                    xmasModifier.OnSleighSpawned(oppressorNetId: oppressorNetId, sleighNetId: sleighNetId);
-                }
-            });
-
-            // I don't know if FiveM is guaranteed to have the net IDs for entities synced as soon as they are created so allow 5s for clients to catch up
-            const float netUpdateTimeoutSeconds = 5f;
-            float elapsedSeconds = 0f;
-            if (xmasModifier != null)
-            {
-                Models.DynamicTickable netIdAwaiter = new Models.DynamicTickable((Models.DynamicTickable instance, float deltaTime) =>
-                {
-                    elapsedSeconds += deltaTime;
-                    bool exists = NetworkDoesEntityExistWithNetworkId(oppressorNetId);
-
-                    if (exists)
-                    {
-                        int oppressorHandle = NetToVeh(oppressorNetId);
-                        Debug.WriteLine($"NetToVeh({nameof(oppressorNetId)}: {oppressorNetId}) = {oppressorHandle}");
-                        xmasModifier.InvisibleEntities.Add(oppressorHandle);
-                    }
-
-                    // Remove the tickable once we're done
-                    if(exists || elapsedSeconds > netUpdateTimeoutSeconds)
-                    {
-                        TickablesToRemove.Add(instance);
-                    }
-                });
-                Tickables.Add(netIdAwaiter);
-            }
-        }
-
-        [EventHandler(SurviveTheHuntShared.Events.Client.XmasReceiveSantaSpawn)]
-        public void ReceiveXmasSantaSpawn(int santaSpawnIndex)
-        {
-            bool done = false;
-
-            ExecutePlugins(plugin =>
-            {
-                if (!done && plugin is Helpers.XmasModifier xmasModifier)
-                {
-                    done = true;
-                    xmasModifier.OnSantaSpawnReceived(Helpers.XmasModifier.Constants.SantaSpawnLocations[santaSpawnIndex]);
-                }
-            });
-        }
-    }
-}
-
-namespace SurviveTheHuntClient.Helpers
-{
-    internal sealed partial class XmasModifier : Plugin, ITickable
+    public sealed partial class XmasPlugin : Plugin<XmasPlugin.EventHandlerMethods>, ITickable
     {
         private static int SpawnVehicle(uint vehicleHash, Vector3 position, VehicleColor? colour = null)
         {
             int vehicle = CreateVehicle(vehicleHash, position.X, position.Y, position.Z, GetEntityHeading(PlayerPedId()), true, false);
-            
-            if(colour != null)
+
+            if (colour != null)
             {
                 SetVehicleColours(vehicle, (int)colour.Value, (int)colour.Value);
             }
@@ -302,17 +157,9 @@ namespace SurviveTheHuntClient.Helpers
         /// </summary>
         internal List<int> InvisibleEntities = new List<int>();
 
-        internal partial class Constants
-        {
-            public const string PlacingDownPresentAnimDict = "anim@MP_FIREWORKS";
-            public const string PlacingDownPresentAnimClip = "PLACE_FIREWORK_BOX2";
-
-            public const string WakeUpAnimDict = "anim@scripted@heist@ig25_beach@male@";
-            public const string WakeUpAnimClip = "action";
-        }
-
-        internal PlayerState PlayerState;
-        internal GameState GameState;
+        internal IPlayerState PlayerState;
+        internal IGameState GameState;
+        internal IHuntUI HuntUI;
 
         private bool _waitingToTeleportToSpawn = false;
         private SpawnLocation _santaSpawnLocation = null;
@@ -325,16 +172,16 @@ namespace SurviveTheHuntClient.Helpers
         private bool _hasDeliveredAll = false;
         private bool _wasCaptured = false;
 
-        internal override Teams.Team? WinningTeamOverride => IsHunted && !_wasCaptured && _hasDeliveredAll ? Teams.Team.Hunted : Teams.Team.Hunters;
+        public override Teams.Team? WinningTeamOverride => IsHunted && !_wasCaptured && _hasDeliveredAll ? Teams.Team.Hunted : Teams.Team.Hunters;
 
-        internal override SurviveTheHuntShared.Utils.Coord[] CarSpawnPointsOverride
+        public override SurviveTheHuntShared.Utils.Coord[] CarSpawnPointsOverride
         {
             get
             {
                 SurviveTheHuntShared.Utils.Coord[] defaultSpawns = SurviveTheHuntShared.Constants.CarSpawnPoints;
                 SurviveTheHuntShared.Utils.Coord[] reducedSpawns = new SurviveTheHuntShared.Utils.Coord[(int)Math.Floor(defaultSpawns.Length / 2.0)];
 
-                for(int i = 0; i < reducedSpawns.Length; i++)
+                for (int i = 0; i < reducedSpawns.Length; i++)
                 {
                     reducedSpawns[i] = defaultSpawns[i * 2];
                 }
@@ -358,7 +205,8 @@ namespace SurviveTheHuntClient.Helpers
         /// <summary>
         /// Hide the ping if santa is not currently using a sleigh
         /// </summary>
-        internal override bool CanPingShow {
+        public override bool CanPingShow
+        {
             get
             {
                 bool anyPresentsRemaining = false;
@@ -381,7 +229,8 @@ namespace SurviveTheHuntClient.Helpers
             }
         }
 
-        internal override string CustomWastedText {
+        public override string CustomWastedText
+        {
             get
             {
                 string[] customWastedLines =
@@ -396,9 +245,9 @@ namespace SurviveTheHuntClient.Helpers
             }
         }
 
-        internal override bool SkipAddingPlayerNameInObjective => true;
+        public override bool SkipAddingPlayerNameInObjective => true;
 
-        internal override LabelledItem[] UICurrentItems => (_hasDeliveredAll || !HasStarted) ? new LabelledItem[0] : new LabelledItem[]
+        public override LabelledItem[] UICurrentItems => (_hasDeliveredAll || !HasStarted) ? new LabelledItem[0] : new LabelledItem[]
         {
             new LabelledItem("DELIVERED", $"{_deliveredCounter}/{_presentBlips.Length}")
         };
@@ -406,7 +255,7 @@ namespace SurviveTheHuntClient.Helpers
         private List<DynamicTickable> _dynamicTickables = new List<DynamicTickable>();
         private List<DynamicTickable> _tickablesToRemove = new List<DynamicTickable>();
 
-        internal override bool? IsVehicleWeaponAllowed(int vehicleHandle, uint weapon)
+        public override bool? IsVehicleWeaponAllowed(int vehicleHandle, uint weapon)
         {
             uint modelHash = (uint)GetEntityModel(vehicleHandle);
             const uint HalfTrackGunHash = 1226518132;
@@ -422,19 +271,120 @@ namespace SurviveTheHuntClient.Helpers
         internal const float ClothesChangeDelaySeconds = 2f;
         private float _clothesChangeTimer = 0f;
 
-        internal override void OnPlayerSpawned()
+        public override void OnPlayerSpawned()
         {
-            if(HasStarted)
+            if (HasStarted)
             {
                 _waitingForClothesChange = true;
                 _clothesChangeTimer = 0f;
             }
         }
 
-        internal XmasModifier(TriggerEventProxyDelegate triggerEventProxy, TriggerServerEventProxyDelegate triggerServerEventProxy, ref PlayerState playerState) : base(triggerEventProxy, triggerServerEventProxy)
+        public XmasPlugin(TriggerEventProxyDelegate triggerEventProxy, TriggerServerEventProxyDelegate triggerServerEventProxy, EventHandlerDictionary eventHandlers, AddTickableDelegate addTickable, RemoveTickableDelegate removeTickable, IPlayerState playerState, IHuntUI huntUi)
+            : base(triggerEventProxy, triggerServerEventProxy, eventHandlers, addTickable, removeTickable)
         {
             PlayerState = playerState;
+            HuntUI = huntUi;
+
             Init();
+        }
+
+        public override void OnResourceStarted()
+        {
+            base.OnResourceStarted();
+
+            //AddEventHandler(SurviveTheHuntShared.Events.Client.XmasReceivePresentsLocations, EventHandlers.ReceivePresentsLocations);
+        }
+
+        public class EventHandlerMethods : PluginEvents
+        {
+            private new XmasPlugin _plugin { get => (XmasPlugin)base._plugin; }
+
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.XmasReceivePresentsLocations)]
+            public void ReceivePresentsLocations(List<object> locationIndices)
+            {
+                PrezzieLocation[] locations = new PrezzieLocation[locationIndices.Count];
+                for (int i = 0; i < locations.Length; i++)
+                {
+                    locations[i] = Constants.PresentsLocations[(int)locationIndices[i]];
+                }
+                _plugin.OnPresentsLocationsReceived(locations);
+            }
+
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.XmasReceiveDeliveryUpdate)]
+            public void ReceiveXmasDeliveryUpdate(List<object> deliveredIndices, List<object> remainingIndices)
+            {
+                bool done = false;
+
+                Debug.WriteLine($"Received delivery update: {deliveredIndices.Count} delivered, {remainingIndices.Count} remaining");
+
+                int[] deliveredIndicesInts = new int[deliveredIndices.Count];
+                for (int i = 0; i < deliveredIndicesInts.Length; i++)
+                {
+                    deliveredIndicesInts[i] = (int)deliveredIndices[i];
+                }
+
+                int[] remainingIndicesInts = new int[remainingIndices.Count];
+                for (int i = 0; i < remainingIndicesInts.Length; i++)
+                {
+                    remainingIndicesInts[i] = (int)remainingIndices[i];
+                }
+
+                _plugin.OnDeliveryUpdate(deliveredIndicesInts, remainingIndicesInts, ref _plugin.GameState);
+            }
+
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.XmasReceiveCapturableUpdate)]
+            public void ReceiveXmasHuntedCapturableUpdate(int huntedServerId, bool isCapturable)
+            {
+                _plugin.OnCapturableUpdate(GetPlayerFromServerId(huntedServerId), isCapturable);
+            }
+
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.XmasReceiveHuntedCaptured)]
+            public void ReceiveXmasHuntedCaptured(int capturedServerId)
+            {
+                _plugin.OnHuntedWasCaptured(GetPlayerFromServerId(capturedServerId));
+            }
+
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.XmasReceiveSleighSpawn)]
+            public void ReceiveXmasSleighSpawn(Int64 sleighServerIdsPair)
+            {
+                int oppressorNetId = (int)(sleighServerIdsPair >> (sizeof(int) * 8));
+                int sleighNetId = (int)sleighServerIdsPair;
+
+                Debug.WriteLine($"{nameof(ReceiveXmasSleighSpawn)}({nameof(oppressorNetId)}: {oppressorNetId}, {nameof(sleighNetId)}: {sleighNetId})");
+
+                _plugin.OnSleighSpawned(oppressorNetId: oppressorNetId, sleighNetId: sleighNetId);
+
+                // I don't know if FiveM is guaranteed to have the net IDs for entities synced as soon as they are created so allow 5s for clients to catch up
+                const float netUpdateTimeoutSeconds = 5f;
+                float elapsedSeconds = 0f;
+                DynamicTickable netIdAwaiter = new DynamicTickable((DynamicTickable instance, float deltaTime) =>
+                {
+                    elapsedSeconds += deltaTime;
+                    bool exists = NetworkDoesEntityExistWithNetworkId(oppressorNetId);
+
+                    if (exists)
+                    {
+                        Debug.WriteLine("Vehicle exists");
+                        int oppressorHandle = NetToVeh(oppressorNetId);
+                        Debug.WriteLine($"NetToVeh({nameof(oppressorNetId)}: {oppressorNetId}) = {oppressorHandle}");
+                        _plugin.InvisibleEntities.Add(oppressorHandle);
+                    }
+
+                    // Remove the tickable once we're done
+                    if (exists || elapsedSeconds > netUpdateTimeoutSeconds)
+                    {
+                        _plugin.RemoveTickable(instance);
+                    }
+                });
+                _plugin.AddTickable(netIdAwaiter);
+            }
+
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.XmasReceiveSantaSpawn)]
+            public void ReceiveXmasSantaSpawn(int santaSpawnIndex)
+            {
+                _plugin.OnSantaSpawnReceived(Constants.SantaSpawnLocations[santaSpawnIndex]);
+            }
         }
 
         private void Init()
@@ -479,7 +429,7 @@ namespace SurviveTheHuntClient.Helpers
             AddTextEntry("OPPRESSOR2", SleighVehicleName);
         }
 
-        internal override bool DoesPlayerNeedInvincibility => IsHunted;
+        public override bool DoesPlayerNeedInvincibility => IsHunted;
 
         public void OnPresentsLocationsReceived(PrezzieLocation[] presents)
         {
@@ -514,7 +464,7 @@ namespace SurviveTheHuntClient.Helpers
             }
         }
 
-        public void OnDeliveryUpdate(int[] deliveredIndices, int[] remainingIndices, ref GameState gameState)
+        public void OnDeliveryUpdate(int[] deliveredIndices, int[] remainingIndices, ref IGameState gameState)
         {
             PlaySoundFrontend(-1, "RACE_PLACED", "HUD_AWARDS", true);
             int greyBlip = SurviveTheHuntShared.Utils.EncodingHelper.HexFromRgba(96, 96, 96, 255);
@@ -553,15 +503,15 @@ namespace SurviveTheHuntClient.Helpers
             if (needsObjectiveUpdate)
             {
                 gameState.CurrentObjective = GenerateObjectiveText(IsHunted, _huntedPlayerId, remainingIndices.Length > 0, nextUpIndex);
-                HuntUI.DisplayObjective(ref gameState, ref PlayerState, skipAddingHuntedName: true);
+                HuntUI.DisplayObjective(gameState, PlayerState, skipAddingHuntedName: true);
             }
 
-            if(_hasDeliveredAll)
+            if (_hasDeliveredAll)
             {
-                if(IsHunted)
+                if (IsHunted)
                 {
                     const float engineHealth = -100f;
-                    
+
                     SleighState[] sleighs = { _primarySleigh, _backupSleigh };
                     foreach (SleighState sleigh in sleighs)
                     {
@@ -610,11 +560,11 @@ namespace SurviveTheHuntClient.Helpers
 
         public void OnCapturableUpdate(int playerHandle, bool isCapturable)
         {
-            if(isCapturable && !_capturablePlayers.Contains(playerHandle))
+            if (isCapturable && !_capturablePlayers.Contains(playerHandle))
             {
                 _capturablePlayers.Add(playerHandle);
             }
-            else if(!isCapturable)
+            else if (!isCapturable)
             {
                 _capturablePlayers.Remove(playerHandle);
             }
@@ -628,17 +578,17 @@ namespace SurviveTheHuntClient.Helpers
             }
         }
 
-        public void OnHuntedWasCaptured(int playerHandle, ref PlayerState playerState)
+        public void OnHuntedWasCaptured(int playerHandle)
         {
-            if(_capturablePlayers.Contains(playerHandle))
+            if (_capturablePlayers.Contains(playerHandle))
             {
                 _capturablePlayers.Remove(playerHandle);
             }
 
-            if(PlayerId() == playerHandle)
+            if (PlayerId() == playerHandle)
             {
                 SetEntityHealth(PlayerPedId(), 0);
-                playerState.ReportDeathNextTick = true;
+                PlayerState.ReportDeathNextTick = true;
                 _wasCaptured = true;
             }
         }
@@ -652,7 +602,7 @@ namespace SurviveTheHuntClient.Helpers
 
         internal static PrezzieLocation[] GetRandomPrezzieLocations(byte maxPresents = MaxPresentsLocations, IEnumerable<PrezzieLocation> prezzies = default)
         {
-            if(prezzies == default || prezzies == null)
+            if (prezzies == default || prezzies == null)
             {
                 prezzies = Constants.PresentsLocations;
             }
@@ -716,8 +666,10 @@ namespace SurviveTheHuntClient.Helpers
 
         private bool _waitingTillSafeZone = false;
 
-        internal override void OnHuntStarted(GameState gameState, PlayerState playerState)
+        public override void OnHuntStarted(IGameState gameState, IPlayerState playerState)
         {
+            Debug.WriteLine($"{nameof(XmasPlugin)}.{nameof(OnHuntStarted)}");
+
             GameState = gameState;
 
             SetRunSprintMultiplierForPlayer(PlayerId(), 1f);
@@ -727,7 +679,7 @@ namespace SurviveTheHuntClient.Helpers
             IsHunted = _huntedPlayerId == PlayerId();
 
             // Pick a random spawn location for santa
-            if(IsHunted)
+            if (IsHunted)
             {
                 BroadcastRandomSpawnLocationForSanta();
                 _waitingTillSafeZone = !playerState.IsInSafeZone;
@@ -747,12 +699,12 @@ namespace SurviveTheHuntClient.Helpers
 
                 PrezzieLocation[] randomPrezzies = GetRandomPrezzieLocations();
                 int[] prezzieIndices = new int[randomPrezzies.Length];
-                for(int i = 0; i < prezzieIndices.Length; i++)
+                for (int i = 0; i < prezzieIndices.Length; i++)
                 {
                     for (int j = 0; j < Constants.PresentsLocations.Length; j++)
-                    { 
+                    {
                         PrezzieLocation location = Constants.PresentsLocations[j];
-                        if(location == randomPrezzies[i])
+                        if (location == randomPrezzies[i])
                         {
                             prezzieIndices[i] = j;
                             break;
@@ -769,7 +721,7 @@ namespace SurviveTheHuntClient.Helpers
             SetPlayerWeapons(IsHunted);
 
             gameState.CurrentObjective = GenerateObjectiveText(IsHunted, _huntedPlayerId, true, 0);
-            HuntUI.DisplayObjective(ref gameState, ref playerState, skipAddingHuntedName: true);
+            HuntUI.DisplayObjective(gameState, playerState, skipAddingHuntedName: true);
 
             _tutorialState = new TutorialState()
             {
@@ -777,7 +729,7 @@ namespace SurviveTheHuntClient.Helpers
             };
         }
 
-        internal override void OnHuntEnded(GameState gameState, PlayerState playerState)
+        public override void OnHuntEnded(IGameState gameState, IPlayerState playerState)
         {
             base.OnHuntEnded(gameState, playerState);
 
@@ -788,13 +740,13 @@ namespace SurviveTheHuntClient.Helpers
         {
             int playerPed = PlayerPedId();
 
-            if(isSanta)
+            if (isSanta)
             {
                 RemoveAllPedWeapons(playerPed, true);
                 GiveWeaponToPed(playerPed, (uint)WeaponHash.Snowball, 9999, true, true);
             }
         }
-        
+
         internal void SetPlayerClothing(bool isSanta)
         {
             int pedId = PlayerPedId();
@@ -802,10 +754,10 @@ namespace SurviveTheHuntClient.Helpers
             //if(isSanta)
             {
                 ClearAllPedProps(pedId);
-                List<int> ignoredComps = new List<int>{ (int)PedComponents.Hair, (int)PedComponents.Face };
+                List<int> ignoredComps = new List<int> { (int)PedComponents.Hair, (int)PedComponents.Face };
                 for (int i = 0; i <= 11; i++)
                 {
-                    if(!ignoredComps.Contains(i))
+                    if (!ignoredComps.Contains(i))
                     {
                         SetPedComponentVariation(pedId, i, 0, 0, 0);
                     }
@@ -813,14 +765,14 @@ namespace SurviveTheHuntClient.Helpers
 
                 Constants.PedOutfit outfit = isSanta ? Constants.MPMaleSantaOutfit : Constants.MPMaleElfOutfit;
 
-                if(!IsPedMale(pedId) || (PedHash)GetEntityModel(pedId) == PedHash.FreemodeFemale01)
+                if (!IsPedMale(pedId) || (PedHash)GetEntityModel(pedId) == PedHash.FreemodeFemale01)
                 {
                     outfit = isSanta ? Constants.MPFemaleSantaOutfit : Constants.MPFemaleElfOutfit;
                 }
 
-                foreach(KeyValuePair<PedComponents, Constants.PedVariation> comp in outfit.ComponentsToApply)
+                foreach (KeyValuePair<PedComponents, Constants.PedVariation> comp in outfit.ComponentsToApply)
                 {
-                    if(!ignoredComps.Contains((int)comp.Key))
+                    if (!ignoredComps.Contains((int)comp.Key))
                     {
                         SetPedComponentVariation(pedId, (int)comp.Key, comp.Value.Drawable, comp.Value.Texture, 0);
                     }
@@ -837,7 +789,7 @@ namespace SurviveTheHuntClient.Helpers
             }
         }
 
-        internal override void OnResourceStopping()
+        public override void OnResourceStopping()
         {
             base.OnResourceStopping();
 
@@ -849,14 +801,14 @@ namespace SurviveTheHuntClient.Helpers
             _hasStarted = false;
 
             SleighState[] sleighs = { _primarySleigh, _backupSleigh };
-            foreach(SleighState sleigh in sleighs)
+            foreach (SleighState sleigh in sleighs)
             {
-                if((sleigh?.OppressorHandle ?? 0) != 0)
+                if ((sleigh?.OppressorHandle ?? 0) != 0)
                 {
                     SetEntityAsMissionEntity(sleigh.OppressorHandle, true, true);
                     DeleteEntity(ref sleigh.OppressorHandle);
                 }
-                if((sleigh?.PropHandle ?? 0) != 0)
+                if ((sleigh?.PropHandle ?? 0) != 0)
                 {
                     DeleteObject(ref sleigh.PropHandle);
                 }
@@ -867,19 +819,19 @@ namespace SurviveTheHuntClient.Helpers
                 DeleteObject(ref _handPresentProp);
             }
 
-            foreach(int blip in _presentBlips)
+            foreach (int blip in _presentBlips)
             {
-                if(DoesBlipExist(blip))
+                if (DoesBlipExist(blip))
                 {
                     int blipCopy = blip;
                     RemoveBlip(ref blipCopy);
                 }
             }
 
-            for(int i = 0; i < _presentProps.Count; i++)
+            for (int i = 0; i < _presentProps.Count; i++)
             {
                 int presentEntity = _presentProps[i];
-                if(DoesEntityExist(presentEntity))
+                if (DoesEntityExist(presentEntity))
                 {
                     DeleteEntity(ref presentEntity);
                     // dunno why i bother, but hey if the native insists on passing a ref then surely it does something interesting with it right...
@@ -887,18 +839,18 @@ namespace SurviveTheHuntClient.Helpers
                 }
             }
 
-            foreach(int objNetId in _objectsToCleanup)
+            foreach (int objNetId in _objectsToCleanup)
             {
-                if(NetworkDoesEntityExistWithNetworkId(objNetId))
+                if (NetworkDoesEntityExistWithNetworkId(objNetId))
                 {
                     int objHandle = NetToObj(objNetId);
                     DeleteObject(ref objHandle);
                 }
             }
-            
-            foreach(int vehNetId in _vehiclesToCleanup)
+
+            foreach (int vehNetId in _vehiclesToCleanup)
             {
-                if(NetworkDoesEntityExistWithNetworkId(vehNetId))
+                if (NetworkDoesEntityExistWithNetworkId(vehNetId))
                 {
                     int handle = NetToVeh(vehNetId);
                     SetEntityAsMissionEntity(handle, true, true);
@@ -906,12 +858,12 @@ namespace SurviveTheHuntClient.Helpers
                 }
             }
 
-            if(_introCam != 0)
+            if (_introCam != 0)
             {
                 DestroyCam(_introCam, true);
             }
 
-            if(_introSleigh != 0 && DoesEntityExist(_introSleigh))
+            if (_introSleigh != 0 && DoesEntityExist(_introSleigh))
             {
                 DeleteVehicle(ref _introSleigh);
                 _introSleigh = 0;
@@ -925,7 +877,7 @@ namespace SurviveTheHuntClient.Helpers
 
             ClearAllHelpMessages();
 
-            if(_sleighStorageVehicleHandle != 0)
+            if (_sleighStorageVehicleHandle != 0)
             {
                 SetEntityAsNoLongerNeeded(ref _sleighStorageVehicleHandle);
                 _sleighStorageVehicleHandle = 0;
@@ -962,7 +914,7 @@ namespace SurviveTheHuntClient.Helpers
             SetBlipNameFromTextFile(state.Blip, "SLEIGH_NAME");
 
             // Mark backup sleighs with a light gray colour
-            if(isBackup)
+            if (isBackup)
             {
                 SetBlipColour(state.Blip, 39);
             }
@@ -994,9 +946,9 @@ namespace SurviveTheHuntClient.Helpers
             float shortestDistanceSq = float.MaxValue;
             float lowestDotDiff = float.MaxValue;
 
-            foreach(Vehicle vehicle in vehicles)
+            foreach (Vehicle vehicle in vehicles)
             {
-                if(vehicle.Handle == _primarySleigh?.OppressorHandle || vehicle.Handle == _backupSleigh?.OppressorHandle)
+                if (vehicle.Handle == _primarySleigh?.OppressorHandle || vehicle.Handle == _backupSleigh?.OppressorHandle)
                 {
                     continue;
                 }
@@ -1009,10 +961,10 @@ namespace SurviveTheHuntClient.Helpers
                     float dot = SurviveTheHuntShared.Utils.Vector3.Dot(dir.X, dir.Y, dir.Z, playerFwdVec.X, playerFwdVec.Y, playerFwdVec.Z);
                     const float minDot = 0.8f;
                     // Check we're facing the same direction as the vehicle
-                    if(dot > minDot)
+                    if (dot > minDot)
                     {
                         float dotDiff = dot - minDot;
-                        if(dotDiff < lowestDotDiff)
+                        if (dotDiff < lowestDotDiff)
                         {
                             nearestVehicle = vehicle;
                             shortestDistanceSq = distanceSq;
@@ -1050,7 +1002,7 @@ namespace SurviveTheHuntClient.Helpers
         /// </summary>
         private const float CheckForStorageInterval = 0.4f;
         private float _timeSinceStorageCheck = 0f;
-        
+
         /// <summary>
         /// Set to true once the player ped has been tasked with exiting the sleigh
         /// </summary>
@@ -1060,7 +1012,7 @@ namespace SurviveTheHuntClient.Helpers
         {
             if (isInSleigh)
             {
-                if(_sleighStorageVehicleHandle != 0 && IsControlJustReleased(0, (int)Control.Context))
+                if (_sleighStorageVehicleHandle != 0 && IsControlJustReleased(0, (int)Control.Context))
                 {
                     TaskLeaveVehicle(playerPed, _primarySleigh.OppressorHandle, 0);
                     _waitingToGetOff = true;
@@ -1141,9 +1093,9 @@ namespace SurviveTheHuntClient.Helpers
                             }
                         }
 
-                        if(wasShowingRestoreTooltip != _isShowingRestoreSleighTooltip)
+                        if (wasShowingRestoreTooltip != _isShowingRestoreSleighTooltip)
                         {
-                            if(_isShowingRestoreSleighTooltip)
+                            if (_isShowingRestoreSleighTooltip)
                             {
                                 BeginTextCommandDisplayHelp(RestoreSleighHelpLabelName);
                                 EndTextCommandDisplayHelp(0, true, true, 0);
@@ -1185,9 +1137,9 @@ namespace SurviveTheHuntClient.Helpers
         private void ProcessPresentPlacement(int playerPed, Vector3 playerPos, bool inVehicle)
         {
             // Prevent placing presents while in a vehicle.
-            if(inVehicle)
+            if (inVehicle)
             {
-                if(_isShowingPlacePresentTooltip)
+                if (_isShowingPlacePresentTooltip)
                 {
                     _isShowingPlacePresentTooltip = false;
                     ClearAllHelpMessages();
@@ -1222,7 +1174,7 @@ namespace SurviveTheHuntClient.Helpers
             }
             else
             {
-                if(_hasThrownSnowball)
+                if (_hasThrownSnowball)
                 {
                     AttachPresentToHand(_handPresentProp, playerPed);
                 }
@@ -1292,7 +1244,7 @@ namespace SurviveTheHuntClient.Helpers
 
             // Hide the snowball
             uint currentWeaponHash = 0;
-            if(GetCurrentPedWeapon(playerPed, ref currentWeaponHash, false) && currentWeaponHash == (uint)WeaponHash.Snowball)
+            if (GetCurrentPedWeapon(playerPed, ref currentWeaponHash, false) && currentWeaponHash == (uint)WeaponHash.Snowball)
             {
                 SetPedCurrentWeaponVisible(playerPed, false, false, false, false);
             }
@@ -1306,7 +1258,7 @@ namespace SurviveTheHuntClient.Helpers
             }
 
             bool isPlacingDown = false;
-            if(_presentState == PresentPlacementState.WaitingForPlaceAnim || _presentState == PresentPlacementState.Placing || _presentState == PresentPlacementState.Placed)
+            if (_presentState == PresentPlacementState.WaitingForPlaceAnim || _presentState == PresentPlacementState.Placing || _presentState == PresentPlacementState.Placed)
             {
                 isPlacingDown = IsEntityPlayingAnim(playerPed, Constants.PlacingDownPresentAnimDict, Constants.PlacingDownPresentAnimClip, 3);
             }
@@ -1320,9 +1272,9 @@ namespace SurviveTheHuntClient.Helpers
                 else
                 {
                     float animTime = GetEntityAnimCurrentTime(playerPed, Constants.PlacingDownPresentAnimDict, Constants.PlacingDownPresentAnimClip);
-                    
+
                     // At 50% of the animation, detach the present so it stays on the floor
-                    if(animTime >= 0.5f)
+                    if (animTime >= 0.5f)
                     {
                         DetachEntity(_handPresentProp, false, false);
                         _presentState = PresentPlacementState.Placed;
@@ -1332,7 +1284,7 @@ namespace SurviveTheHuntClient.Helpers
 
             if (_presentState == PresentPlacementState.WaitingForPlaceAnim)
             {
-                if(!isPlacingDown)
+                if (!isPlacingDown)
                 {
                     if (HasAnimDictLoaded(Constants.PlacingDownPresentAnimDict))
                     {
@@ -1365,7 +1317,7 @@ namespace SurviveTheHuntClient.Helpers
             {
                 _isHuntedRagdolling = IsPedRagdoll(playerPed);
 
-                if(_isHuntedRagdolling != wasHuntedRagdolling)
+                if (_isHuntedRagdolling != wasHuntedRagdolling)
                 {
                     if (_isHuntedRagdolling)
                     {
@@ -1375,7 +1327,7 @@ namespace SurviveTheHuntClient.Helpers
                     TriggerServerEventProxy(SurviveTheHuntShared.Events.Server.XmasBroadcastHuntedCapturableState, _isHuntedRagdolling);
                 }
 
-                if(_isHuntedRagdolling && _huntedRagdollTimeElapsed < HuntedMinRagdollTime)
+                if (_isHuntedRagdolling && _huntedRagdollTimeElapsed < HuntedMinRagdollTime)
                 {
                     _huntedRagdollTimeElapsed += deltaTime;
                     ResetPedRagdollTimer(playerPed);
@@ -1387,16 +1339,16 @@ namespace SurviveTheHuntClient.Helpers
 
                 int? prevNearestHunted = _nearestHuntedToApprehend;
 
-                if(_timeSinceHuntedDistanceCheck >= HuntedDistanceCheckInterval)
+                if (_timeSinceHuntedDistanceCheck >= HuntedDistanceCheckInterval)
                 {
                     int? nearestPlayer = null;
                     float lowestDistanceSq = float.MaxValue;
-                    foreach(int playerHandle in _capturablePlayers)
+                    foreach (int playerHandle in _capturablePlayers)
                     {
                         float distance = GetEntityCoords(GetPlayerPed(playerHandle), false).DistanceToSquared(playerPos);
                         if (distance <= MinApprehendDistance)
                         {
-                            if(distance < lowestDistanceSq)
+                            if (distance < lowestDistanceSq)
                             {
                                 lowestDistanceSq = distance;
                                 nearestPlayer = playerHandle;
@@ -1408,9 +1360,9 @@ namespace SurviveTheHuntClient.Helpers
                     _timeSinceHuntedDistanceCheck = 0f;
                 }
 
-                if(_nearestHuntedToApprehend != prevNearestHunted)
+                if (_nearestHuntedToApprehend != prevNearestHunted)
                 {
-                    if(_nearestHuntedToApprehend.HasValue)
+                    if (_nearestHuntedToApprehend.HasValue)
                     {
                         BeginTextCommandDisplayHelp(ApprehendHelpLabelName);
                         EndTextCommandDisplayHelp(0, true, true, -1);
@@ -1421,7 +1373,7 @@ namespace SurviveTheHuntClient.Helpers
                     }
                 }
 
-                if(_nearestHuntedToApprehend.HasValue && IsControlJustPressed(0, (int)Control.Context))
+                if (_nearestHuntedToApprehend.HasValue && IsControlJustPressed(0, (int)Control.Context))
                 {
                     ClearAllHelpMessages();
                     TriggerServerEventProxy(SurviveTheHuntShared.Events.Server.XmasBroadcastHuntedCaptured, GetPlayerServerId(_nearestHuntedToApprehend.Value));
@@ -1462,19 +1414,19 @@ namespace SurviveTheHuntClient.Helpers
 
         private void OnBackupSleighEntered(ref SleighState currentPrimarySleigh, ref SleighState backupSleigh)
         {
-            if(backupSleigh != null)
+            if (backupSleigh != null)
             {
                 // Destroy the previous primary sleigh so the player can't dupe them
-                if(currentPrimarySleigh != null)
+                if (currentPrimarySleigh != null)
                 {
                     SetVehicleEngineHealth(currentPrimarySleigh.OppressorHandle, -4000f);
-                    if(currentPrimarySleigh.Blip != default && DoesBlipExist(currentPrimarySleigh.Blip))
+                    if (currentPrimarySleigh.Blip != default && DoesBlipExist(currentPrimarySleigh.Blip))
                     {
                         RemoveBlip(ref currentPrimarySleigh.Blip);
                     }
                 }
 
-                if(_sleighStorageVehicleHandle != 0)
+                if (_sleighStorageVehicleHandle != 0)
                 {
                     SetEntityAsNoLongerNeeded(ref _sleighStorageVehicleHandle);
                     _sleighStorageVehicleHandle = 0;
@@ -1519,7 +1471,7 @@ namespace SurviveTheHuntClient.Helpers
             }
         }
 
-        internal override void OnClockReceived(int hours, int minutes, int seconds)
+        public override void OnClockReceived(int hours, int minutes, int seconds)
         {
             if (!_timeSet)
             {
@@ -1531,7 +1483,7 @@ namespace SurviveTheHuntClient.Helpers
         internal void OnSantaSpawnReceived(SpawnLocation spawnLocation)
         {
             _santaSpawnLocation = spawnLocation;
-            if(IsHunted)
+            if (IsHunted)
             {
                 _waitingToTeleportToSpawn = true;
             }
@@ -1565,7 +1517,7 @@ namespace SurviveTheHuntClient.Helpers
             }
             else
             {
-                if(PlayerState.IsInSafeZone)
+                if (PlayerState.IsInSafeZone)
                 {
                     _waitingTillSafeZone = false;
                 }
@@ -1665,12 +1617,12 @@ namespace SurviveTheHuntClient.Helpers
             RenderScriptCams(false, false, 0, false, false);
             FreezeEntityPosition(playerPed, false);
             SetFocusEntity(playerPed);
-            HuntUI.DisplayObjective(ref GameState, ref PlayerState, skipAddingHuntedName: true);
+            HuntUI.DisplayObjective(GameState, PlayerState, skipAddingHuntedName: true);
         }
 
         private void ProcessIntroSequence(float deltaTime, int playerPed)
         {
-            if(_introTimeElapsed > IntroTimeSeconds)
+            if (_introTimeElapsed > IntroTimeSeconds)
             {
                 if (_prevIntroStage != IntroSequenceStage.Done)
                 {
@@ -1687,20 +1639,20 @@ namespace SurviveTheHuntClient.Helpers
 
             DisableAllControlActions(0);
 
-            if(!IsHunted && _currentIntroStage != IntroSequenceStage.Done)
+            if (!IsHunted && _currentIntroStage != IntroSequenceStage.Done)
             {
                 SetFocusEntity(GetPlayerPed(_huntedPlayerId));
                 //SetFocusArea(_santaSpawnLocation.PosAndHeading.X, _santaSpawnLocation.PosAndHeading.Y, _santaSpawnLocation.PosAndHeading.Z, 0f, 0f, 0f);
             }
 
-            if(_currentIntroStage == IntroSequenceStage.WaitForSleighToCrash && _introCurrentTimer > _introCurrentTargetTime * 0.75f)
+            if (_currentIntroStage == IntroSequenceStage.WaitForSleighToCrash && _introCurrentTimer > _introCurrentTargetTime * 0.75f)
             {
-                if(_primarySleigh != null && _introCurrentTimer < _introCurrentTargetTime * 0.9f)
+                if (_primarySleigh != null && _introCurrentTimer < _introCurrentTargetTime * 0.9f)
                 {
                     SetEntityInvincible(_primarySleigh.OppressorHandle, true);
                 }
 
-                if(_introSleigh != 0 && DoesEntityExist(_introSleigh))
+                if (_introSleigh != 0 && DoesEntityExist(_introSleigh))
                 {
                     Vector3 coords = GetEntityCoords(_introSleigh, false);
                     //for (int i = 0; i < 4; i++)
@@ -1710,7 +1662,7 @@ namespace SurviveTheHuntClient.Helpers
                     }
                     _currentIntroStage++;
 
-                    if(_currentIntroStage == IntroSequenceStage.WaitABit)
+                    if (_currentIntroStage == IntroSequenceStage.WaitABit)
                     {
                         _introTimerActive = true;
                         _introTimeElapsed = 0f;
@@ -1719,7 +1671,7 @@ namespace SurviveTheHuntClient.Helpers
                 }
             }
 
-            if(_currentIntroStage == IntroSequenceStage.SleighCrashed)
+            if (_currentIntroStage == IntroSequenceStage.SleighCrashed)
             {
                 _prevIntroStage++;
                 _currentIntroStage++;
@@ -1730,10 +1682,10 @@ namespace SurviveTheHuntClient.Helpers
             if (_currentIntroStage != _prevIntroStage)
             {
                 Debug.WriteLine(_currentIntroStage.ToString());
-                switch(_currentIntroStage)
+                switch (_currentIntroStage)
                 {
                     case IntroSequenceStage.Start:
-                        if(IsHunted)
+                        if (IsHunted)
                         {
                             int oppressorHandle = GetEntityAttachedTo(_introSleigh);
                             FreezeEntityPosition(oppressorHandle, false);
@@ -1762,7 +1714,7 @@ namespace SurviveTheHuntClient.Helpers
                         SetCamFov(_introCam, 40f);
                         PointCamAtEntity(_introCam, huntedPlayerPed, 0f, 0f, 0f, true);
                         TaskPlayAnim(huntedPlayerPed, Constants.WakeUpAnimDict, Constants.WakeUpAnimClip, 8f, -1f, -1, 0, 0f, true, true, true);
-                        
+
                         _introTimerActive = true;
                         _introCurrentTargetTime = !IsHunted ? ((IntroTimeSeconds - _introTimeElapsed) - 1f) : 0f;
                         _introCurrentTimer = 0f;
@@ -1790,8 +1742,8 @@ namespace SurviveTheHuntClient.Helpers
                         break;
                 }
             }
-            
-            if(_currentIntroStage == IntroSequenceStage.WaitForSleighToCrash)
+
+            if (_currentIntroStage == IntroSequenceStage.WaitForSleighToCrash)
             {
                 //int oppressor = GetEntityAttachedTo(_introSleigh);
 
@@ -1830,12 +1782,12 @@ namespace SurviveTheHuntClient.Helpers
         private void ProcessTutorialSequence(float deltaTime)
         {
             bool reachedEnd = _tutorialState.HasFinished;
-            if(!reachedEnd)
+            if (!reachedEnd)
             {
                 string labelKey = $"STH_XMAS_TUTORIAL{_tutorialState.CurrentItemIndex}";
                 string text = _tutorialState.Items[_tutorialState.CurrentItemIndex].Text;
                 AddTextEntry(labelKey, text ?? "");
-                if(text != null)
+                if (text != null)
                 {
                     BeginTextCommandDisplayHelp(labelKey);
                     EndTextCommandDisplayHelp(0, false, true, (int)Math.Round(_tutorialState.CurrentItemTimeTarget * 1000.0));
@@ -1846,7 +1798,7 @@ namespace SurviveTheHuntClient.Helpers
             {
                 _tutorialState.CurrentItemTimeElapsed += deltaTime;
             }
-            else if(!reachedEnd)
+            else if (!reachedEnd)
             {
                 ++_tutorialState.CurrentItemIndex;
                 _tutorialState.CurrentItemTimeElapsed = 0f;
@@ -1910,7 +1862,7 @@ namespace SurviveTheHuntClient.Helpers
                     if (HasModelLoaded((uint)s_OppressorHashKey) && HasModelLoaded((uint)s_SleighHashKey))
                     {
                         bool isBackup = _sleighSpawnState == SleighSpawnState.NeedBackup;
-                        
+
                         // Prevent spawning any backups after presents were delivered.
                         if (!isBackup || !_hasDeliveredAll)
                         {
@@ -1948,9 +1900,9 @@ namespace SurviveTheHuntClient.Helpers
                 AttachPresentToHand(_handPresentProp, playerPed);
             }
 
-            if(_handPresentProp != 0)
+            if (_handPresentProp != 0)
             {
-                if(_presentState == PresentPlacementState.Placing || IsControlJustPressed(0, (int)Control.Aim) || IsControlJustPressed(0, (int)Control.Attack))
+                if (_presentState == PresentPlacementState.Placing || IsControlJustPressed(0, (int)Control.Aim) || IsControlJustPressed(0, (int)Control.Attack))
                 {
                     AttachPresentToHand(_handPresentProp, playerPed);
                 }
@@ -1961,7 +1913,7 @@ namespace SurviveTheHuntClient.Helpers
             {
                 ProcessIntroSequence(deltaTime, playerPed);
 
-                if(_currentIntroStage == IntroSequenceStage.WaitingToStart && _santaSpawnLocation != null && (!IsHunted || (HasModelLoaded((uint)VehicleHash.Nimbus))))
+                if (_currentIntroStage == IntroSequenceStage.WaitingToStart && _santaSpawnLocation != null && (!IsHunted || (HasModelLoaded((uint)VehicleHash.Nimbus))))
                 {
                     StartIntroSequence();
                 }
@@ -1976,7 +1928,7 @@ namespace SurviveTheHuntClient.Helpers
                 DisableControlAction(0, (int)Control.SelectWeapon, true);
                 SetPlayerSprint(PlayerId(), false);
 
-                if(_hasStarted != _wasStartedLastTick)
+                if (_hasStarted != _wasStartedLastTick)
                 {
                     NetworkOverrideClockTime(18, 0, 0);
                 }
@@ -1999,7 +1951,7 @@ namespace SurviveTheHuntClient.Helpers
 
             int currentVehicle = GetVehiclePedIsIn(playerPed, false);
 
-            foreach(int invisibleEntity in InvisibleEntities)
+            foreach (int invisibleEntity in InvisibleEntities)
             {
                 SetEntityAlpha(invisibleEntity, 0, 0);
             }
@@ -2008,7 +1960,7 @@ namespace SurviveTheHuntClient.Helpers
             {
                 bool isInBackupSleigh = _backupSleigh != null && currentVehicle == _backupSleigh.OppressorHandle;
 
-                if(isInBackupSleigh)
+                if (isInBackupSleigh)
                 {
                     OnBackupSleighEntered(ref _primarySleigh, ref _backupSleigh);
                 }
@@ -2028,7 +1980,7 @@ namespace SurviveTheHuntClient.Helpers
             }
 
             // Add a tutorial notification when the backup sleigh is spawned.
-            if(_backupSleigh != null && _backupSleigh.NeedsNotification && _tutorialState.HasFinished)
+            if (_backupSleigh != null && _backupSleigh.NeedsNotification && _tutorialState.HasFinished)
             {
                 _tutorialState = new TutorialState()
                 {
@@ -2037,7 +1989,7 @@ namespace SurviveTheHuntClient.Helpers
                 _backupSleigh.NeedsNotification = false;
             }
 
-            if(IsHunted)
+            if (IsHunted)
             {
                 ProcessPresentPlacement(playerPed, playerPos, currentVehicle != 0);
 
@@ -2046,7 +1998,7 @@ namespace SurviveTheHuntClient.Helpers
                     _timeSinceSnowballThrow += deltaTime;
                 }
 
-                if(_timeSinceSnowballThrow >= SnowballThrowTimeout)
+                if (_timeSinceSnowballThrow >= SnowballThrowTimeout)
                 {
                     _hasThrownSnowball = false;
                     _timeSinceSnowballThrow = 0f;
@@ -2054,7 +2006,7 @@ namespace SurviveTheHuntClient.Helpers
                 }
             }
 
-            foreach(PrezzieState prezzie in _presentsToDeliver)
+            foreach (PrezzieState prezzie in _presentsToDeliver)
             {
                 Vector3 pos = prezzie.Location.Position;
                 byte[] col = prezzie.HasPlaced ? new byte[4] { 255, 255, 255, 255 } : prezzie.Rgba;
@@ -2069,7 +2021,7 @@ namespace SurviveTheHuntClient.Helpers
 
             ProcessHuntedRagdollState(playerPed, deltaTime, playerPos);
 
-            if(_waitingForClothesChange)
+            if (_waitingForClothesChange)
             {
                 if (_clothesChangeTimer >= ClothesChangeDelaySeconds)
                 {

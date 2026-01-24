@@ -7,83 +7,46 @@ using SurviveTheHuntShared.Core;
 
 namespace SurviveTheHuntClient
 {
-    public class GameState
+    public class GameState : Interfaces.IGameState
     {
-        /// <summary>
-        /// Current objective text. This will be displayed every frame at the bottom of the screen.
-        /// </summary>
         public string CurrentObjective { get; set; }
 
-        /// <summary>
-        /// Details about the current hunt session.
-        /// </summary>
-        public HuntDetails Hunt { get; set; } = new HuntDetails();
 
-        public class HuntDetails
+        private HuntDetails _hunt = new HuntDetails();
+
+        public Interfaces.IHuntDetails Hunt { get => _hunt; }
+
+        public class HuntDetails : Interfaces.IHuntDetails
         {
-            /// <summary>
-            /// Has the hunt been started?
-            /// </summary>
             public bool IsStarted { get; set; } = false;
 
-            /// <summary>
-            /// Has the hunt finished?
-            /// </summary>
             public bool IsOver { get; set; } = false;
 
-            /// <summary>
-            /// Is the hunt currently ongoing?
-            /// </summary>
             public bool IsInProgress { get { return IsStarted && !IsOver; } }
 
-            /// <summary>
-            /// Is the hunt currently ending? (ie. winner notification being shown, etc.)
-            /// </summary>
             public bool IsEnding { get { return !IsInProgress && IsOver; } }
 
-            /// <summary>
-            /// Can a hunt be started right now?
-            /// </summary>
             public bool CanBeStarted { get { return !IsInProgress && !IsEnding; } }
 
-            /// <summary>
-            /// Is the prep phase still active?
-            /// </summary>
             public bool IsPrepPhase { get { return Utility.CurrentTime < PrepPhaseEndTime; } }
 
-            /// <summary>
-            /// Currently hunted player.
-            /// </summary>
             public Player HuntedPlayer { get; set; } = null;
 
-            /// <summary>
-            /// Mugshot texture of the currently hunted player.
-            /// </summary>
-            public Texture HuntedPlayerMugshot { get; set; } = null;
+            public Models.Texture HuntedPlayerMugshot { get; set; } = null;
 
             /// <summary>
             /// The currently hunted player's mugshot texture generation time.
             /// </summary>
             public DateTime LastHuntedMugshotGeneration { get; set; } = Utility.CurrentTime;
 
-            /// <summary>
-            /// Expected time for the next ping.
-            /// </summary>
             public DateTime NextMugshotTime { get; set; } = Utility.CurrentTime;
 
-            /// <summary>
-            /// Time when hunt is meant to end & state be reset.
-            /// This includes the delay for displaying the win/loss text.
-            /// </summary>
             public DateTime ActualEndTime { get; set; } = new DateTime();
 
-            /// <summary>
-            /// Expected end time (set at start of the hunt).
-            /// </summary>
             public DateTime InitialEndTime { get; set; } = new DateTime();
 
             /// <summary>
-            /// Time when the prep phase is already over.
+            /// Time when the prep phase is already over. See <see cref="Interfaces.IHuntDetails.PrepPhaseEndTime"/>
             /// </summary>
             /// <remarks>
             /// Note: this does not always refer to the actual hunt start time. For a player joining in progress,
@@ -93,11 +56,6 @@ namespace SurviveTheHuntClient
             public DateTime PrepPhaseEndTime { get; set; } = new DateTime();
 
             private bool _wasHuntInProgressLastFrame = false;
-
-            /// <summary>
-            /// Was <see cref="IsStarted"/> true last frame?
-            /// This can be used for checking if the hunt has only just started.
-            /// </summary>
             public bool WasHuntInProgressLastFrame { get => _wasHuntInProgressLastFrame; }
 
             /// <summary>
@@ -127,20 +85,17 @@ namespace SurviveTheHuntClient
 
                 // Reset the player's weapons.
                 Ped playerPed = Game.PlayerPed;
-                playerState.TakeAwayWeapons(ref playerPed);
+                playerState.TakeAwayWeapons(playerPed);
             }
 
             /// <summary>
             /// Logic tick - needs to be called on every script update!
             /// </summary>
-            public void Tick()
+            public void Tick(float deltaTime)
             {
                 _wasHuntInProgressLastFrame = IsStarted;
             }
 
-            /// <summary>
-            /// Regenerates the hunted player's mugshot texture.
-            /// </summary>
             public void UpdateHuntedMugshot()
             {
                 if(!IsStarted)
@@ -163,7 +118,7 @@ namespace SurviveTheHuntClient
                 if (HuntedPlayerMugshot == null)
                 {
                     Debug.WriteLine("Generating a mugshot!");
-                    HuntedPlayerMugshot = new Texture() { Id = RegisterPedheadshot(HuntedPlayer.Character.Handle) };
+                    HuntedPlayerMugshot = new Models.Texture() { Id = RegisterPedheadshot(HuntedPlayer.Character.Handle) };
                     LastHuntedMugshotGeneration = Utility.CurrentTime;
                 }
 

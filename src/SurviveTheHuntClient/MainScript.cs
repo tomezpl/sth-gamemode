@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-
 using CitizenFX.Core;
 using SurviveTheHuntShared.Utils;
 using Vector3 = SurviveTheHuntShared.Utils.Vector3;
@@ -17,6 +13,7 @@ using SharedConstants = SurviveTheHuntShared.Constants;
 using SurviveTheHuntShared.Core;
 using SurviveTheHuntShared;
 using SurviveTheHuntClient.Interfaces;
+using SurviveTheHuntClient.Models;
 
 namespace SurviveTheHuntClient
 {
@@ -31,6 +28,11 @@ namespace SurviveTheHuntClient
         /// Game state synced from the server.
         /// </summary>
         protected GameState GameState = new GameState();
+
+        /// <summary>
+        /// The UI drawing functions.
+        /// </summary>
+        protected HuntUI HuntUI = new HuntUI();
 
         /// <summary>
         /// Event handlers specific to this implementation of the Survive the Hunt gamemode.
@@ -98,7 +100,7 @@ namespace SurviveTheHuntClient
 
         private readonly List<ITickable> Tickables;
         internal readonly List<ITickable> TickablesToRemove = new List<ITickable>();
-        private readonly Plugin[] Plugins;
+        private readonly IPlugin[] Plugins;
 
         public MainScript()
         {
@@ -118,7 +120,7 @@ namespace SurviveTheHuntClient
             BoundsTracker = new BoundsTracker();
             WastedAnim = new WastedAnim(ExecutePlugins);
 
-            XmasModifier XmasModifierPlugin = new XmasModifier(TriggerEvent, TriggerServerEvent, ref PlayerState);
+            Plugins.Xmas.XmasPlugin xmasPlugin = new Plugins.Xmas.XmasPlugin(TriggerEvent, TriggerServerEvent, EventHandlers, Tickables.Add, TickablesToRemove.Add, PlayerState, HuntUI);
 
             Tickables = new List<ITickable>
             {
@@ -126,20 +128,20 @@ namespace SurviveTheHuntClient
                 BoundsTracker,
                 WastedAnim,
                 new VehicleWeaponsTracker(ExecutePlugins),
-                XmasModifierPlugin
+                xmasPlugin
             };
 
-            Plugins = new Plugin[]
+            Plugins = new IPlugin[]
             {
-                XmasModifierPlugin
+                xmasPlugin
             };
 
             HuntUI.ExecutePlugins = ExecutePlugins;
         }
 
-        internal void ExecutePlugins(Action<Plugin> pluginAction)
+        internal void ExecutePlugins(Action<IPlugin> pluginAction)
         {
-            foreach(Plugin plugin in Plugins)
+            foreach(IPlugin plugin in Plugins)
             {
                 pluginAction(plugin);
             }
@@ -275,6 +277,8 @@ namespace SurviveTheHuntClient
                     CfxVector3 pos = Player.Local.Character.Position;
                     Debug.WriteLine($"X = {pos.X}, Y = {pos.Y}, Z = {pos.Z}");
                 }), false);
+
+                ExecutePlugins(plugin => plugin.OnResourceStarted());
             }
         }
 
@@ -499,7 +503,7 @@ namespace SurviveTheHuntClient
                     }
                 });
 
-                HuntUI.DisplayObjective(ref GameState, ref PlayerState, GameState.Hunt.IsEnding, skipAddingHuntedName: skipAddingPlayerName);
+                HuntUI.DisplayObjective(GameState, PlayerState, GameState.Hunt.IsEnding, skipAddingHuntedName: skipAddingPlayerName);
             }
 
             // Set the player's max health.
@@ -584,7 +588,7 @@ namespace SurviveTheHuntClient
 
             bool wasHuntStartedLastFrame = !GameState.Hunt.WasHuntInProgressLastFrame && GameState.Hunt.IsStarted;
 
-            GameState.Hunt.Tick();
+            GameState.Hunt.Tick(deltaTime);
 
             GameState.Hunt.UpdateHuntedMugshot();
             HuntUI.SetBigmap(ref PlayerState);
@@ -834,7 +838,7 @@ namespace SurviveTheHuntClient
                                 SetEntityCoordsNoOffset(entityId, safeZoneOrigin.X, safeZoneOrigin.Y, safeZoneOrigin.Z, true, false, false);
                                 PlayerState.WaitingToTeleportToSpawn = false;
                                 DoScreenFadeIn(500);
-                                HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+                                HuntUI.DisplayObjective(GameState, PlayerState);
                             }
                         }
                     }
@@ -854,7 +858,7 @@ namespace SurviveTheHuntClient
 
             if (GameState.Hunt.ActualEndTime <= Utility.CurrentTime)
             {
-                GameState.Hunt.End(ref PlayerState);
+                ((GameState.HuntDetails)GameState.Hunt).End(ref PlayerState);
                 GameState.CurrentObjective = "";
             }
 
@@ -905,7 +909,7 @@ namespace SurviveTheHuntClient
                     break;
             }
 
-            PlayerState.TakeAwayWeapons(ref playerPed);
+            PlayerState.TakeAwayWeapons(playerPed);
             AmmoCheckTimer = 0;
         }
 
@@ -921,7 +925,7 @@ namespace SurviveTheHuntClient
             GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(secondsTillPing);
             GameState.Hunt.InitialEndTime = endTime;
             GameState.Hunt.PrepPhaseEndTime = Utility.CurrentTime + prepPhase.Value;
-            HuntUI.DisplayObjective(ref GameState, ref PlayerState);
+            HuntUI.DisplayObjective(GameState, PlayerState);
 
             // Heal the player when the hunt is started.
             const string huntStartedHealthRestoredString = "HuntStartedHealthRestoredString";
@@ -1003,7 +1007,7 @@ namespace SurviveTheHuntClient
                             GameState.CurrentObjective = "You've lost the hunt!";
                         }
                         GameState.Hunt.ActualEndTime = Utility.CurrentTime + TimeSpan.FromSeconds(5);
-                        HuntUI.DisplayObjective(ref GameState, ref PlayerState, true);
+                        HuntUI.DisplayObjective(GameState, PlayerState, true);
                     })
                 },
                 {
@@ -1083,7 +1087,7 @@ namespace SurviveTheHuntClient
                 if(Player.Local?.Character != null && PlayerState?.WeaponsGiven == true)
                 {
                     Ped localPlayerPed = Player.Local.Character;
-                    PlayerState.TakeAwayWeapons(ref localPlayerPed);
+                    PlayerState.TakeAwayWeapons(localPlayerPed);
                 }
             });
 
@@ -1150,7 +1154,7 @@ namespace SurviveTheHuntClient
             {
                 Debug.WriteLine("Resetting weapons");
                 Ped playerPedObj = Game.PlayerPed;
-                PlayerState.TakeAwayWeapons(ref playerPedObj);
+                PlayerState.TakeAwayWeapons(playerPedObj);
                 PlayerState.UpdateWeapons(playerPedObj);
             }
             else

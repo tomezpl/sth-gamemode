@@ -8,7 +8,7 @@ using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient
 {
-    public class PlayerState
+    public class PlayerState : Interfaces.IPlayerState
     {
         /// <summary>
         /// <para>Does the player have weapons?</para>
@@ -27,20 +27,14 @@ namespace SurviveTheHuntClient
         /// </summary>
         public bool DeathReported = false;
 
-        /// <summary>
-        /// Should the player's death be reported to the server?
-        /// </summary>
-        public bool ReportDeathNextTick = false;
+        public bool ReportDeathNextTick { get; set; } = false;
 
         /// <summary>
         /// Last weapon the player had equipped.
         /// </summary>
         public uint LastWeaponEquipped = (uint)WeaponHash.Unarmed;
 
-        /// <summary>
-        /// The team the local player is on.
-        /// </summary>
-        public Teams.Team Team = Teams.Team.Hunters;
+        public Teams.Team Team { get; set; } = Teams.Team.Hunters;
 
         /// <summary>
         /// Is the player currently waiting to be teleported to spawn because of the hunt starting?
@@ -58,10 +52,7 @@ namespace SurviveTheHuntClient
         /// </summary>
         public Constants.TeleportPlayerStage TeleportPlayerStage = Constants.TeleportPlayerStage.None;
 
-        /// <summary>
-        /// Is the player currently within the safezone bounds?
-        /// </summary>
-        public bool IsInSafeZone = false;
+        public bool IsInSafeZone { get; set; } = false;
 
         /// <summary>
         /// Manages the state of the bigmap widget on the HUD.
@@ -106,12 +97,7 @@ namespace SurviveTheHuntClient
         /// </summary>
         public BigmapState Bigmap = new BigmapState();
 
-        /// <summary>
-        /// Removes weapons from a player ped.
-        /// </summary>
-        /// <param name="playerPed">The player ped to remove weapons from.</param>
-        /// <param name="takeAll">Should all weapons be removed, or just the ones given to the player by the gamemode?</param>
-        public void TakeAwayWeapons(ref Ped playerPed)
+        public void TakeAwayWeapons(Ped playerPed)
         {
             TakeAwayWeapons(playerPed.Handle);
         }

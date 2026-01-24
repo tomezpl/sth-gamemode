@@ -1,17 +1,18 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{99281032-B67E-4F49-ABF9-13938936F721}</ProjectGuid>
+    <ProjectGuid>{3008355F-5F05-42B3-85F6-50DF34081706}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SurviveTheHuntClient</RootNamespace>
-    <AssemblyName>SurviveTheHuntClient.net</AssemblyName>
+    <RootNamespace>SurviveTheHuntClient.Plugin.Xmas</RootNamespace>
+    <AssemblyName>SurviveTheHuntClient.Plugin.Xmas.net</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -32,7 +33,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CitizenFX.Core.Client, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\CitizenFX.Core.Client.1.0.10230\lib\net45\CitizenFX.Core.Client.dll</HintPath>
+      <HintPath>..\..\packages\CitizenFX.Core.Client.1.0.24574\lib\net45\CitizenFX.Core.Client.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -44,45 +45,33 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Constants.cs" />
-    <Compile Include="Events.cs" />
-    <Compile Include="GameState.cs" />
-    <Compile Include="Helpers\BoundsTracker.cs" />
-    <Compile Include="Helpers\DeathBlips.cs" />
-    <Compile Include="Helpers\KillTracker.cs" />
-    <Compile Include="Helpers\MinimapHelper.cs" />
-    <Compile Include="Helpers\NativeHelpers.cs" />
-    <Compile Include="Helpers\PlayerPassenger.cs" />
-    <Compile Include="Helpers\SyncedVehicle.cs" />
-    <Compile Include="Helpers\WantedLevelHelper.cs" />
-    <Compile Include="Helpers\VehicleWeaponsTracker.cs" />
-    <Compile Include="Helpers\WastedAnim.cs" />
-    <Compile Include="Helpers\WeaponAttachments.cs" />
-    <Compile Include="HuntUI.cs" />
-    <Compile Include="Integrations\LbgCharNeo.cs" />
-    <Compile Include="MainScript.cs" />
-    <Compile Include="PlayerState.cs" />
+    <Compile Include="Constants\XmasAnims.cs" />
+    <Compile Include="Constants\XmasClothing.cs" />
+    <Compile Include="Constants\XmasPresents.cs" />
+    <Compile Include="Constants\XmasSantaSpawns.cs" />
+    <Compile Include="Constants\XmasTutorials.cs" />
+    <Compile Include="Constants\XmasVehicles.cs" />
+    <Compile Include="Models\PresentSpawner.cs" />
+    <Compile Include="Models\PrezzieLocation.cs" />
+    <Compile Include="Models\PrezzieState.cs" />
+    <Compile Include="Models\SleighStorageVehicle.cs" />
+    <Compile Include="Models\SpawnLocation.cs" />
+    <Compile Include="XmasPlugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Utility.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SurviveTheHuntClient.Models\SurviveTheHuntClient.Models.csproj">
       <Project>{bf89c873-8c48-435d-a422-9104710e296e}</Project>
       <Name>SurviveTheHuntClient.Models</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SurviveTheHuntClient.Plugin.Xmas\SurviveTheHuntClient.Plugins.Xmas.csproj">
-      <Project>{3008355f-5f05-42b3-85f6-50df34081706}</Project>
-      <Name>SurviveTheHuntClient.Plugins.Xmas</Name>
-    </ProjectReference>
     <ProjectReference Include="..\SurviveTheHuntShared\SurviveTheHuntShared.csproj">
-      <Project>{a49f7ac5-2652-4c94-930c-950f8c80283a}</Project>
+      <Project>{A49F7AC5-2652-4C94-930C-950F8C80283A}</Project>
       <Name>SurviveTheHuntShared</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy "$(TargetPath)" "$(SolutionDir)\$(TargetFileName)" /Y</PostBuildEvent>

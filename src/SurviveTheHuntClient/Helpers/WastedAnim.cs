@@ -1,5 +1,6 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Interfaces;
+using SurviveTheHuntClient.Models;
 using System;
 using static CitizenFX.Core.Native.API;
 
@@ -19,7 +20,7 @@ namespace SurviveTheHuntClient.Helpers
         private float SecondsPassedSinceDeath = 0f;
         private int? CurrentSoundId = null;
 
-        internal delegate void ExecutePluginsDelegate(Action<Plugin> plugin);
+        internal delegate void ExecutePluginsDelegate(Action<IPlugin> plugin);
 
         private ExecutePluginsDelegate ExecutePlugins;
 

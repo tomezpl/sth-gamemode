@@ -1,4 +1,4 @@
-﻿namespace SurviveTheHuntClient.Models.XmasModifier
+﻿namespace SurviveTheHuntClient.Plugins.Xmas.Models
 {
     internal class SpawnLocation
     {

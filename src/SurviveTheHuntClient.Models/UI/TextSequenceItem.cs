@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace SurviveTheHuntClient.Models.UI
 {
-    internal struct TextSequenceItem
+    public struct TextSequenceItem
     {
-        internal readonly float TimeInSeconds;
-        internal readonly string Text;
+        public readonly float TimeInSeconds;
+        public readonly string Text;
 
-        internal TextSequenceItem(float timeInSeconds, string text)
+        public TextSequenceItem(float timeInSeconds, string text)
         {
             TimeInSeconds = timeInSeconds;
             Text = text;

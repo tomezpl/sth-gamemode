@@ -11,11 +11,11 @@ namespace SurviveTheHuntClient.Models
     /// An <see cref="ITickable"/> that executes a provided callback on each tick.
     /// Useful for temporarily injecting per-tick functions.
     /// </summary>
-    internal class DynamicTickable : ITickable
+    public class DynamicTickable : ITickable
     {
-        internal Action<DynamicTickable, float> _tickImpl;
+        public Action<DynamicTickable, float> _tickImpl;
 
-        internal DynamicTickable(Action<DynamicTickable, float> tickAction)
+        public DynamicTickable(Action<DynamicTickable, float> tickAction)
         {
             if(tickAction == null)
             {

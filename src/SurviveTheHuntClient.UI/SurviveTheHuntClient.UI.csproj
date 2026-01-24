@@ -66,8 +66,13 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>
-    </PostBuildEvent>
+    <PostBuildEvent>copy "$(TargetPath)" "$(SolutionDir)\..\sth-ui\$(TargetFileName)" /Y
+copy "$(SolutionDir)\SurviveTheHuntShared.net.dll" "$(SolutionDir)\..\sth-ui\SurviveTheHuntShared.net.dll" /Y
+copy "$(SolutionDir)\SurviveTheHuntClient.Models.net.dll" "$(SolutionDir)\..\sth-ui\SurviveTheHuntClient.Models.net.dll" /Y
+
+copy "$(SolutionDir)\uimanifest.lua"  "$(SolutionDir)\..\sth-ui\fxmanifest.lua" /Y
+if not exist "$(SolutionDir)\..\sth-ui\files" mkdir "$(SolutionDir)\..\sth-ui\files"
+copy "$(SolutionDir)\ui_files\*" "$(SolutionDir)\..\sth-ui\files\*"</PostBuildEvent>
   </PropertyGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
