@@ -120,7 +120,7 @@ namespace SurviveTheHuntClient
             BoundsTracker = new BoundsTracker();
             WastedAnim = new WastedAnim(ExecutePlugins);
 
-            Plugins.Xmas.XmasPlugin xmasPlugin = new Plugins.Xmas.XmasPlugin(TriggerEvent, TriggerServerEvent, EventHandlers, Tickables.Add, TickablesToRemove.Add, PlayerState, HuntUI);
+            Plugins.Xmas.XmasPlugin xmasPlugin = new Plugins.Xmas.XmasPlugin(TriggerEvent, TriggerServerEvent, EventHandlers, (ITickable tickable) => Tickables.Add(tickable), (ITickable tickable) => TickablesToRemove.Add(tickable), PlayerState, HuntUI);
 
             Tickables = new List<ITickable>
             {
