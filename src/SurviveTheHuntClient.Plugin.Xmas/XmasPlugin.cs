@@ -361,6 +361,7 @@ namespace SurviveTheHuntClient.Plugins.Xmas
                 DynamicTickable netIdAwaiter = new DynamicTickable((DynamicTickable instance, float deltaTime) =>
                 {
                     elapsedSeconds += deltaTime;
+                    Debug.WriteLine($"{elapsedSeconds}s elapsed in DynamicTickable");
                     bool exists = NetworkDoesEntityExistWithNetworkId(oppressorNetId);
 
                     if (exists)
@@ -378,6 +379,7 @@ namespace SurviveTheHuntClient.Plugins.Xmas
                     }
                 });
                 _plugin.AddTickable(netIdAwaiter);
+                Debug.WriteLine($"Added {nameof(netIdAwaiter)}");
             }
 
             [SthNamedEvent(SurviveTheHuntShared.Events.Client.XmasReceiveSantaSpawn)]
