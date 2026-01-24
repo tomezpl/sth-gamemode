@@ -7,8 +7,8 @@
     <ProjectGuid>{3008355F-5F05-42B3-85F6-50DF34081706}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SurviveTheHuntClient.Plugin.Xmas</RootNamespace>
-    <AssemblyName>SurviveTheHuntClient.Plugin.Xmas.net</AssemblyName>
+    <RootNamespace>SurviveTheHuntClient.Plugins.Xmas</RootNamespace>
+    <AssemblyName>SurviveTheHuntClient.Plugins.Xmas.net</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
