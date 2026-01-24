@@ -1,7 +1,7 @@
 env:
   STH_CLIENT_SCRIPT: SurviveTheHuntClient.net.dll
   STH_CLIENT_MODELS_SCRIPT: SurviveTheHuntClient.Models.net.dll
-  STH_CLIENT_PLUGIN_XMAS_SCRIPT: SurviveTheHuntClient.Plugins.Xmas.net.dll
+  STH_CLIENT_PLUGIN_XMAS_SCRIPT: SurviveTheHuntClient.Plugin.Xmas.net.dll
   STH_CLIENT_UI_SCRIPT: SurviveTheHuntClient.UI.net.dll
   LEMONUI_DLL: LemonUI.FiveM.dll
   STH_SERVER_SCRIPT: SurviveTheHuntServer.net.dll
