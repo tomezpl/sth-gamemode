@@ -1,7 +1,7 @@
 env:
   STH_CLIENT_SCRIPT: SurviveTheHuntClient.net.dll
   STH_CLIENT_MODELS_SCRIPT: SurviveTheHuntClient.Models.net.dll
-  STH_CLIENT_PLUGIN_XMAS_SCRIPT: SurviveTheHuntClient.Plugin.Xmas.net.dll
+  STH_CLIENT_PLUGIN_GLOB: SurviveTheHuntClient.Plugins.*.net.dll
   STH_CLIENT_UI_SCRIPT: SurviveTheHuntClient.UI.net.dll
   LEMONUI_DLL: LemonUI.FiveM.dll
   STH_SERVER_SCRIPT: SurviveTheHuntServer.net.dll
@@ -73,7 +73,7 @@ jobs:
             copy uimanifest.lua artifacts/sth-ui/fxmanifest.lua
             copy build/${{env.STH_CLIENT_SCRIPT}} artifacts/sth-gamemode/${{env.STH_CLIENT_SCRIPT}}
             copy build/${{env.STH_CLIENT_MODELS_SCRIPT}} artifacts/sth-gamemode/${{env.STH_CLIENT_MODELS_SCRIPT}}
-            copy build/${{env.STH_CLIENT_PLUGIN_XMAS_SCRIPT}} artifacts/sth-gamemode/${{env.STH_CLIENT_PLUGIN_XMAS_SCRIPT}}
+            copy build/${{env.STH_CLIENT_PLUGIN_GLOB}} artifacts/sth-gamemode/${{env.STH_CLIENT_PLUGIN_GLOB}}
             copy build/${{env.STH_SERVER_SCRIPT}} artifacts/sth-gamemode/${{env.STH_SERVER_SCRIPT}}
             copy build/${{env.STH_SHARED_LIB}} artifacts/sth-gamemode/${{env.STH_SHARED_LIB}}
             copy build/${{env.STH_SHARED_LIB}} artifacts/sth-ui/${{env.STH_SHARED_LIB}}
