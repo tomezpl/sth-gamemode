@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 
-namespace SurviveTheHuntClient.Models.XmasModifier
+namespace SurviveTheHuntClient.Plugins.Xmas.Models
 {
     internal struct PresentSpawner
     {
@@ -16,7 +16,7 @@ namespace SurviveTheHuntClient.Models.XmasModifier
         }
     }
 
-    internal class PresentSpawnerCollection : Dictionary<Helpers.XmasModifier.Constants.PrezzieLocationTag, PresentSpawner>
+    internal class PresentSpawnerCollection : Dictionary<Constants.PrezzieLocationTag, PresentSpawner>
     {
         /*private PresentSpawnerCollection(Dictionary<Helpers.XmasModifier.Constants.PrezzieLocationTag, PresentSpawner> data)
         {

@@ -1,6 +1,6 @@
 ﻿namespace SurviveTheHuntClient.Interfaces
 {
-    internal interface ITickable
+    public interface ITickable
     {
         void Tick(float deltaTime);
     }

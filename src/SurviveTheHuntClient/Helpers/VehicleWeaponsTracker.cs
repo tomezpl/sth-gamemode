@@ -1,5 +1,6 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Interfaces;
+using SurviveTheHuntClient.Models;
 using System;
 using static CitizenFX.Core.Native.API;
 
@@ -10,7 +11,7 @@ namespace SurviveTheHuntClient.Helpers
     /// </summary>
     internal class VehicleWeaponsTracker : ITickable
     {
-        internal delegate void ExecutePluginsDelegate(Action<Plugin> pluginFunc);
+        internal delegate void ExecutePluginsDelegate(Action<IPlugin> pluginFunc);
         private ExecutePluginsDelegate ExecutePlugins;
 
         internal VehicleWeaponsTracker(ExecutePluginsDelegate executePlugins)

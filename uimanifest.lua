@@ -1,6 +1,6 @@
 fx_version 'cerulean'
 
-client_scripts {'SurviveTheHuntClient.UI.net.dll' }
+client_scripts { 'SurviveTheHuntClient.UI.net.dll', 'SurviveTheHuntClient.Models.net.dll' }
 shared_scripts { 'SurviveTheHuntShared.net.dll' }
 
 files { 

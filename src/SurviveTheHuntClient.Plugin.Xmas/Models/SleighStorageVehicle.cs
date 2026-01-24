@@ -1,7 +1,7 @@
 ﻿using CitizenFX.Core;
 using static CitizenFX.Core.Native.API;
 
-namespace SurviveTheHuntClient.Models.XmasModifier
+namespace SurviveTheHuntClient.Plugins.Xmas.Models
 {
     internal class SleighStorageVehicle
     {

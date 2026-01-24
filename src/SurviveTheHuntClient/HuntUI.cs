@@ -10,36 +10,36 @@ using static SurviveTheHuntShared.Core.Teams;
 
 namespace SurviveTheHuntClient
 {
-    public static class HuntUI
+    public class HuntUI : Interfaces.IHuntUI
     {
-        internal delegate void ExecutePluginsDelegate(Action<Plugin> plugin);
-        internal static ExecutePluginsDelegate ExecutePlugins;
+        internal delegate void ExecutePluginsDelegate(Action<IPlugin> plugin);
+        internal ExecutePluginsDelegate ExecutePlugins;
 
         /// <summary>
         /// Blip handle used for showing the hunted player's radius.
         /// </summary>
-        private static Blip RadiusBlip = null;
+        private Blip RadiusBlip = null;
 
         /// <summary>
         /// Blip handle used for showing the hunted player's search radius center.
         /// </summary>
-        private static Blip RadiusCenterBlip = null;
+        private Blip RadiusCenterBlip = null;
 
         /// <summary>
         /// Regular player blips to show on the radar.
         /// </summary>
         /// <remarks>TODO: Change this to a hashset?</remarks>
-        private static Dictionary<int, dynamic> PlayerBlips = new Dictionary<int, dynamic>();
+        private Dictionary<int, dynamic> PlayerBlips = new Dictionary<int, dynamic>();
 
         /// <summary>
         /// Handles for currently active player peds; this is needed so blips aren't tracking dead player peds etc.
         /// </summary>
-        private static List<int> ActivePeds = new List<int>();
+        private List<int> ActivePeds = new List<int>();
 
         /// <summary>
         /// Blips with opacity fading over time.
         /// </summary>
-        private static List<FadingBlip> FadingBlips = new List<FadingBlip>();
+        private List<FadingBlip> FadingBlips = new List<FadingBlip>();
 
         private class FadingBlip
         {
@@ -112,13 +112,7 @@ namespace SurviveTheHuntClient
             }
         }
 
-        /// <summary>
-        /// Display the current objective text at the bottom of the screen, as per the <paramref name="gameState"/>.
-        /// </summary>
-        /// <param name="gameState">Reference to this client's <see cref="GameState"/>.</param>
-        /// <param name="playerState">Reference to this client's <see cref="PlayerState"/>.</param>
-        /// <param name="ended">Pass true if the game is ending - this will make sure the objective text disappears on time.</param>
-        public static void DisplayObjective(ref GameState gameState, ref PlayerState playerState, bool ended = false, bool skipAddingHuntedName = false)
+        public void DisplayObjective(Interfaces.IGameState gameState, Interfaces.IPlayerState playerState, bool ended = false, bool skipAddingHuntedName = false)
         {
             if (!string.IsNullOrWhiteSpace(gameState.CurrentObjective))
             {
@@ -187,7 +181,7 @@ namespace SurviveTheHuntClient
         /// Draws a timerbar in the bottom right corner indicating how long time there is remaining in the game.
         /// </summary>
         /// <param name="gameState">Most up-to-date game state.</param>
-        public static void DrawRemainingTime(ref GameState gameState)
+        public void DrawRemainingTime(ref GameState gameState)
         {
             // Don't draw anything if game is not in progress or is ending.
             if (!gameState.Hunt.IsInProgress && !gameState.Hunt.IsEnding)
@@ -288,7 +282,7 @@ namespace SurviveTheHuntClient
         /// <param name="offsetY"></param>
         /// <param name="creationTime"></param>
         /// <param name="playerState"></param>
-        public static void CreateRadiusBlipForPlayer(Player player, float radius, float offsetX, float offsetY, DateTime creationTime, ref PlayerState playerState)
+        public void CreateRadiusBlipForPlayer(Player player, float radius, float offsetX, float offsetY, DateTime creationTime, ref PlayerState playerState)
         {
             Vector3 position = GetEntityCoords(player.Character.Handle, false);
 
@@ -341,7 +335,7 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Updates <see cref="FadingBlips"/>' alpha components and removes those that have reached 0 alpha.
         /// </summary>
-        public static void FadeBlips()
+        public void FadeBlips()
         {
             List<FadingBlip> blipsToDelete = new List<FadingBlip>();
             foreach(FadingBlip blip in FadingBlips)
@@ -390,7 +384,7 @@ namespace SurviveTheHuntClient
         /// <param name="creationTime">Spawn time of the blip.</param>
         /// <param name="lifespan">How long the blip should be visible for before starting to fade.</param>
         /// <param name="fadeOutTime">The time it takes for a blip to fade once <paramref name="lifespan"/> has been reached.</param>
-        public static void PingBlipOnMap(ref Blip blip, ref Blip preciseBlip, DateTime creationTime, TimeSpan lifespan, TimeSpan fadeOutTime)
+        public void PingBlipOnMap(ref Blip blip, ref Blip preciseBlip, DateTime creationTime, TimeSpan lifespan, TimeSpan fadeOutTime)
         {
             FadingBlips.Add(new FadingBlip(blip, preciseBlip, creationTime + lifespan, creationTime + lifespan + fadeOutTime));
         }
@@ -401,7 +395,7 @@ namespace SurviveTheHuntClient
         /// <param name="player">The hunted player.</param>
         /// <param name="position">The hunted player's position.</param>
         /// <param name="gameState">Most up-to-date game state.</param>
-        public static void NotifyAboutHuntedZone(Player player, Vector3 position, ref GameState gameState)
+        public void NotifyAboutHuntedZone(Player player, Vector3 position, ref GameState gameState)
         {
             if (position != null)
             {
@@ -436,7 +430,7 @@ namespace SurviveTheHuntClient
         /// <param name="players">Currently playing players.</param>
         /// <param name="gameState">Most up-to-date game state.</param>
         /// <param name="playerState">Local player state.</param>
-        public static void UpdateTeammateBlips(PlayerList players, ref GameState gameState, ref PlayerState playerState)
+        public void UpdateTeammateBlips(PlayerList players, ref GameState gameState, ref PlayerState playerState)
         {
             // TODO: The heavy use of collections in this method seems to increase the tick time by a considerable amount.
             // Need to only invoke the blip update when a player connects, disconnects or dies; Otherwise only update the visibility of existing blips.

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SurviveTheHuntClient.Models.XmasModifier
+﻿namespace SurviveTheHuntClient.Plugins.Xmas.Models
 {
     internal class PrezzieState
     {

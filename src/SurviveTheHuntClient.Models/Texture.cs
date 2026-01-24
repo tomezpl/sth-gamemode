@@ -1,4 +1,4 @@
-﻿namespace SurviveTheHuntClient
+﻿namespace SurviveTheHuntClient.Models
 {
     /// <summary>
     /// Represents TXD identifiers for a texture.
