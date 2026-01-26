@@ -278,6 +278,7 @@ namespace SurviveTheHuntClient.Plugins.Xmas
         }
 
         public override bool IsGameMode => true;
+        public override string GameModeTitle => "Survive the Yule";
         public override string GameModeDescription => "Spread some holiday cheer around Los Santos.\n\nOne player becomes Santa. They need to deliver 12 presents while elves try to hunt them down.";
 
         public XmasPlugin(PluginContext context, IPlayerState playerState, IHuntUI huntUi)

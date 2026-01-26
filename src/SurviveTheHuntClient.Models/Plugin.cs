@@ -69,19 +69,22 @@ namespace SurviveTheHuntClient.Models
 
     public class PluginInfo
     {
-        private string _name;
-        private string _description;
+        private readonly string _name;
+        private readonly string _description;
+        private readonly string _title;
 
         public string Name { get => _name; }
         public string Description { get => _description; }
+        public string Title { get => _title; }
 
-        public PluginInfo(string name, string description)
+        public PluginInfo(string name, string title = null, string description = null)
         {
             _name = name;
             _description = description ?? "";
+            _title = title ?? "";
         }
 
-        public PluginInfo(IPlugin plugin) : this(plugin.Name, plugin.GameModeDescription)
+        public PluginInfo(IPlugin plugin) : this(plugin.Name, string.IsNullOrWhiteSpace(plugin.GameModeTitle) ? plugin.Name : plugin.GameModeTitle, plugin.GameModeDescription)
         {
         }
     }
@@ -106,6 +109,7 @@ namespace SurviveTheHuntClient.Models
 
         public virtual bool IsGameMode { get => false; }
 
+        public virtual string GameModeTitle { get => null; }
         public virtual string GameModeDescription { get => null; } 
 
         public Plugin(string name, PluginContext context)
