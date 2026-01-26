@@ -14,6 +14,11 @@ namespace SurviveTheHuntClient.Interfaces
         bool IsGameMode { get; }
 
         /// <summary>
+        /// The title to show for this plugin in the UI if it is a gamemode (see <see cref="IsGameMode"/>).
+        /// </summary>
+        string GameModeTitle { get; }
+
+        /// <summary>
         /// The description to use for this plugin if it is a gamemode (see <see cref="IsGameMode"/>)
         /// </summary>
         string GameModeDescription { get; }

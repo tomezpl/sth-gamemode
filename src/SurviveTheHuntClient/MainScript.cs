@@ -98,8 +98,22 @@ namespace SurviveTheHuntClient
         private readonly WastedAnim WastedAnim;
         private readonly PlayerPassenger PlayerPassenger = new PlayerPassenger();
 
+        /// <summary>
+        /// Extra logic to run every tick.
+        /// </summary>
         private readonly List<ITickable> Tickables;
+
+        /// <summary>
+        /// Since we can't mutate <see cref="Tickables"/> while iterating over it, plugins can request tickables to be removed by adding them here.
+        /// This will be iterated over on each tick once the tickables have run, and it will remove those tickables from both <see cref="Tickables"/> and <see cref="TickablesToRemove"/>.
+        /// </summary>
         internal readonly List<ITickable> TickablesToRemove = new List<ITickable>();
+
+        /// <summary>
+        /// Plugins (which may also be <see cref="ITickable"/>), which will receive events from the script and can be hooked up to systems to customise behaviour.
+        /// 
+        /// Gamemode variants can be implemented this way.
+        /// </summary>
         private readonly IPlugin[] Plugins;
 
         public MainScript()
@@ -153,6 +167,11 @@ namespace SurviveTheHuntClient
             }, true);
         }
 
+        /// <summary>
+        /// Executes an <see cref="Action{IPlugin}"/> on each active plugin. Alternatively, the action can be forced on non-active plugins too.
+        /// </summary>
+        /// <param name="pluginAction">The action to execute on each active plugin.</param>
+        /// <param name="runAll">Should <paramref name="pluginAction"/> be executed on all plugins, even if they are not currently active?</param>
         internal void ExecutePlugins(Action<IPlugin> pluginAction, bool runAll = false)
         {
             foreach(IPlugin plugin in Plugins)
@@ -333,7 +352,8 @@ namespace SurviveTheHuntClient
                 if (plugin.IsGameMode)
                 {
                     PluginInfo info = new PluginInfo(plugin);
-                    gameModeInfo.Add(string.IsNullOrWhiteSpace(info.Description) ? info.Name : $"{info.Name}\n{info.Description}");
+                    string nameAndTitle = $"{info.Name}\n{info.Title}";
+                    gameModeInfo.Add(string.IsNullOrWhiteSpace(info.Description) ? nameAndTitle : $"{nameAndTitle}\n{info.Description}");
                 }
             }, true);
 

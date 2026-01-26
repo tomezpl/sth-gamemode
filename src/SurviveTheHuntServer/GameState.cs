@@ -107,7 +107,8 @@ namespace SurviveTheHuntServer
             TriggerClientEvent
             (
                 player, 
-                SurviveTheHuntShared.Events.Client.ReceiveGameState, 
+                SurviveTheHuntShared.Events.Client.ReceiveGameState,
+                GameState.ActiveMode ?? "",
                 gameState.Hunt.IsStarted, 
                 gameState.Hunt.HuntedPlayer != null ? int.Parse(gameState.Hunt.HuntedPlayer.Handle) : int.MinValue, 
                 gameState.Hunt.StartTime.Ticks, gameState.Hunt.EndTime.Ticks, 

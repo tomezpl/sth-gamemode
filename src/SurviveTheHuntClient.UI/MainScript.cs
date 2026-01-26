@@ -27,7 +27,8 @@ namespace SurviveTheHuntClient.UI
         private NativeMenu StartHuntMenu;
         private NativeListItem<string> SelectModeItem;
         private Dictionary<string, string> ModeDescriptions = new Dictionary<string, string>();
-        private List<string> GameModeNames = new List<string> { "Default" };
+        private List<string> GameModeNames = new List<string> { "" };
+        private List<string> GameModeTitles = new List<string> { "Default" };
         private NativeListItem<string> SelectPlayerItem;
         private NativeItem StartHuntButton;
 
@@ -160,7 +161,7 @@ namespace SurviveTheHuntClient.UI
 
         private NativeListItem<string> CreateSelectModeItem()
         {
-            return new NativeListItem<string>("Game mode", GameModeNames.ToArray());
+            return new NativeListItem<string>("Game mode", GameModeTitles.ToArray());
         }
 
         private void InitUI()
@@ -255,7 +256,7 @@ namespace SurviveTheHuntClient.UI
 
         private void SelectedModeChanged(object sender, ItemChangedEventArgs<string> e)
         {
-            string mode = e.Object;
+            string mode = GameModeNames[e.Index];
             if(ModeDescriptions.TryGetValue(mode, out string description))
             {
                 StartHuntMenu.Description = description;
@@ -360,7 +361,7 @@ namespace SurviveTheHuntClient.UI
 
         private void StartHuntClicked(object sender, EventArgs e)
         {
-            string modeName = SelectModeItem.SelectedIndex == 0 ? "" : SelectModeItem.SelectedItem;
+            string modeName = GameModeNames[SelectModeItem.SelectedIndex];
 
             if (SelectPlayerItem.SelectedIndex != 0)
             {
@@ -427,22 +428,26 @@ namespace SurviveTheHuntClient.UI
             if(GameModeNames.Count > 1)
             {
                 GameModeNames.RemoveRange(1, GameModeNames.Count - 1);
+                GameModeTitles.RemoveRange(1, GameModeTitles.Count - 1);
             }
 
             Debug.WriteLine($"info count: {info.Count}");
             foreach (string gameModeSerialized in info)
             {
-                int newlineIndex = gameModeSerialized.IndexOf('\n');
-                string gameModeName = newlineIndex == -1 ? gameModeSerialized : gameModeSerialized.Substring(0, newlineIndex);
+                string gameModeName = gameModeSerialized.Substring(0, gameModeSerialized.IndexOf('\n'));
+                string titleAndDesc = gameModeSerialized.Substring(gameModeName.Length + 1);
+                int newlineIndex = titleAndDesc.IndexOf('\n');
+                string gameModeTitle = newlineIndex == -1 ? titleAndDesc : titleAndDesc.Substring(0, newlineIndex);
                 string gameModeDescription = newlineIndex == -1 ? "" : gameModeSerialized.Substring(newlineIndex + 1);
 
                 GameModeNames.Add(gameModeName);
+                GameModeTitles.Add(gameModeTitle);
                 ModeDescriptions[gameModeName] = gameModeDescription;
             }
 
             if (SelectModeItem != null)
             {
-                SelectModeItem.Items = GameModeNames;
+                SelectModeItem.Items = GameModeTitles;
             }
         }
 

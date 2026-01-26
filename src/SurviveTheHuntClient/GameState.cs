@@ -148,9 +148,10 @@ namespace SurviveTheHuntClient
     public partial class MainScript
     {
         [EventHandler(SurviveTheHuntShared.Events.Client.ReceiveGameState)]
-        public void ReceiveGameState(bool isStarted, int huntedPlayerServerId, long startTimeTicks, long endTimeTicks, long lastPingTimeTicks, long prepPhaseEndTicks)
+        public void ReceiveGameState(bool isStarted, string mode, int huntedPlayerServerId, long startTimeTicks, long endTimeTicks, long lastPingTimeTicks, long prepPhaseEndTicks)
         {
             Debug.WriteLine("Received game state");
+            SetMode(mode);
             if (huntedPlayerServerId != int.MinValue && NetworkIsPlayerConnected(GetPlayerFromServerId(huntedPlayerServerId)))
             {
                 Player huntedPlayer = new Player(GetPlayerFromServerId(huntedPlayerServerId));
