@@ -6,9 +6,9 @@ namespace SurviveTheHuntClient
 {
     public partial class MainScript
     {
-        private ushort AmmoCheckTimer = 0;
+        private float AmmoCheckTimer = 0f;
 
-        private const ushort AmmoCheckInterval = 500;
+        private const float AmmoCheckInterval = 0.5f;
 
         private Weapons.WeaponAmmo[] AmmoState = new Weapons.WeaponAmmo[0];
 
@@ -16,12 +16,12 @@ namespace SurviveTheHuntClient
 
         private long? LastSpawnTime = null;
 
-        public void TickLbgCharNeoIntegration()
+        public void TickLbgCharNeoIntegration(float deltaTime)
         {
-            AmmoCheckTimer += (ushort)Math.Round(GetFrameTime() * 1000f);
+            AmmoCheckTimer += deltaTime;
             if (AmmoCheckTimer >= AmmoCheckInterval)
             {
-                Weapons.WeaponAmmo[] selectedLoadout = Constants.WeaponLoadouts[PlayerState.Team];
+                Weapons.WeaponAmmo[] selectedLoadout = Constants.GetModeWeaponLoadouts(GameState.Mode)[PlayerState.Team];
 
                 AmmoState = new Weapons.WeaponAmmo[selectedLoadout.Length];
 

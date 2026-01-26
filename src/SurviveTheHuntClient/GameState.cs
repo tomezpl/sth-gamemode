@@ -11,6 +11,7 @@ namespace SurviveTheHuntClient
     {
         public string CurrentObjective { get; set; }
 
+        public string Mode { get; set; } = "";
 
         private HuntDetails _hunt = new HuntDetails();
 

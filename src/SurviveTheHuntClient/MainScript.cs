@@ -104,6 +104,8 @@ namespace SurviveTheHuntClient
 
         public MainScript()
         {
+            PlayerState.GameState = GameState;
+
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientResourceStart);
             EventHandlers["onResourceStop"] += new Action<string>(OnResourceStopping);
@@ -120,7 +122,9 @@ namespace SurviveTheHuntClient
             BoundsTracker = new BoundsTracker();
             WastedAnim = new WastedAnim(ExecutePlugins);
 
-            Plugins.Xmas.XmasPlugin xmasPlugin = new Plugins.Xmas.XmasPlugin(TriggerEvent, TriggerServerEvent, EventHandlers, (ITickable tickable) => Tickables.Add(tickable), (ITickable tickable) => TickablesToRemove.Add(tickable), PlayerState, HuntUI);
+            PluginContext context = new PluginContext(TriggerEvent, TriggerServerEvent, EventHandlers, Tickables, TickablesToRemove);
+
+            Plugins.Xmas.XmasPlugin xmasPlugin = new Plugins.Xmas.XmasPlugin(context, PlayerState, HuntUI);
 
             Tickables = new List<ITickable>
             {
@@ -139,11 +143,24 @@ namespace SurviveTheHuntClient
             HuntUI.ExecutePlugins = ExecutePlugins;
         }
 
-        internal void ExecutePlugins(Action<IPlugin> pluginAction)
+        internal void SetMode(string mode)
+        {
+            Debug.WriteLine($"Setting mode to {(string.IsNullOrWhiteSpace(mode) ? "default" : mode)}");
+            GameState.Mode = mode;
+            ExecutePlugins(plugin =>
+            {
+                plugin.IsActive = plugin.Name == mode;
+            }, true);
+        }
+
+        internal void ExecutePlugins(Action<IPlugin> pluginAction, bool runAll = false)
         {
             foreach(IPlugin plugin in Plugins)
             {
-                pluginAction(plugin);
+                if (runAll || plugin.IsActive)
+                {
+                    pluginAction(plugin);
+                }
             }
         }
 
@@ -178,7 +195,7 @@ namespace SurviveTheHuntClient
                 GameState.Hunt.HuntedPlayerMugshot = null;
             }
 
-            ExecutePlugins(plugin => plugin.OnResourceStopping());
+            ExecutePlugins(plugin => plugin.OnResourceStopping(), true);
 
             TickablesToRemove.Clear();
         }
@@ -203,6 +220,16 @@ namespace SurviveTheHuntClient
             // #63: Previously this used to be controlled by vMenu, but now the gamemode is decoupled from that,
             // so we're just letting FiveM manage the weather. (In testing it seems to work reliably well)
             SetWeatherOwnedByNetwork(true);
+
+            string uiResourceState = GetResourceState(SharedConstants.UIResourceName);
+            if (uiResourceState == "started" || uiResourceState == "starting")
+            {
+                InitUI();
+            }
+            else
+            {
+                Debug.WriteLine($"{nameof(OnClientGameTypeStart)}: {SharedConstants.UIResourceName} state was {uiResourceState}, this may result in UI options being initialised late.");
+            }
         }
 
         private void OnClientResourceStart(string resource)
@@ -275,11 +302,44 @@ namespace SurviveTheHuntClient
                 RegisterCommand("coords", new Action(() =>
                 {
                     CfxVector3 pos = Player.Local.Character.Position;
-                    Debug.WriteLine($"X = {pos.X}, Y = {pos.Y}, Z = {pos.Z}");
+                    float heading = Player.Local.Character.Heading;
+                    Debug.WriteLine($"X = {pos.X}, Y = {pos.Y}, Z = {pos.Z}, W = {heading}");
                 }), false);
 
-                ExecutePlugins(plugin => plugin.OnResourceStarted());
+                ExecutePlugins(plugin => plugin.OnResourceStarted(), true);
             }
+
+            if(resource == SharedConstants.UIResourceName)
+            {
+                InitUI(true);
+            }
+        }
+
+        private bool _hasUIInitialised = false;
+        private void InitUI(bool force = false)
+        {
+            if(!force && _hasUIInitialised)
+            {
+                Debug.WriteLine($"Called {nameof(InitUI)} more than once");
+                //return;
+            }
+
+            _hasUIInitialised = true;
+
+            List<string> gameModeInfo = new List<string>();
+
+            ExecutePlugins(plugin =>
+            {
+                if (plugin.IsGameMode)
+                {
+                    PluginInfo info = new PluginInfo(plugin);
+                    gameModeInfo.Add(string.IsNullOrWhiteSpace(info.Description) ? info.Name : $"{info.Name}\n{info.Description}");
+                }
+            }, true);
+
+            TriggerEvent(Events.Client.UIRecvGameModes, gameModeInfo);
+
+            // TODO
         }
 
         /// <summary>
@@ -362,9 +422,9 @@ namespace SurviveTheHuntClient
 
             Debug.WriteLine($"{maxNewCarCount} new cars will be created");
 
-            List<VehicleHash> spawnableCars = Constants.Vehicles.ToList();
+            List<VehicleHash> spawnableCars = Constants.GetModeVehicles(GameState.Mode).ToList();
 
-            int availableCars = Constants.Vehicles.Length;
+            int availableCars = spawnableCars.Count;
 
             for (int i = 0; i < maxNewCarCount; i++)
             {
@@ -721,7 +781,7 @@ namespace SurviveTheHuntClient
 
             RunPedChangedChecks();
 
-            TickLbgCharNeoIntegration();
+            TickLbgCharNeoIntegration(deltaTime);
 
             UpdateRelationships();
 
@@ -961,6 +1021,17 @@ namespace SurviveTheHuntClient
                 {
                     Events.Client.NotifyHuntedPlayer.EventName(), new Action<dynamic>(data =>
                     {
+                        string mode = "";
+                        try
+                        {
+                            mode = data.Mode;
+                        }
+                        catch
+                        {
+                            mode = "";
+                        }
+
+                        SetMode(mode);
                         NotifyTeam(Teams.Team.Hunted, Game.Player);
                     })
                 },
@@ -969,11 +1040,23 @@ namespace SurviveTheHuntClient
                     {
                         int huntedPlayerServerId = data.HuntedPlayerServerId;
 
+                        string mode = "";
+                        try
+                        {
+                            mode = data.Mode;
+                        }
+                        catch
+                        {
+                            mode = "";
+                        }
+
                         // Since the event is sent out to everyone, make sure it is discarded by the hunted player.
                         if(huntedPlayerServerId == Game.Player.ServerId)
                         {
                             return;
                         }
+
+                        SetMode(mode);
 
                         NotifyTeam(Teams.Team.Hunters, new Player(GetPlayerFromServerId(huntedPlayerServerId)));
                     })
@@ -1071,7 +1154,7 @@ namespace SurviveTheHuntClient
             };
 
             // Event handler for gamemode config being sent by the server.
-            EventHandlers[Events.Client.ReceiveConfig] += new Action<byte[], byte[], string>((weaponsHunters, weaponsHunted, vehicleList) =>
+            EventHandlers[Events.Client.ReceiveConfig] += new Action<string, byte[], byte[], string>((pluginName, weaponsHunters, weaponsHunted, vehicleList) =>
             {
                 Debug.WriteLine("sth:receiveConfig received!");
 
@@ -1079,9 +1162,10 @@ namespace SurviveTheHuntClient
 
                 Debug.WriteLine("parsed config!");
 
-                Constants.WeaponLoadouts[Teams.Team.Hunters] = deserialized.HuntersWeapons;
-                Constants.WeaponLoadouts[Teams.Team.Hunted] = deserialized.HuntedWeapons;
-                Constants.Vehicles = deserialized.VehicleWhitelist.Vehicles.Select((vehicleName) => (VehicleHash)GetHashKey(vehicleName)).ToArray();
+                Constants.WeaponLoadouts[pluginName] = new Dictionary<Teams.Team, Weapons.WeaponAmmo[]>();
+                Constants.WeaponLoadouts[pluginName][Teams.Team.Hunters] = deserialized.HuntersWeapons;
+                Constants.WeaponLoadouts[pluginName][Teams.Team.Hunted] = deserialized.HuntedWeapons;
+                Constants.Vehicles[pluginName] = deserialized.VehicleWhitelist.Vehicles.Select((vehicleName) => (VehicleHash)GetHashKey(vehicleName)).ToArray();
             
                 // In the event the player was already given weapons, remove them so that the new loadout can be applied.
                 if(Player.Local?.Character != null && PlayerState?.WeaponsGiven == true)

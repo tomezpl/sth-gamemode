@@ -179,11 +179,23 @@ namespace SurviveTheHuntServer
                             return;
                         }
 
+                        string mode = "";
+
+                        // Set the mode
+                        try
+                        {
+                            mode = data.Mode as string;
+                        }
+                        catch
+                        {
+                            mode = "";
+                        }
+
                         // Check if a specific player was requested when the hunt was started.
                         int? requestedPlayer = null;
                         try
                         {
-                            requestedPlayer = data as int?;
+                            requestedPlayer = data.Player as int?;
                         }
                         catch
                         {
@@ -210,8 +222,8 @@ namespace SurviveTheHuntServer
 
                         GameState.Hunt.LastHuntedPlayer = randomPlayer;
 
-                        TriggerClientEvent(randomPlayer, Events.Client.NotifyHuntedPlayer);
-                        TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerServerId = int.Parse(randomPlayer.Handle) });
+                        TriggerClientEvent(randomPlayer, Events.Client.NotifyHuntedPlayer, new { Mode = mode });
+                        TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerServerId = int.Parse(randomPlayer.Handle), Mode = mode });
 
                         ulong prepPhaseSeconds = (ulong)GetConvarInt("sth_prepPhaseDuration", SharedConstants.DefaultPrepPhaseSeconds);
 

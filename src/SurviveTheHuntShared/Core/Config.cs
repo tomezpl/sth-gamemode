@@ -16,7 +16,7 @@ namespace SurviveTheHuntShared.Core
     {
         protected Config() { }
 
-        protected VehicleWhitelist _vehicleWhitelist = null;
+        protected VehicleWhitelistConfig _vehicleWhitelist = null;
 
         /// <summary>
         /// An allowlist of vehicles that can be spawned for the players.
@@ -41,6 +41,7 @@ namespace SurviveTheHuntShared.Core
             private readonly byte[] WeaponsHunted;
             private readonly byte[] WeaponsHunters;
             private readonly string Vehicles;
+            private readonly string PluginName;
 
             /// <summary>
             /// Creates a serialized representation of a weapons loadout config.
@@ -48,8 +49,9 @@ namespace SurviveTheHuntShared.Core
             /// <param name="huntersLoadout">Loadout for <see cref="Teams.Team.Hunters"/>.</param>
             /// <param name="huntedLoadout">Loadout for the <see cref="Teams.Team.Hunted"/>.</param>
             /// <param name="vehicleWhitelist">List of vehicle names that can be spawned for the hunt.</param>
-            public Serialized(ISurviveTheHuntConfigSerializable huntersLoadout, ISurviveTheHuntConfigSerializable huntedLoadout, VehicleWhitelist vehicleWhitelist)
+            public Serialized(string pluginName, ISurviveTheHuntConfigSerializable huntersLoadout, ISurviveTheHuntConfigSerializable huntedLoadout, VehicleWhitelist vehicleWhitelist)
             {
+                PluginName = pluginName;
                 WeaponsHunters = huntersLoadout.Serialize();
                 WeaponsHunted = huntedLoadout.Serialize();
                 Vehicles = vehicleWhitelist.Serialize();
@@ -58,7 +60,7 @@ namespace SurviveTheHuntShared.Core
             /// <summary>
             /// Serialized data to be passed as event parameters.
             /// </summary>
-            public object[] EventParams { get => new object[] { WeaponsHunters, WeaponsHunted, Vehicles }; }
+            public object[] EventParams { get => new object[] { PluginName, WeaponsHunters, WeaponsHunted, Vehicles }; }
             
             /// <summary>
             /// Helper method to deserialize a byte array of weapon&ammo data into WeaponAmmo objects.

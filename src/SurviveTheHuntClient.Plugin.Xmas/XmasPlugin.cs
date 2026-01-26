@@ -252,9 +252,6 @@ namespace SurviveTheHuntClient.Plugins.Xmas
             new LabelledItem("DELIVERED", $"{_deliveredCounter}/{_presentBlips.Length}")
         };
 
-        private List<DynamicTickable> _dynamicTickables = new List<DynamicTickable>();
-        private List<DynamicTickable> _tickablesToRemove = new List<DynamicTickable>();
-
         public override bool? IsVehicleWeaponAllowed(int vehicleHandle, uint weapon)
         {
             uint modelHash = (uint)GetEntityModel(vehicleHandle);
@@ -280,8 +277,11 @@ namespace SurviveTheHuntClient.Plugins.Xmas
             }
         }
 
-        public XmasPlugin(TriggerEventProxyDelegate triggerEventProxy, TriggerServerEventProxyDelegate triggerServerEventProxy, EventHandlerDictionary eventHandlers, AddTickableDelegate addTickable, RemoveTickableDelegate removeTickable, IPlayerState playerState, IHuntUI huntUi)
-            : base(triggerEventProxy, triggerServerEventProxy, eventHandlers, addTickable, removeTickable)
+        public override bool IsGameMode => true;
+        public override string GameModeDescription => "Spread some holiday cheer around Los Santos.\n\nOne player becomes Santa. They need to deliver 12 presents while elves try to hunt them down.";
+
+        public XmasPlugin(PluginContext context, IPlayerState playerState, IHuntUI huntUi)
+            : base("xmas", context)
         {
             PlayerState = playerState;
             HuntUI = huntUi;

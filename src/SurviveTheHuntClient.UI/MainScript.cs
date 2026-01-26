@@ -9,6 +9,7 @@ using SurviveTheHuntShared;
 using System.Collections.Generic;
 using LemonUI.Elements;
 using LemonUI.Tools;
+using SurviveTheHuntClient.Models;
 
 namespace SurviveTheHuntClient.UI
 {
@@ -24,6 +25,9 @@ namespace SurviveTheHuntClient.UI
         private NativeItem AboutButton;
 
         private NativeMenu StartHuntMenu;
+        private NativeListItem<string> SelectModeItem;
+        private Dictionary<string, string> ModeDescriptions = new Dictionary<string, string>();
+        private List<string> GameModeNames = new List<string> { "Default" };
         private NativeListItem<string> SelectPlayerItem;
         private NativeItem StartHuntButton;
 
@@ -154,6 +158,11 @@ namespace SurviveTheHuntClient.UI
             }
         }
 
+        private NativeListItem<string> CreateSelectModeItem()
+        {
+            return new NativeListItem<string>("Game mode", GameModeNames.ToArray());
+        }
+
         private void InitUI()
         {
             PrepareTextures();
@@ -172,6 +181,8 @@ namespace SurviveTheHuntClient.UI
             // This creates SelectPlayerItem
             UpdateSelectablePlayers();
             StartHuntButton = new NativeItem("Start", "Start a new round of Survive the Hunt with the selected settings.");
+            SelectModeItem = CreateSelectModeItem();
+            StartHuntMenu.Add(SelectModeItem);
             StartHuntMenu.Add(SelectPlayerItem);
             StartHuntMenu.Add(StartHuntButton);
 
@@ -221,6 +232,7 @@ namespace SurviveTheHuntClient.UI
             MainMenu.Add(AboutButton);
 
             SelectPlayerItem.ItemChanged += SelectedPlayerChanged;
+            SelectModeItem.ItemChanged += SelectedModeChanged;
             StartHuntMenuItem.Activated += OpenedStartHuntMenu;
 
             VehicleEngineOffButton = new NativeItem("Turn engine off", "Turn the ignition off. It will automatically turn back on if you apply the accelerator.");
@@ -239,6 +251,19 @@ namespace SurviveTheHuntClient.UI
             HelpMenu.Closed += HelpMenu_Closed;
 
             MainMenu.SelectedIndexChanged += MainMenu_SelectedIndexChanged;
+        }
+
+        private void SelectedModeChanged(object sender, ItemChangedEventArgs<string> e)
+        {
+            string mode = e.Object;
+            if(ModeDescriptions.TryGetValue(mode, out string description))
+            {
+                StartHuntMenu.Description = description;
+            }
+            else
+            {
+                StartHuntMenu.Description = "";
+            }
         }
 
         private void TeleportToSpawnClicked(object sender, EventArgs e)
@@ -335,13 +360,15 @@ namespace SurviveTheHuntClient.UI
 
         private void StartHuntClicked(object sender, EventArgs e)
         {
+            string modeName = SelectModeItem.SelectedIndex == 0 ? "" : SelectModeItem.SelectedItem;
+
             if (SelectPlayerItem.SelectedIndex != 0)
             {
-                TriggerServerEvent(Events.Server.RequestStartHunt, GetPlayerServerId(SelectablePlayerHandles[SelectPlayerItem.SelectedIndex]));
+                TriggerServerEvent(Events.Server.RequestStartHunt, new { Player = GetPlayerServerId(SelectablePlayerHandles[SelectPlayerItem.SelectedIndex]), Mode = modeName });
             }
             else
             {
-                TriggerServerEvent(Events.Server.RequestStartHunt);
+                TriggerServerEvent(Events.Server.RequestStartHunt, new { Mode = modeName } );
             }
             MainMenu.Visible = false;
             StartHuntMenu.Visible = false;
@@ -365,7 +392,7 @@ namespace SurviveTheHuntClient.UI
         }
 
         [EventHandler("sth:client:ui:toggleMenu")]
-        private void ToggleUI()
+        public void ToggleUI()
         {
             Shown = !Shown;
 
@@ -385,10 +412,38 @@ namespace SurviveTheHuntClient.UI
         }
 
         [EventHandler("sth:client:ui:closeMenu")]
-        private void CloseMenu()
+        public void CloseMenu()
         {
             Shown = false;
             ObjectPool.HideAll();
+        }
+
+        [EventHandler(Events.Client.UIRecvGameModes)]
+        public void ReceiveExtraGameModes(List<object> info)
+        {
+            Debug.WriteLine($"{nameof(ReceiveExtraGameModes)}, {info.GetType()}");
+
+            // Remove all but the default mode
+            if(GameModeNames.Count > 1)
+            {
+                GameModeNames.RemoveRange(1, GameModeNames.Count - 1);
+            }
+
+            Debug.WriteLine($"info count: {info.Count}");
+            foreach (string gameModeSerialized in info)
+            {
+                int newlineIndex = gameModeSerialized.IndexOf('\n');
+                string gameModeName = newlineIndex == -1 ? gameModeSerialized : gameModeSerialized.Substring(0, newlineIndex);
+                string gameModeDescription = newlineIndex == -1 ? "" : gameModeSerialized.Substring(newlineIndex + 1);
+
+                GameModeNames.Add(gameModeName);
+                ModeDescriptions[gameModeName] = gameModeDescription;
+            }
+
+            if (SelectModeItem != null)
+            {
+                SelectModeItem.Items = GameModeNames;
+            }
         }
 
         private void DrawHelpImages()

@@ -12,6 +12,11 @@ namespace SurviveTheHuntShared
         public const string ResourceName = "sth-gamemode";
 
         /// <summary>
+        /// Expected resource name for the UI handler.
+        /// </summary>
+        public const string UIResourceName = "sth-ui";
+
+        /// <summary>
         /// Amount of time the hunt should last for.
         /// </summary>
         /// <remarks>TODO: this needs a convar</remarks>

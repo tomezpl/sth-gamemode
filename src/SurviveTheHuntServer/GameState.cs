@@ -8,6 +8,8 @@ namespace SurviveTheHuntServer
 {
     public class GameState
     {
+        public string ActiveMode { get; set; } = "";
+
         /// <summary>
         /// Details about a hunt session.
         /// </summary>

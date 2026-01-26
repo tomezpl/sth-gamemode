@@ -81,6 +81,8 @@ namespace SurviveTheHuntShared
             public const string XmasReceiveHuntedCaptured = "sth:xmas:recvHuntedCaptured";
             public const string XmasReceiveSleighSpawn = "sth:xmas:recvSleighSpawn";
             public const string XmasReceiveSantaSpawn = "sth:xmas:recvSantaSpawn";
+
+            public const string UIRecvGameModes = "sth:ui:recvGameModes";
         }
 
         /// <summary>
