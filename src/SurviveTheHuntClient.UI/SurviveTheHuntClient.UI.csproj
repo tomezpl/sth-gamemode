@@ -59,6 +59,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\SurviveTheHuntClient.Models\SurviveTheHuntClient.Models.csproj">
+      <Project>{bf89c873-8c48-435d-a422-9104710e296e}</Project>
+      <Name>SurviveTheHuntClient.Models</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SurviveTheHuntShared\SurviveTheHuntShared.csproj">
       <Project>{A49F7AC5-2652-4C94-930C-950F8C80283A}</Project>
       <Name>SurviveTheHuntShared</Name>

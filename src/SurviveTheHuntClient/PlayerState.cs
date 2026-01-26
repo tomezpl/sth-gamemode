@@ -54,6 +54,8 @@ namespace SurviveTheHuntClient
 
         public bool IsInSafeZone { get; set; } = false;
 
+        public GameState GameState { get; set; }
+
         /// <summary>
         /// Manages the state of the bigmap widget on the HUD.
         /// </summary>
@@ -120,7 +122,7 @@ namespace SurviveTheHuntClient
             // First remove the existing weapons.
             RemoveAllPedWeapons(playerPed.Handle, false);
 
-            foreach(Weapons.WeaponAmmo weapon in Constants.WeaponLoadouts[Team])
+            foreach(Weapons.WeaponAmmo weapon in Constants.GetModeWeaponLoadouts(GameState.Mode)[Team])
             {
                 bool equip = weapon.Hash == LastWeaponEquipped;
                 NativeHelpers.GivePedWeapon(playerPed.Handle, weapon, equip);

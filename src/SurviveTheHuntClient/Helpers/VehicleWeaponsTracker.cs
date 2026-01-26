@@ -11,7 +11,7 @@ namespace SurviveTheHuntClient.Helpers
     /// </summary>
     internal class VehicleWeaponsTracker : ITickable
     {
-        internal delegate void ExecutePluginsDelegate(Action<IPlugin> pluginFunc);
+        internal delegate void ExecutePluginsDelegate(Action<IPlugin> pluginFunc, bool runAll = false);
         private ExecutePluginsDelegate ExecutePlugins;
 
         internal VehicleWeaponsTracker(ExecutePluginsDelegate executePlugins)

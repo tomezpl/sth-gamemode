@@ -5,6 +5,7 @@ using SurviveTheHuntClient.Models.UI;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace SurviveTheHuntClient.Attributes
 {
@@ -37,6 +38,54 @@ namespace SurviveTheHuntClient.Models
         }
     }
 
+
+    public delegate void TriggerServerEventProxyDelegate(string eventName, params object[] payload);
+    public delegate void TriggerEventProxyDelegate(string eventName, params object[] payload);
+    public delegate void AddTickableDelegate(ITickable tickable);
+    public delegate void RemoveTickableDelegate(ITickable tickable);
+
+    public struct PluginContext
+    {
+        public readonly TriggerServerEventProxyDelegate TriggerServerEventProxy;
+        public readonly TriggerEventProxyDelegate TriggerEventProxy;
+        public readonly AddTickableDelegate AddTickable;
+        public readonly RemoveTickableDelegate RemoveTickable;
+        public readonly EventHandlerDictionary EventHandlers;
+
+        public PluginContext(TriggerEventProxyDelegate triggerEvent, TriggerServerEventProxyDelegate triggerServerEvent, EventHandlerDictionary eventHandlers, List<ITickable> tickables, List<ITickable> tickablesToRemove)
+            : this(triggerEvent, triggerServerEvent, eventHandlers, (ITickable tickable) => tickables.Add(tickable), (ITickable tickable) => tickablesToRemove.Add(tickable))
+        {
+        }
+
+        public PluginContext(TriggerEventProxyDelegate triggerEvent, TriggerServerEventProxyDelegate triggerServerEvent, EventHandlerDictionary eventHandlers, AddTickableDelegate addTickable, RemoveTickableDelegate removeTickable)
+        {
+            TriggerEventProxy = triggerEvent;
+            TriggerServerEventProxy = triggerServerEvent;
+            AddTickable = addTickable;
+            RemoveTickable = removeTickable;
+            EventHandlers = eventHandlers;
+        }
+    }
+
+    public class PluginInfo
+    {
+        private string _name;
+        private string _description;
+
+        public string Name { get => _name; }
+        public string Description { get => _description; }
+
+        public PluginInfo(string name, string description)
+        {
+            _name = name;
+            _description = description ?? "";
+        }
+
+        public PluginInfo(IPlugin plugin) : this(plugin.Name, plugin.GameModeDescription)
+        {
+        }
+    }
+
     abstract public class Plugin<EventHandlers> : IPlugin where EventHandlers : PluginEvents, new()
     {
         protected readonly TriggerServerEventProxyDelegate TriggerServerEventProxy;
@@ -50,20 +99,26 @@ namespace SurviveTheHuntClient.Models
 
         private readonly EventHandlers _events;
 
-        public Plugin(TriggerEventProxyDelegate triggerEventProxy, TriggerServerEventProxyDelegate triggerServerEventProxy, EventHandlerDictionary eventHandlers, AddTickableDelegate addTickable, RemoveTickableDelegate removeTickable)
-        {
-            TriggerEventProxy = triggerEventProxy;
-            TriggerServerEventProxy = triggerServerEventProxy;
-            _eventHandlers = eventHandlers;
-            _events = (EventHandlers)new EventHandlers().UsePlugin(this);
-            AddTickable = addTickable;
-            RemoveTickable = removeTickable;
-        }
+        private readonly string _name;
+        public string Name { get => _name; }
 
-        public delegate void TriggerServerEventProxyDelegate(string eventName, params object[] payload);
-        public delegate void TriggerEventProxyDelegate(string eventName, params object[] payload);
-        public delegate void AddTickableDelegate(ITickable tickable);
-        public delegate void RemoveTickableDelegate(ITickable tickable);
+        public bool IsActive { get; set; } = false;
+
+        public virtual bool IsGameMode { get => false; }
+
+        public virtual string GameModeDescription { get => null; } 
+
+        public Plugin(string name, PluginContext context)
+        {
+            TriggerEventProxy = context.TriggerEventProxy;
+            TriggerServerEventProxy = context.TriggerServerEventProxy;
+            _eventHandlers = context.EventHandlers;
+            _events = (EventHandlers)new EventHandlers().UsePlugin(this);
+            AddTickable = context.AddTickable;
+            RemoveTickable = context.RemoveTickable;
+            
+            _name = name;
+        }
 
         /*{
             _triggerServerEventProxy(eventName, payload);

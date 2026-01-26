@@ -5,14 +5,22 @@ using SurviveTheHuntShared.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.Serialization;
 using System.Text;
 using SharedConstants = SurviveTheHuntShared.Constants;
 
 namespace SurviveTheHuntServer.Helpers
 {
     /// <summary>
-    /// JSON binding for the weapon loadouts config.
+    /// JSON binding for the weapon loadouts config file. This is a JSON file that contains the base config and any per-plugin configs.
+    /// </summary>
+    public class TeamWeaponLoadoutsConfig : TeamWeaponLoadouts
+    {
+        [JsonProperty("plugins")]
+        public Dictionary<string, TeamWeaponLoadouts> Plugins = new Dictionary<string, TeamWeaponLoadouts>();
+    }
+
+    /// <summary>
+    /// JSON binding for the weapon loadouts config. This can be the "base" config or a per-plugin config.
     /// </summary>
     public class TeamWeaponLoadouts
     {

@@ -12,7 +12,7 @@ namespace SurviveTheHuntClient
 {
     public class HuntUI : Interfaces.IHuntUI
     {
-        internal delegate void ExecutePluginsDelegate(Action<IPlugin> plugin);
+        internal delegate void ExecutePluginsDelegate(Action<IPlugin> plugin, bool runAll = false);
         internal ExecutePluginsDelegate ExecutePlugins;
 
         /// <summary>

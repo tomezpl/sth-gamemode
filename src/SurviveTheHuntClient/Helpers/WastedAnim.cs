@@ -20,7 +20,7 @@ namespace SurviveTheHuntClient.Helpers
         private float SecondsPassedSinceDeath = 0f;
         private int? CurrentSoundId = null;
 
-        internal delegate void ExecutePluginsDelegate(Action<IPlugin> plugin);
+        internal delegate void ExecutePluginsDelegate(Action<IPlugin> plugin, bool runAll = false);
 
         private ExecutePluginsDelegate ExecutePlugins;
 

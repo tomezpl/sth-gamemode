@@ -1,8 +1,15 @@
 ﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 using System.Text;
 
 namespace SurviveTheHuntShared.Core
 {
+    public class VehicleWhitelistConfig : VehicleWhitelist
+    {
+        [JsonProperty("plugins")]
+        public Dictionary<string, VehicleWhitelist> Plugins = new Dictionary<string, VehicleWhitelist>();
+    }
+
     public class VehicleWhitelist
     {
         [JsonProperty("vehicles")]

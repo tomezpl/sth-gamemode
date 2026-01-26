@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using SurviveTheHuntServer.Helpers;
 using SurviveTheHuntShared;
 using SurviveTheHuntShared.Core;
+using System.Collections.Generic;
 
 namespace SurviveTheHuntServer {
     public class ServerConfig : Config
@@ -35,28 +36,85 @@ namespace SurviveTheHuntServer {
         public static ServerConfig FromJson(string weaponsJson, string vehicleJson)
         {
             ServerConfig config = new ServerConfig();
-            config._weaponLoadouts = JsonConvert.DeserializeObject<TeamWeaponLoadouts>(weaponsJson);
-            config._vehicleWhitelist = JsonConvert.DeserializeObject<VehicleWhitelist>(vehicleJson);
+            config._weaponLoadouts = JsonConvert.DeserializeObject<TeamWeaponLoadoutsConfig>(weaponsJson);
+            config._vehicleWhitelist = JsonConvert.DeserializeObject<VehicleWhitelistConfig>(vehicleJson);
 
             return config;
         }
 
-        protected TeamWeaponLoadouts _weaponLoadouts = null;
+        protected TeamWeaponLoadoutsConfig _weaponLoadouts = null;
 
         /// <summary>
         /// Weapon loadouts for each team loaded from the JSON file.
         /// </summary>
-        public TeamWeaponLoadouts WeaponLoadouts { get => _weaponLoadouts; }
+        public TeamWeaponLoadoutsConfig WeaponLoadouts { get => _weaponLoadouts; }
+
+        /// <summary>
+        /// Get names of all plugins that have configs.
+        /// </summary>
+        /// <returns></returns>
+        public string[] GetAllPluginNames()
+        {
+            List<string> names = new List<string>();
+
+            IEnumerable<string>[] allNames =
+            {
+                _weaponLoadouts.Plugins?.Keys ?? (IEnumerable<string>)(new string[0]),
+                _vehicleWhitelist.Plugins?.Keys ?? (IEnumerable<string>)(new string[0]),
+            };
+
+            foreach (IEnumerable<string> pluginNames in allNames)
+            {
+                foreach(string name in pluginNames)
+                {
+                    if(!names.Contains(name))
+                    {
+                        names.Add(name);
+                    }
+                }
+            }
+
+            return names.ToArray();
+        }
 
 
         /// <summary>
         /// Converts the <see cref="Config"/> into serialized Cfx event parameters.
         /// </summary>
         /// <returns>A serialized representation of the <see cref="Config"/>.</returns>
-        public Serialized Serialize()
+        public Serialized Serialize(string activePlugin = null)
         {
+            TeamWeaponLoadouts activeLoadouts = null;
+            VehicleWhitelist activeVehicles = null;
+            if(!string.IsNullOrWhiteSpace(activePlugin))
+            {
+                if(!WeaponLoadouts.Plugins.TryGetValue(activePlugin, out activeLoadouts))
+                {
+                    activeLoadouts = null;
+                }
+
+                if(!_vehicleWhitelist.Plugins.TryGetValue(activePlugin, out activeVehicles))
+                {
+                    activeVehicles = null;
+                }
+            }
+            else
+            {
+                activePlugin = "";
+            }
+
+            if (activeLoadouts == null)
+            {
+                activeLoadouts = WeaponLoadouts;
+            }
+
+            if(activeVehicles == null)
+            {
+                activeVehicles = VehicleWhitelist;
+            }
+
             // TODO: for now this will just choose the first loadout for each team
-            return new Serialized(WeaponLoadouts.Hunters[0], WeaponLoadouts.Hunted[0], VehicleWhitelist);
+            return new Serialized(activePlugin ?? "", activeLoadouts.Hunters[0], activeLoadouts.Hunted[0], activeVehicles);
         }
     }
 
@@ -71,6 +129,12 @@ namespace SurviveTheHuntServer {
         {
             Debug.WriteLine("Sending serialized config to players");
             TriggerLatentClientEvent(Events.Client.ReceiveConfig, ServerConfig.ConfigBroadcastBytesPerSec, config.Serialize().EventParams);
+
+            string[] pluginNames = config.GetAllPluginNames();
+            foreach(string pluginName in pluginNames)
+            {
+                TriggerLatentClientEvent(Events.Client.ReceiveConfig, ServerConfig.ConfigBroadcastBytesPerSec, config.Serialize(pluginName).EventParams);
+            }
         }
 
         /// <summary>
@@ -82,6 +146,12 @@ namespace SurviveTheHuntServer {
         {
             Debug.WriteLine($"Sending serialized config to player {player.Name}");
             TriggerLatentClientEvent(player, Events.Client.ReceiveConfig, ServerConfig.ConfigBroadcastBytesPerSec, config.Serialize().EventParams);
+
+            string[] pluginNames = config.GetAllPluginNames();
+            foreach (string pluginName in pluginNames)
+            {
+                TriggerLatentClientEvent(player, Events.Client.ReceiveConfig, ServerConfig.ConfigBroadcastBytesPerSec, config.Serialize(pluginName).EventParams);
+            }
         }
     }
 }

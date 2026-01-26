@@ -31,74 +31,100 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Weapon loadouts for each team.
         /// </summary>
-        public static Dictionary<Teams.Team, Weapons.WeaponAmmo[]> WeaponLoadouts = new Dictionary<Teams.Team, Weapons.WeaponAmmo[]>
+        public static Dictionary<string, Dictionary<Teams.Team, Weapons.WeaponAmmo[]>> WeaponLoadouts = new Dictionary<string, Dictionary<Teams.Team, Weapons.WeaponAmmo[]>>
         {
             {
-                Teams.Team.Hunters, new Weapons.WeaponAmmo[0]
-            },
-            {
-                Teams.Team.Hunted, new Weapons.WeaponAmmo[0]
+                "", new Dictionary<Teams.Team, Weapons.WeaponAmmo[]>
+                {
+                    {Teams.Team.Hunters, new Weapons.WeaponAmmo[0]},
+                    {Teams.Team.Hunted, new Weapons.WeaponAmmo[0]}
+                }
             }
         };
 
-        /// <summary>
-        /// Vehicles that can be spawned.
-        /// </summary>
-        public static VehicleHash[] Vehicles = new VehicleHash[]
+        public static Dictionary<Teams.Team, Weapons.WeaponAmmo[]> GetModeWeaponLoadouts(string mode)
         {
-            VehicleHash.Adder,
-            VehicleHash.Banshee2,
-            VehicleHash.Bati,
-            VehicleHash.BestiaGTS,
-            VehicleHash.BfInjection,
-            VehicleHash.Bifta,
-            VehicleHash.Blista,
-            VehicleHash.Bmx,
-            VehicleHash.Brawler,
-            VehicleHash.Buffalo2,
-            VehicleHash.Bullet,
-            VehicleHash.Carbonizzare,
-            VehicleHash.Casco,
-            VehicleHash.Cheetah2,
-            VehicleHash.Comet3,
-            VehicleHash.Comet2,
-            VehicleHash.Coquette3,
-            VehicleHash.Dilettante,
-            VehicleHash.Dubsta3,
-            VehicleHash.Dukes2,
-            VehicleHash.Elegy2,
-            VehicleHash.Exemplar,
-            VehicleHash.EntityXF,
-            VehicleHash.Fugitive,
-            VehicleHash.Furoregt,
-            VehicleHash.Fusilade,
-            VehicleHash.Gauntlet,
-            VehicleHash.Hotknife,
-            VehicleHash.Insurgent,
-            VehicleHash.Khamelion,
-            VehicleHash.Kuruma,
-            VehicleHash.Massacro,
-            VehicleHash.Mesa3,
-            VehicleHash.Nightshade,
-            VehicleHash.Ninef,
-            VehicleHash.Panto,
-            VehicleHash.Police,
-            VehicleHash.Police2,
-            VehicleHash.RapidGT,
-            VehicleHash.Riot,
-            VehicleHash.Rocoto,
-            VehicleHash.SabreGT2,
-            VehicleHash.Seven70,
-            VehicleHash.Sentinel2,
-            VehicleHash.Shotaro,
-            VehicleHash.Specter2,
-            VehicleHash.StingerGT,
-            VehicleHash.SultanRS,
-            VehicleHash.T20,
-            VehicleHash.Voltic2,
-            VehicleHash.Zentorno,
-            VehicleHash.ZType
+            if(WeaponLoadouts.TryGetValue(mode, out Dictionary<Teams.Team, Weapons.WeaponAmmo[]> loadouts))
+            {
+                return loadouts;
+            }
+
+            return WeaponLoadouts[""];
+        }
+
+        /// <summary>
+        /// Vehicles that can be spawned (per plugin - empty string for default).
+        /// </summary>
+        public static Dictionary<string, VehicleHash[]> Vehicles = new Dictionary<string, VehicleHash[]>
+        {
+            {
+                "", new VehicleHash[]
+                {
+                    VehicleHash.Adder,
+                    VehicleHash.Banshee2,
+                    VehicleHash.Bati,
+                    VehicleHash.BestiaGTS,
+                    VehicleHash.BfInjection,
+                    VehicleHash.Bifta,
+                    VehicleHash.Blista,
+                    VehicleHash.Bmx,
+                    VehicleHash.Brawler,
+                    VehicleHash.Buffalo2,
+                    VehicleHash.Bullet,
+                    VehicleHash.Carbonizzare,
+                    VehicleHash.Casco,
+                    VehicleHash.Cheetah2,
+                    VehicleHash.Comet3,
+                    VehicleHash.Comet2,
+                    VehicleHash.Coquette3,
+                    VehicleHash.Dilettante,
+                    VehicleHash.Dubsta3,
+                    VehicleHash.Dukes2,
+                    VehicleHash.Elegy2,
+                    VehicleHash.Exemplar,
+                    VehicleHash.EntityXF,
+                    VehicleHash.Fugitive,
+                    VehicleHash.Furoregt,
+                    VehicleHash.Fusilade,
+                    VehicleHash.Gauntlet,
+                    VehicleHash.Hotknife,
+                    VehicleHash.Insurgent,
+                    VehicleHash.Khamelion,
+                    VehicleHash.Kuruma,
+                    VehicleHash.Massacro,
+                    VehicleHash.Mesa3,
+                    VehicleHash.Nightshade,
+                    VehicleHash.Ninef,
+                    VehicleHash.Panto,
+                    VehicleHash.Police,
+                    VehicleHash.Police2,
+                    VehicleHash.RapidGT,
+                    VehicleHash.Riot,
+                    VehicleHash.Rocoto,
+                    VehicleHash.SabreGT2,
+                    VehicleHash.Seven70,
+                    VehicleHash.Sentinel2,
+                    VehicleHash.Shotaro,
+                    VehicleHash.Specter2,
+                    VehicleHash.StingerGT,
+                    VehicleHash.SultanRS,
+                    VehicleHash.T20,
+                    VehicleHash.Voltic2,
+                    VehicleHash.Zentorno,
+                    VehicleHash.ZType
+                }
+            }
         };
+
+        public static VehicleHash[] GetModeVehicles(string mode)
+        {
+            if (Vehicles.TryGetValue(mode, out VehicleHash[] vehicles))
+            {
+                return vehicles;
+            }
+
+            return Vehicles[""];
+        }
 
         public static class RelationshipGroups
         {
