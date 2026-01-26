@@ -73,7 +73,7 @@ jobs:
             copy uimanifest.lua artifacts/sth-ui/fxmanifest.lua
             copy build/${{env.STH_CLIENT_SCRIPT}} artifacts/sth-gamemode/${{env.STH_CLIENT_SCRIPT}}
             copy build/${{env.STH_CLIENT_MODELS_SCRIPT}} artifacts/sth-gamemode/${{env.STH_CLIENT_MODELS_SCRIPT}}
-            copy build/${{env.STH_CLIENT_PLUGIN_GLOB}} artifacts/sth-gamemode/${{env.STH_CLIENT_PLUGIN_GLOB}}
+            Get-Item build/${{env.STH_CLIENT_PLUGIN_GLOB}} | ForEach-Object { Copy-Item -Path ($_.FullName) -Destination ([System.String]::Concat("artifacts/sth-gamemode/", $_.Name)) }
             copy build/${{env.STH_SERVER_SCRIPT}} artifacts/sth-gamemode/${{env.STH_SERVER_SCRIPT}}
             copy build/${{env.STH_SHARED_LIB}} artifacts/sth-gamemode/${{env.STH_SHARED_LIB}}
             copy build/${{env.STH_SHARED_LIB}} artifacts/sth-ui/${{env.STH_SHARED_LIB}}
