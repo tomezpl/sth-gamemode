@@ -191,6 +191,12 @@ namespace SurviveTheHuntServer
                             mode = "";
                         }
 
+                        // Reset the hunted ping radius for the default mode.
+                        if(string.IsNullOrWhiteSpace(mode))
+                        {
+                            SetConvarReplicated("sth_huntedPingRadius", "200");
+                        }
+
                         // Check if a specific player was requested when the hunt was started.
                         int? requestedPlayer = null;
                         try
