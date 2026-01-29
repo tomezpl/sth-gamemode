@@ -1,22 +1,10 @@
 ﻿using CitizenFX.Core;
-using System.Collections.Generic;
+using SurviveTheHuntClient.Models;
 
 namespace SurviveTheHuntClient.Plugins.Xmas
 {
     internal static partial class Constants
     {
-        internal class PedVariation
-        {
-            internal int Drawable;
-            internal int Texture;
-        }
-
-        internal class PedOutfit
-        {
-            internal Dictionary<PedComponents, PedVariation> ComponentsToApply = new Dictionary<PedComponents, PedVariation>();
-            internal Dictionary<PedProps, PedVariation> PropsToApply = new Dictionary<PedProps, PedVariation>();
-        }
-
         internal static PedOutfit MPFemaleSantaOutfit = new PedOutfit
         {
             ComponentsToApply =

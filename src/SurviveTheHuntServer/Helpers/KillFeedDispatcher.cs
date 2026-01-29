@@ -1,4 +1,5 @@
-﻿using SurviveTheHuntShared;
+﻿using CitizenFX.Core;
+using SurviveTheHuntShared;
 using System;
 using SharedConstants = SurviveTheHuntShared.Constants;
 
@@ -17,7 +18,17 @@ namespace SurviveTheHuntServer.Helpers
 
             if(killInfo.AttackerServerId != null)
             {
-                if (killInfo.VictimServerId == gameState.Hunt?.HuntedPlayer?.Handle)
+                bool victimIsHunted = false;
+                foreach(Player huntedPlayer in gameState.Hunt?.HuntedPlayers ?? new Player[0])
+                {
+                    if(killInfo.VictimServerId == huntedPlayer.Handle)
+                    {
+                        victimIsHunted = true;
+                        break;
+                    }
+                }
+
+                if (victimIsHunted)
                 {
                     payload.Label = SharedConstants.KillFeedMessages.HuntedKillLabel;
                 }

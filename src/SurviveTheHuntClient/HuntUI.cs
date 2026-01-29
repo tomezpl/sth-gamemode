@@ -126,7 +126,9 @@ namespace SurviveTheHuntClient
                     {
                         // Make the next text component colour yellow, as it'll contain the hunted player's name.
                         SetColourOfNextTextComponent(12);
-                        AddTextComponentString(gameState.Hunt.HuntedPlayer.Name);
+
+                        // By default we're using the first hunted player's name - plugins can override the objective
+                        AddTextComponentString(GetPlayerName(gameState.Hunt.HuntedPlayers[0].PlayerHandle));
                     }
                 }
 
@@ -406,14 +408,19 @@ namespace SurviveTheHuntClient
                     playerName = player.Name;
                 }
 
+                if(!gameState.Hunt.IsHunted(player.Handle, out Models.HuntPlayer? huntedPlayerInfo))
+                {
+                    Debug.WriteLine($"{nameof(HuntUI)}.{nameof(NotifyAboutHuntedZone)}: called for player {player.Name} (id: {player.Handle}, server: {player.ServerId}) but {nameof(GameState)} says they are not hunted. This could be a bug.");
+                }
+
                 string zoneName = GetLabelText(GetNameOfZone(position.X, position.Y, position.Z));
                 string message = $"{playerName} is somewhere in {zoneName} right now.";
                 BeginTextCommandThefeedPost("STRING");
-                if (gameState?.Hunt?.HuntedPlayerMugshot?.IsValid == true)
+                if (huntedPlayerInfo?.Mugshot?.IsValid == true)
                 {
                     // Attach the hunted player's mugshot texture if it is ready.
                     AddTextComponentSubstringPlayerName(message);
-                    string txd = gameState.Hunt.HuntedPlayerMugshot.Name;
+                    string txd = huntedPlayerInfo.Value.Mugshot.Name;
                     EndTextCommandThefeedPostMessagetextTu(txd, txd, true, 0, playerName, "Hunted Suspect", (Constants.HuntedBlipLifespan + Constants.HuntedBlipFadeoutTime) / Constants.FeedPostMessageDuration);
                 }
                 else
@@ -437,49 +444,53 @@ namespace SurviveTheHuntClient
 
             foreach (Player player in players)
             {
+                int playerId = player.Handle;
+                int pedId = GetPlayerPed(playerId);
+
                 // Set the player's blip colour based on their ID so that it is unique & replicated across all clients.
                 if(player == Game.Player)
                 {
-                    SetBlipColour(GetMainPlayerBlipId(), player.Handle + 10);
+                    SetBlipColour(GetMainPlayerBlipId(), playerId + 10);
                 }
 
                 // Creates overhead player name labels if need be.
-                if (!IsMpGamerTagActive(player.Handle))
+                if (!IsMpGamerTagActive(playerId))
                 {
                     //Debug.WriteLine($"Creating GamerTag for {player.Name}");
-                    CreateMpGamerTagWithCrewColor(player.Handle, player.Name, false, false, "", 0, 0, 0, 0);
+                    CreateMpGamerTagWithCrewColor(playerId, player.Name, false, false, "", 0, 0, 0, 0);
                 }
 
                 if(player == Game.Player)
                 {
-                    SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(GetMainPlayerBlipId()));
+                    SetMpGamerTagColour(playerId, 0, GetBlipHudColour(GetMainPlayerBlipId()));
                     continue;
                 }
 
-                if (!PlayerBlips.ContainsKey(player.Character.Handle))
+                if (!PlayerBlips.ContainsKey(pedId))
                 {
                     // If the player hasn't got a blip yet, create one.
-                    Blip blip = new Blip(AddBlipForEntity(player.Character.Handle));
+                    Blip blip = new Blip(AddBlipForEntity(pedId));
                     blip.Name = player.Name;
-                    SetBlipColour(blip.Handle, player.Handle + 10);
-                    SetBlipDisplay(blip.Handle, 6);
-                    ShowHeadingIndicatorOnBlip(blip.Handle, true);
-                    SetBlipCategory(blip.Handle, 7);
-                    SetBlipShrink(blip.Handle, GetConvar("sth_shrinkPlayerBlips", "false") != "false");
-                    SetBlipScale(blip.Handle, 0.9f);
-                    PlayerBlips.Add(player.Character.Handle, new { blip, id = player.Handle });
+                    int blipId = blip.Handle;
+                    SetBlipColour(blipId, playerId + 10);
+                    SetBlipDisplay(blipId, 6);
+                    ShowHeadingIndicatorOnBlip(blipId, true);
+                    SetBlipCategory(blipId, 7);
+                    SetBlipShrink(blipId, GetConvar("sth_shrinkPlayerBlips", "false") != "false");
+                    SetBlipScale(blipId, 0.9f);
+                    PlayerBlips.Add(pedId, new { blip, id = playerId });
                 }
                 else
                 {
                     // If the player has a blip, sync their overhead player name label colour with it.
-                    Blip blip = PlayerBlips[player.Character.Handle].blip;
-                    SetMpGamerTagColour(player.Handle, 0, GetBlipHudColour(blip.Handle));
+                    Blip blip = PlayerBlips[pedId].blip;
+                    SetMpGamerTagColour(playerId, 0, GetBlipHudColour(blip.Handle));
                 }
 
                 // Mark the player as an active ped to know that its blips & gamertag shouldn't be deleted.
-                if (player.Character.Exists() && player.Character.IsAlive && !ActivePeds.Contains(player.Character.Handle))
+                if (DoesEntityExist(pedId) && !IsPedDeadOrDying(pedId, false) && !ActivePeds.Contains(pedId))
                 {
-                    ActivePeds.Add(player.Character.Handle);
+                    ActivePeds.Add(pedId);
                 }
             }
 
@@ -500,7 +511,14 @@ namespace SurviveTheHuntClient
                     continue;
                 }
 
-                if(gameState.Hunt.IsStarted && (playerState.Team == Team.Hunted || ped == gameState.Hunt.HuntedPlayer.Character.Handle) && !GameState.IsPedTooFar(new Ped(ped)))
+                int playerId = NetworkGetPlayerIndexFromPed(ped);
+                bool isHunted = false;
+                for(int i = 0; !isHunted && i < gameState.Hunt.HuntedPlayers.Length; i++)
+                {
+                    isHunted = playerId == gameState.Hunt.HuntedPlayers[i].PlayerHandle;
+                }
+
+                if(gameState.Hunt.IsStarted && ((!isHunted && playerState.Team == Team.Hunted) || isHunted) && !GameState.IsPedTooFar(new Ped(ped)))
                 {
                     // Hide the blip if it's within the play area bounds and the player is on the opposite team.
                     Blip blip = PlayerBlips[ped].blip;

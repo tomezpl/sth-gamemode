@@ -139,6 +139,7 @@ namespace SurviveTheHuntClient
             PluginContext context = new PluginContext(TriggerEvent, TriggerServerEvent, EventHandlers, Tickables, TickablesToRemove);
 
             Plugins.Xmas.XmasPlugin xmasPlugin = new Plugins.Xmas.XmasPlugin(context, PlayerState, HuntUI);
+            Plugins.Cupid.CupidPlugin cupidPlugin = new Plugins.Cupid.CupidPlugin(context);
 
             Tickables = new List<ITickable>
             {
@@ -146,12 +147,14 @@ namespace SurviveTheHuntClient
                 BoundsTracker,
                 WastedAnim,
                 new VehicleWeaponsTracker(ExecutePlugins),
-                xmasPlugin
+                xmasPlugin,
+                cupidPlugin
             };
 
             Plugins = new IPlugin[]
             {
-                xmasPlugin
+                xmasPlugin,
+                cupidPlugin
             };
 
             HuntUI.ExecutePlugins = ExecutePlugins;
@@ -206,12 +209,16 @@ namespace SurviveTheHuntClient
             }
             SpawnedVehicles.Clear();
 
-            Debug.WriteLine("Checking hunted player mugshot...");
-            if(GameState.Hunt.HuntedPlayerMugshot != null)
+            Debug.WriteLine("Checking hunted player mugshots...");
+            for (int i = 0; i < GameState.Hunt.HuntedPlayers.Length; i++)
             {
-                Debug.WriteLine("Hunted player mugshot not null, deleting.");
-                UnregisterPedheadshot(GameState.Hunt.HuntedPlayerMugshot.Id);
-                GameState.Hunt.HuntedPlayerMugshot = null;
+                ref HuntPlayer player = ref GameState.Hunt.HuntedPlayers[i];
+                if (player.Mugshot != null)
+                {
+                    Debug.WriteLine($"Hunted player {i+1} mugshot not null, deleting.");
+                    UnregisterPedheadshot(player.Mugshot.Id);
+                    player.Mugshot = null;
+                }
             }
 
             ExecutePlugins(plugin => plugin.OnResourceStopping(), true);
@@ -803,7 +810,7 @@ namespace SurviveTheHuntClient
 
             TickLbgCharNeoIntegration(deltaTime);
 
-            UpdateRelationships();
+            UpdateRelationships(deltaTime);
 
             foreach(ITickable tickable in Tickables)
             {
@@ -970,11 +977,19 @@ namespace SurviveTheHuntClient
             }
         }
 
-        private void NotifyTeam(Teams.Team playerTeam, Player huntedPlayer)
+        private void NotifyTeam(Teams.Team playerTeam, Player[] huntedPlayers)
         {
             Ped playerPed = Game.PlayerPed;
             GameState.Hunt.IsStarted = true;
-            GameState.Hunt.HuntedPlayer = huntedPlayer;
+            
+            HuntPlayer[] huntedPlayersInfo = new HuntPlayer[huntedPlayers.Length];
+            DateTime currentTime = Utility.CurrentTime;
+            for (int i = 0; i < huntedPlayers.Length; i++)
+            {
+                huntedPlayersInfo[i] = new HuntPlayer(huntedPlayers[i], currentTime);
+            }
+            
+            GameState.Hunt.HuntedPlayers = huntedPlayersInfo;
 
             switch (playerTeam)
             {
@@ -1002,7 +1017,7 @@ namespace SurviveTheHuntClient
                 prepPhase = TimeSpan.Zero;
             }
 
-            GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(secondsTillPing);
+            GameState.ScheduleNextMugshotTime(Utility.CurrentTime + TimeSpan.FromSeconds(secondsTillPing));
             GameState.Hunt.InitialEndTime = endTime;
             GameState.Hunt.PrepPhaseEndTime = Utility.CurrentTime + prepPhase.Value;
             HuntUI.DisplayObjective(GameState, PlayerState);
@@ -1051,14 +1066,30 @@ namespace SurviveTheHuntClient
                             mode = "";
                         }
 
+                        List<object> huntedPlayerServerIds = new List<object> { };
+                        try
+                        {
+                            huntedPlayerServerIds = data.HuntedPlayerServerIds;
+                        }
+                        catch(Exception ex)
+                        {
+                            Debug.WriteLine($"{nameof(Events.Client.NotifyHuntedPlayer)}: Could not read hunted player server IDs: {ex}");
+                        }
+
+                        Player[] huntedPlayers = new Player[huntedPlayerServerIds.Count];
+                        for(int i = 0; i < huntedPlayers.Length; i++)
+                        {
+                            huntedPlayers[i] = new Player(GetPlayerFromServerId((int)huntedPlayerServerIds[i]));
+                        }
+
                         SetMode(mode);
-                        NotifyTeam(Teams.Team.Hunted, Game.Player);
+                        NotifyTeam(Teams.Team.Hunted, huntedPlayers);
                     })
                 },
                 {
                     Events.Client.NotifyHunters.EventName(), new Action<dynamic>(data =>
                     {
-                        int huntedPlayerServerId = data.HuntedPlayerServerId;
+                        int[] huntedPlayerServerIds = data.HuntedPlayerServerIds;
 
                         string mode = "";
                         try
@@ -1070,15 +1101,20 @@ namespace SurviveTheHuntClient
                             mode = "";
                         }
 
-                        // Since the event is sent out to everyone, make sure it is discarded by the hunted player.
-                        if(huntedPlayerServerId == Game.Player.ServerId)
+                        Player[] huntedPlayers = new Player[huntedPlayerServerIds.Length];
+                        for(int i = 0; i < huntedPlayers.Length; i++)
                         {
-                            return;
+                            // Since the event is sent out to everyone, make sure it is discarded by the hunted player.
+                            if(huntedPlayerServerIds[i] == Game.Player.ServerId)
+                            {
+                                return;
+                            }
+                            huntedPlayers[i] = new Player(GetPlayerFromServerId(huntedPlayerServerIds[i]));
                         }
 
                         SetMode(mode);
 
-                        NotifyTeam(Teams.Team.Hunters, new Player(GetPlayerFromServerId(huntedPlayerServerId)));
+                        NotifyTeam(Teams.Team.Hunters, huntedPlayers);
                     })
                 },
                 {
@@ -1138,14 +1174,23 @@ namespace SurviveTheHuntClient
                             }
                         });
 
-                        int playerServerId = int.Parse(data.PlayerServerId);
+                        List<object> playerServerIds = data.PlayerServerIds;
 
-                        if(shouldShowPing)
+                        bool isLocalPlayerPinged = false;
+                        foreach(object serverId in playerServerIds)
                         {
-                            HuntUI.CreateRadiusBlipForPlayer(new Player(GetPlayerFromServerId(playerServerId)), data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
+                            if(shouldShowPing)
+                            {
+                                HuntUI.CreateRadiusBlipForPlayer(new Player(GetPlayerFromServerId((int)serverId)), data.Radius, data.OffsetX, data.OffsetY, DateTime.ParseExact(data.CreationDate, "F", CultureInfo.InvariantCulture), ref PlayerState);
+                            }
+
+                            if((int)serverId == Game.Player.ServerId)
+                            {
+                                isLocalPlayerPinged = true;
+                            }
                         }
 
-                        if(playerServerId == Game.Player.ServerId)
+                        if(isLocalPlayerPinged)
                         {
                             CfxVector3 position = GetEntityCoords(PlayerPedId(), false);
                             TriggerServerEvent(Events.Server.BroadcastHuntedZone, new { Position = position });
@@ -1155,12 +1200,15 @@ namespace SurviveTheHuntClient
                 {
                     Events.Client.NotifyAboutHuntedZone.EventName(), new Action<dynamic>(data =>
                     {
-                        int playerServerId = int.Parse(data.PlayerServerId);
-                        Player player = new Player(GetPlayerFromServerId(playerServerId));
-                        string playerName = player.Name;
+                        List<object> playerServerIds = data.PlayerServerIds;
                         float nextNotificationTimeout = data.NextNotification;
-                        GameState.Hunt.NextMugshotTime = Utility.CurrentTime + TimeSpan.FromSeconds(nextNotificationTimeout);
-                        HuntUI.NotifyAboutHuntedZone(player, data.Position, ref GameState);
+                        foreach(object serverId in playerServerIds)
+                        {
+                            Player player = new Player(GetPlayerFromServerId((int)serverId));
+                            string playerName = player.Name;
+                            HuntUI.NotifyAboutHuntedZone(player, data.Position, ref GameState);
+                        }
+                        GameState.ScheduleNextMugshotTime(Utility.CurrentTime + TimeSpan.FromSeconds(nextNotificationTimeout));
                     })
                 },
                 {
@@ -1315,9 +1363,9 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Sets each player's ped's relationship group based on game state
         /// </summary>
-        public void UpdateRelationships()
+        public void UpdateRelationships(float deltaTime)
         {
-            TimeSinceLastRelationshipGroupUpdate += GetFrameTime();
+            TimeSinceLastRelationshipGroupUpdate += deltaTime;
             if(TimeSinceLastRelationshipGroupUpdate > 1.5f)
             {
                 TimeSinceLastRelationshipGroupUpdate = 0f;
@@ -1342,7 +1390,7 @@ namespace SurviveTheHuntClient
                     {
                         if (player.Character.Exists())
                         {
-                            SetPedRelationshipGroupHash(player.Character.Handle, GameState.Hunt.HuntedPlayer.Handle == player.Handle ? HuntedGroupHash.Value : HunterGroupHash.Value);
+                            SetPedRelationshipGroupHash(player.Character.Handle, GameState.Hunt.IsHunted(player.Handle, out HuntPlayer? _) ? HuntedGroupHash.Value : HunterGroupHash.Value);
                         }
                     }
                 }

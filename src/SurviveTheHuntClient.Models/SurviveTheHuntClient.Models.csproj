@@ -45,7 +45,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClothingInfo.cs" />
     <Compile Include="DynamicTickable.cs" />
+    <Compile Include="HuntPlayer.cs" />
     <Compile Include="Interfaces\IGameState.cs" />
     <Compile Include="Interfaces\IHuntDetails.cs" />
     <Compile Include="Interfaces\IHuntUI.cs" />

@@ -67,6 +67,18 @@ namespace SurviveTheHuntServer
             return randomPlayer;
         }
 
+        public static Player ChooseRandomPlayer(PlayerList players, Player[] playersToExclude, ref GameState gameState)
+        {
+            List<Player> playersProcessed = new List<Player>(players);
+            foreach (Player player in playersToExclude)
+            {
+                playersProcessed.Remove(player);
+            }
+
+            HuntedPlayerQueue.Init(playersProcessed);
+            return ChooseRandomPlayer(players, ref gameState);
+        }
+
         /// <summary>
         /// Checks if the <paramref name="player"/> who just died was a hunted player.
         /// </summary>
@@ -75,7 +87,19 @@ namespace SurviveTheHuntServer
         /// <returns>Returns true if the hunt should end due to hunted player's death, false if it's still in progress.</returns>
         public static bool CheckPlayerDeath(Player player, ref GameState gameState)
         {
-            if (gameState.Hunt.HuntedPlayer == player)
+            bool wasHuntedPlayer = false;
+            foreach(Player huntedPlayer in gameState.Hunt.HuntedPlayers)
+            {
+                if(huntedPlayer.Handle == player.Handle)
+                {
+                    wasHuntedPlayer = true;
+                    break;
+                }
+            }
+
+            // TODO: currently the match will end as soon as any hunted player dies, which doesn't really make sense,
+            // but in the default mode there's only ever one hunted anyway, so we'll leave it to plugins to account for this
+            if (wasHuntedPlayer)
             {
                 Console.WriteLine($"The hunted player ({player.Name}) died. Ending hunt.");
                 gameState.Hunt.End(Teams.Team.Hunters);

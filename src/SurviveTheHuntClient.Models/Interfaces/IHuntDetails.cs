@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Models;
 using System;
 
 namespace SurviveTheHuntClient.Interfaces
@@ -47,9 +48,17 @@ namespace SurviveTheHuntClient.Interfaces
         bool IsPrepPhase { get; }
 
         /// <summary>
-        /// Currently hunted player.
+        /// Currently hunted player(s).
         /// </summary>
-        Player HuntedPlayer { get; set; }
+        HuntPlayer[] HuntedPlayers { get; set; }
+
+        /// <summary>
+        /// Checks if the player is a hunted player.
+        /// </summary>
+        /// <param name="playerHandle">The local handle of the player to check.</param>
+        /// <param name="huntedPlayerInfo">Details about the player.</param>
+        /// <returns></returns>
+        bool IsHunted(int playerHandle, out HuntPlayer? huntedPlayerInfo);
 
         /// <summary>
         /// Was <see cref="IsStarted"/> true last frame?
@@ -58,23 +67,13 @@ namespace SurviveTheHuntClient.Interfaces
         bool WasHuntInProgressLastFrame { get; }
 
         /// <summary>
-        /// Regenerate the hunted player's mugshot texture.
+        /// Regenerate the hunted players' mugshot texture(s).
         /// </summary>
         void UpdateHuntedMugshot();
-
-        /// <summary>
-        /// Expected time for the next ping.
-        /// </summary>
-        DateTime NextMugshotTime { get; set; }
 
         /// <summary>
         /// Time when the prep phase is already over.
         /// </summary>
         DateTime PrepPhaseEndTime { get; set; }
-
-        /// <summary>
-        /// Mugshot texture of the currently hunted player.
-        /// </summary>
-        Models.Texture HuntedPlayerMugshot { get; set; }
     }
 }

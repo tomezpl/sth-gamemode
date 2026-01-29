@@ -678,7 +678,7 @@ namespace SurviveTheHuntClient.Plugins.Xmas
             SetRunSprintMultiplierForPlayer(PlayerId(), 1f);
 
             _hasStarted = true;
-            _huntedPlayerId = gameState.Hunt.HuntedPlayer.Handle;
+            _huntedPlayerId = gameState.Hunt.HuntedPlayers[0].PlayerHandle;
             IsHunted = _huntedPlayerId == PlayerId();
 
             // Pick a random spawn location for santa
@@ -766,14 +766,14 @@ namespace SurviveTheHuntClient.Plugins.Xmas
                     }
                 }
 
-                Constants.PedOutfit outfit = isSanta ? Constants.MPMaleSantaOutfit : Constants.MPMaleElfOutfit;
+                PedOutfit outfit = isSanta ? Constants.MPMaleSantaOutfit : Constants.MPMaleElfOutfit;
 
                 if (!IsPedMale(pedId) || (PedHash)GetEntityModel(pedId) == PedHash.FreemodeFemale01)
                 {
                     outfit = isSanta ? Constants.MPFemaleSantaOutfit : Constants.MPFemaleElfOutfit;
                 }
 
-                foreach (KeyValuePair<PedComponents, Constants.PedVariation> comp in outfit.ComponentsToApply)
+                foreach (KeyValuePair<PedComponents, PedVariation> comp in outfit.ComponentsToApply)
                 {
                     if (!ignoredComps.Contains((int)comp.Key))
                     {
@@ -781,7 +781,7 @@ namespace SurviveTheHuntClient.Plugins.Xmas
                     }
                 }
 
-                foreach (KeyValuePair<PedProps, Constants.PedVariation> comp in outfit.PropsToApply)
+                foreach (KeyValuePair<PedProps, PedVariation> comp in outfit.PropsToApply)
                 {
                     SetPedPropIndex(pedId, (int)comp.Key, comp.Value.Drawable, comp.Value.Texture, true);
                 }

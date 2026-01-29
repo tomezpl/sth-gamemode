@@ -74,7 +74,16 @@ namespace SurviveTheHuntServer
         {
             HuntedPlayerQueue.RemovePlayer(player);
 
-            if (GameState.Hunt.IsStarted && player != null && GameState.Hunt.HuntedPlayer?.Handle == player.Handle)
+            bool isHunted = false;
+            foreach (Player huntedPlayer in GameState.Hunt.HuntedPlayers)
+            {
+                if (huntedPlayer.Handle == player.Handle)
+                {
+                    isHunted = true;
+                }
+            }
+
+            if (GameState.Hunt.IsStarted && player != null && isHunted)
             {
                 Debug.WriteLine("Hunted player left, ending hunt.");
                 GameState.Hunt.End(Teams.Team.Hunters);
@@ -133,10 +142,16 @@ namespace SurviveTheHuntServer
                     float offsetX = (((float)RNG.NextDouble() * 2f) - 1f) * playerLocationRadius;
                     float offsetY = (((float)RNG.NextDouble() * 2f) - 1f) * playerLocationRadius;
 
+                    int[] serverIds = new int[GameState.Hunt.HuntedPlayers.Length];
+                    for (int i = 0; i < GameState.Hunt.HuntedPlayers.Length; i++)
+                    {
+                        serverIds[i] = int.Parse(GameState.Hunt.HuntedPlayers[i].Handle);
+                    }
+
                     TriggerClientEvent(Events.Client.ShowPingOnMap, new
                     {
                         CreationDate = GameState.Hunt.LastPingTime.ToString("F", CultureInfo.InvariantCulture),
-                        PlayerServerId = GameState.Hunt.HuntedPlayer.Handle,
+                        PlayerServerIds = serverIds,
                         Radius = radius,
                         OffsetX = offsetX,
                         OffsetY = offsetY
@@ -192,7 +207,7 @@ namespace SurviveTheHuntServer
                         }
 
                         // Reset the hunted ping radius for the default mode.
-                        if(string.IsNullOrWhiteSpace(mode))
+                        if(Utils.Mode.IsDefaultMode(mode))
                         {
                             SetConvarReplicated("sth_huntedPingRadius", "200");
                         }
@@ -208,34 +223,57 @@ namespace SurviveTheHuntServer
                             requestedPlayer = null;
                         }
 
-                        Player randomPlayer = null;
+                        Player[] randomPlayers = new Player[Utils.Mode.GetHuntedPlayerCount(mode, GetNumPlayerIndices())];
+                        
+                        // If a specific player was requested, include them as the first player.
+                        int counter = 0;
                         if(requestedPlayer != null)
                         {
                             foreach(Player player in Players)
                             {
                                 if(player.Handle == requestedPlayer.Value.ToString())
                                 {
-                                    randomPlayer = player;
+                                    randomPlayers[0] = player;
+                                    counter = 1;
                                     break;
                                 }
                             }
                         }
-                        
-                        if(randomPlayer == null)
+
+                        if(randomPlayers.Length != 1)
                         {
-                            randomPlayer = Hunt.ChooseRandomPlayer(Players, ref GameState);
+                            for(; counter < randomPlayers.Length; counter++)
+                            {
+                                randomPlayers[counter] = Hunt.ChooseRandomPlayer(Players, randomPlayers, ref GameState);
+                            }
+                        }
+                        else
+                        {
+                            if(randomPlayers[0] == null)
+                            {
+                                randomPlayers[0] = Hunt.ChooseRandomPlayer(Players, ref GameState);
+                            }
                         }
 
-                        GameState.Hunt.LastHuntedPlayer = randomPlayer;
+                        int[] serverIds = new int[randomPlayers.Length];
+                        for(int i = 0; i < randomPlayers.Length; i++)
+                        {
+                            serverIds[i] = int.Parse(randomPlayers[i].Handle);
+                        }
 
-                        TriggerClientEvent(randomPlayer, Events.Client.NotifyHuntedPlayer, new { Mode = mode });
-                        TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerServerId = int.Parse(randomPlayer.Handle), Mode = mode });
+                        GameState.Hunt.LastHuntedPlayers = randomPlayers;
+
+                        foreach(Player player in randomPlayers)
+                        {
+                            TriggerClientEvent(player, Events.Client.NotifyHuntedPlayer, new { Mode = mode, HuntedPlayerServerIds = serverIds });
+                        }
+                        TriggerClientEvent(Events.Client.NotifyHunters, new { HuntedPlayerServerIds = serverIds, Mode = mode });
 
                         ulong prepPhaseSeconds = (ulong)GetConvarInt("sth_prepPhaseDuration", SharedConstants.DefaultPrepPhaseSeconds);
 
                         SetConvarReplicated(SharedConstants.CharCreatorBlockCreatorConvar, "true");
 
-                        GameState.Hunt.Begin(randomPlayer, prepPhaseSeconds);
+                        GameState.Hunt.Begin(randomPlayers, prepPhaseSeconds);
 
                         TriggerClientEvent(Events.Client.HuntStartedByServer, new 
                         { 
@@ -246,7 +284,16 @@ namespace SurviveTheHuntServer
 
                         foreach(Player player in Players)
                         {
-                            JoinTeam(player, player.Handle == randomPlayer.Handle ? Teams.Team.Hunted : Teams.Team.Hunters);
+                            bool isHunted = false;
+                            foreach(Player huntedPlayer in randomPlayers)
+                            {
+                                if(huntedPlayer.Handle == player.Handle)
+                                {
+                                    isHunted = true;
+                                }
+                            }
+
+                            JoinTeam(player, isHunted ? Teams.Team.Hunted : Teams.Team.Hunters);
                         }
                     })
                 },
@@ -254,7 +301,14 @@ namespace SurviveTheHuntServer
                     Events.Server.BroadcastHuntedZone.EventName(), new Action<dynamic>(data =>
                     {
                         Vector3 pos = data.Position;
-                        TriggerClientEvent(Events.Client.NotifyAboutHuntedZone, new { PlayerServerId = GameState.Hunt.HuntedPlayer.Handle, Position = pos, NextNotification = (float)SharedConstants.HuntedPingInterval.TotalSeconds });
+
+                        int[] serverIds = new int[GameState.Hunt.HuntedPlayers.Length];
+                        for(int i = 0; i < GameState.Hunt.HuntedPlayers.Length; i++)
+                        {
+                            serverIds[i] = int.Parse(GameState.Hunt.HuntedPlayers[i].Handle);
+                        }
+
+                        TriggerClientEvent(Events.Client.NotifyAboutHuntedZone, new { PlayerServerIds = serverIds, Position = pos, NextNotification = (float)SharedConstants.HuntedPingInterval.TotalSeconds });
                     })
                 }
             };

@@ -74,6 +74,10 @@
       <Project>{3008355f-5f05-42b3-85f6-50df34081706}</Project>
       <Name>SurviveTheHuntClient.Plugins.Xmas</Name>
     </ProjectReference>
+    <ProjectReference Include="..\SurviveTheHuntClient.Plugins.Cupid\SurviveTheHuntClient.Plugins.Cupid.csproj">
+      <Project>{f925a0db-6e71-46b3-b96e-e5e08c74ef28}</Project>
+      <Name>SurviveTheHuntClient.Plugins.Cupid</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SurviveTheHuntShared\SurviveTheHuntShared.csproj">
       <Project>{a49f7ac5-2652-4c94-930c-950f8c80283a}</Project>
       <Name>SurviveTheHuntShared</Name>

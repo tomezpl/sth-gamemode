@@ -27,6 +27,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SurviveTheHuntClient.Plugin
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SurviveTheHuntClient.Models", "src\SurviveTheHuntClient.Models\SurviveTheHuntClient.Models.csproj", "{BF89C873-8C48-435D-A422-9104710E296E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SurviveTheHuntClient.Plugins.Cupid", "src\SurviveTheHuntClient.Plugins.Cupid\SurviveTheHuntClient.Plugins.Cupid.csproj", "{F925A0DB-6E71-46B3-B96E-E5E08C74EF28}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +59,10 @@ Global
 		{BF89C873-8C48-435D-A422-9104710E296E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BF89C873-8C48-435D-A422-9104710E296E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BF89C873-8C48-435D-A422-9104710E296E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F925A0DB-6E71-46B3-B96E-E5E08C74EF28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F925A0DB-6E71-46B3-B96E-E5E08C74EF28}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F925A0DB-6E71-46B3-B96E-E5E08C74EF28}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F925A0DB-6E71-46B3-B96E-E5E08C74EF28}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

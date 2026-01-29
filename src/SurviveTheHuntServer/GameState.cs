@@ -1,7 +1,6 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntShared.Core;
 using System;
-using static CitizenFX.Core.Native.API;
 using SharedConstants = SurviveTheHuntShared.Constants;
 
 namespace SurviveTheHuntServer
@@ -9,6 +8,8 @@ namespace SurviveTheHuntServer
     public class GameState
     {
         public string ActiveMode { get; set; } = "";
+
+        public bool IsDefaultMode { get => Utils.Mode.IsDefaultMode(ActiveMode); }
 
         /// <summary>
         /// Details about a hunt session.
@@ -26,14 +27,14 @@ namespace SurviveTheHuntServer
             public Teams.Team WinningTeam { get; set; } = Teams.Team.Hunted;
 
             /// <summary>
-            /// The currently hunted player.
+            /// The currently hunted players.
             /// </summary>
-            public Player HuntedPlayer { get; set; } = null;
+            public Player[] HuntedPlayers { get; set; } = new Player[0];
 
             /// <summary>
             /// The player hunted during the last session - this aims to prevent the same player being hunted twice consecutively.
             /// </summary>
-            public Player LastHuntedPlayer { get; set; } = null;
+            public Player[] LastHuntedPlayers { get; set; } = new Player[0];
 
             /// <summary>
             /// UTC time of starting the hunt session.
@@ -69,11 +70,11 @@ namespace SurviveTheHuntServer
             /// <summary>
             /// Starts the hunt for a given player.
             /// </summary>
-            /// <param name="huntedPlayer"></param>
-            public void Begin(Player huntedPlayer, ulong prepPhaseSeconds = 0)
+            /// <param name="huntedPlayers"></param>
+            public void Begin(Player[] huntedPlayers, ulong prepPhaseSeconds = 0)
             {
                 IsStarted = true;
-                HuntedPlayer = huntedPlayer;
+                HuntedPlayers = huntedPlayers;
                 WinningTeam = Teams.Team.Hunted;
                 StartTime = DateTime.UtcNow;
                 LastPingTime = DateTime.UtcNow + TimeSpan.FromSeconds(prepPhaseSeconds) - SharedConstants.HuntedPingInterval;
@@ -89,7 +90,7 @@ namespace SurviveTheHuntServer
             {
                 WinningTeam = winningTeam;
                 IsStarted = false;
-                HuntedPlayer = null;
+                HuntedPlayers = new Player[0];
                 NextHuntStartTime = DateTime.UtcNow + TimeSpan.FromMilliseconds(SharedConstants.HuntStartCooldown);
             }
         }
@@ -104,13 +105,19 @@ namespace SurviveTheHuntServer
     {
         public void SendGameState(Player player, GameState gameState)
         {
+            int[] huntedPlayerServerIds = new int[gameState.Hunt.HuntedPlayers.Length];
+            for(int i = 0; i < huntedPlayerServerIds.Length; i++)
+            {
+                huntedPlayerServerIds[i] = int.Parse(gameState.Hunt.HuntedPlayers[i].Handle);
+            }
+
             TriggerClientEvent
             (
                 player, 
                 SurviveTheHuntShared.Events.Client.ReceiveGameState,
                 GameState.ActiveMode ?? "",
                 gameState.Hunt.IsStarted, 
-                gameState.Hunt.HuntedPlayer != null ? int.Parse(gameState.Hunt.HuntedPlayer.Handle) : int.MinValue, 
+                huntedPlayerServerIds, 
                 gameState.Hunt.StartTime.Ticks, gameState.Hunt.EndTime.Ticks, 
                 gameState.Hunt.LastPingTime.Ticks, 
                 gameState.Hunt.PrepPhaseEndTime.Ticks

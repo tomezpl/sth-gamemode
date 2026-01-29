@@ -138,10 +138,13 @@ namespace SurviveTheHuntServer
         [EventHandler(Events.Server.HuntedClockSyncRequested)]
         public void RequestHuntedClockResync()
         {
-            if (GameState.Hunt?.IsStarted == true && GameState.Hunt?.HuntedPlayer != null)
+            if (GameState.Hunt?.IsStarted == true && GameState.Hunt?.HuntedPlayers.Length != 0)
             {
                 Debug.WriteLine($"Requesting in-game clock to be re-synced from the hunted player");
-                TriggerLatentClientEvent(GameState.Hunt.HuntedPlayer, Events.Client.ReceiveClockSyncRequest, 1);
+                foreach(Player player in GameState.Hunt.HuntedPlayers)
+                {
+                    TriggerLatentClientEvent(player, Events.Client.ReceiveClockSyncRequest, 1);
+                }
             }
         }
 
