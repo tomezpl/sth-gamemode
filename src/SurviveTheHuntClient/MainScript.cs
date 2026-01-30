@@ -1089,7 +1089,7 @@ namespace SurviveTheHuntClient
                 {
                     Events.Client.NotifyHunters.EventName(), new Action<dynamic>(data =>
                     {
-                        int[] huntedPlayerServerIds = data.HuntedPlayerServerIds;
+                        List<object> huntedPlayerServerIds = data.HuntedPlayerServerIds;
 
                         string mode = "";
                         try
@@ -1101,15 +1101,15 @@ namespace SurviveTheHuntClient
                             mode = "";
                         }
 
-                        Player[] huntedPlayers = new Player[huntedPlayerServerIds.Length];
+                        Player[] huntedPlayers = new Player[huntedPlayerServerIds.Count];
                         for(int i = 0; i < huntedPlayers.Length; i++)
                         {
                             // Since the event is sent out to everyone, make sure it is discarded by the hunted player.
-                            if(huntedPlayerServerIds[i] == Game.Player.ServerId)
+                            if((int)huntedPlayerServerIds[i] == Game.Player.ServerId)
                             {
                                 return;
                             }
-                            huntedPlayers[i] = new Player(GetPlayerFromServerId(huntedPlayerServerIds[i]));
+                            huntedPlayers[i] = new Player(GetPlayerFromServerId((int)huntedPlayerServerIds[i]));
                         }
 
                         SetMode(mode);
