@@ -20,6 +20,20 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         public class PluginState
         {
             public PlayerType LocalRole = PlayerType.Cop;
+            private float CurrentClothesChangeDelaySeconds = -1f;
+            public float CurrentClothesChangeElapsedSeconds = 0f;
+            public const float ClothesChangeDelay = 1f;
+
+            public void RequestClothesChange(bool request = true)
+            {
+                CurrentClothesChangeDelaySeconds = request ? ClothesChangeDelay : -1f;
+                CurrentClothesChangeElapsedSeconds = 0f;
+            }
+
+            public bool IsWaitingForClothesChange => CurrentClothesChangeDelaySeconds >= 0f;
+            public bool ShouldChangeClothes => CurrentClothesChangeElapsedSeconds > CurrentClothesChangeDelaySeconds;
+
+            public DirectedScene CurrentScene = DirectedScene.IntroJason;
         }
 
         private PluginState _state = new PluginState();
@@ -55,6 +69,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             State.LocalRole = playerType;
 
             Debug.WriteLine($"{nameof(CupidPlugin)}.{nameof(OnHuntStarted)}: Local player's role is {State.LocalRole}");
+
+            State.RequestClothesChange();
+        }
+
+        public override void OnPlayerSpawned()
+        {
+            base.OnPlayerSpawned();
+
+            if (GameState.Hunt.IsInProgress)
+            {
+                State.RequestClothesChange();
+            }
         }
 
         internal bool TryGetPlayer(PlayerType playerType, out HuntPlayer? huntPlayer, int index = 0)
@@ -94,9 +120,36 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
         }
 
-        internal void SetPlayerClothing(PlayerType playerType)
+        internal void SetPlayerClothing(PlayerType playerType, DirectedScene scene)
         {
             int pedId = PlayerPedId();
+
+            Debug.WriteLine($"Changing clothing to {playerType}");
+
+            bool failed = false;
+
+            State.RequestClothesChange(false);
+
+            if (!Constants.Clothing.Outfits.TryGetValue(playerType, out Constants.Clothing.SceneOutfits sceneOutfits))
+            {
+                Debug.WriteLine($"Player type {playerType} doesn't have any scene outfits");
+                return;
+            }
+
+            if(!sceneOutfits.TryGetValue(scene, out Constants.Clothing.OutfitPair currentSceneOutfit))
+            {
+                Debug.WriteLine($"Player type {playerType} does not have an outfit for scene {scene}");
+                return;
+            }
+
+            bool isFemale = !IsPedMale(pedId) || (PedHash)GetEntityModel(pedId) == PedHash.FreemodeFemale01;
+
+            PedOutfit outfit = currentSceneOutfit.GetOutfit(isFemale);
+
+            if (outfit == null)
+            {
+                Debug.WriteLine($"{(isFemale ? "Female" : "Male")} {playerType} player model does not have an outfit for scene {scene}");
+            }
 
             ClearAllPedProps(pedId);
             List<int> ignoredComps = new List<int> { (int)PedComponents.Hair, (int)PedComponents.Face };
@@ -107,10 +160,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     SetPedComponentVariation(pedId, i, 0, 0, 0);
                 }
             }
-
-            bool isFemale = !IsPedMale(pedId) || (PedHash)GetEntityModel(pedId) == PedHash.FreemodeFemale01;
-
-            PedOutfit outfit = Constants.Clothing.Outfits[playerType][DirectedScene.IntroJason].GetOutfit(isFemale);
 
             foreach (KeyValuePair<PedComponents, PedVariation> comp in outfit.ComponentsToApply)
             {
@@ -124,11 +173,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 SetPedPropIndex(pedId, (int)comp.Key, comp.Value.Drawable, comp.Value.Texture, true);
             }
+
+            State.RequestClothesChange(false);
         }
 
         public void Tick(float deltaTime)
         {
+            if(State.IsWaitingForClothesChange)
+            {
+                State.CurrentClothesChangeElapsedSeconds += deltaTime;
 
+                if(State.ShouldChangeClothes)
+                {
+                    SetPlayerClothing(State.LocalRole, State.CurrentScene);
+                }
+            }
         }
     }
 }

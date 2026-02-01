@@ -36,13 +36,36 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                                 { PedComponents.Legs, new PedVariation { Drawable = 88, Texture = 16 } },
                                 //{ PedComponents.Hands, new PedVariation { Drawable = 0, Texture = 0 } },
                                 { PedComponents.Shoes, new PedVariation { Drawable = 12, Texture = 11 } },
-                                //{ PedComponents.Special1, new PedVariation { Drawable = 0, Texture = 0 } },
+                                { PedComponents.Special1, new PedVariation { Drawable = 0, Texture = 0 } },
+                                { PedComponents.Special2, new PedVariation { Drawable = 15, Texture = 0 } },
                                 { PedComponents.Torso2, new PedVariation { Drawable = 15, Texture = 0 } },
+                            },
+                            PropsToApply = new Dictionary<PedProps, PedVariation>
+                            {
+                                { PedProps.Hats, new PedVariation { Drawable = 110, Texture = 3 } },
+                                { PedProps.Glasses, new PedVariation { Drawable = 4, Texture = 6 } },
+                                { PedProps.EarPieces, new PedVariation { Drawable = 33, Texture = 0 } },
+                                { PedProps.Watches, new PedVariation { Drawable = 2, Texture = 0 } }
                             }
                         },
                         Female = new PedOutfit
                         {
-                            // TODO
+                            ComponentsToApply = new Dictionary<PedComponents, PedVariation>
+                            {
+                                {PedComponents.Torso, new PedVariation { Drawable = 15, Texture = 0} },
+                                {PedComponents.Legs, new PedVariation{ Drawable = 91, Texture = 16} },
+                                {PedComponents.Hands, new PedVariation { Drawable = 0, Texture = 0 } },
+                                {PedComponents.Shoes, new PedVariation { Drawable = 118, Texture = 16 } },
+                                {PedComponents.Torso2, new PedVariation { Drawable = 168, Texture = 3} },
+                                {PedComponents.Special2, new PedVariation { Drawable = 3 , Texture = 0 } }
+                            },
+                            PropsToApply = new Dictionary<PedProps, PedVariation>
+                            {
+                                {PedProps.Hats, new PedVariation { Drawable = 109, Texture = 3 } },
+                                {PedProps.Glasses, new PedVariation { Drawable = 16, Texture = 1 } },
+                                {PedProps.EarPieces, new PedVariation{ Drawable = 33, Texture = 0} },
+                                {PedProps.Watches, new PedVariation { Drawable = 2, Texture = 0} }
+                            }
                         }
                     }
                 }
