@@ -45,8 +45,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants\Clothing.cs" />
+    <Compile Include="Constants\DirectedScenes.cs" />
     <Compile Include="CupidPlugin.cs" />
+    <Compile Include="Interfaces\ISceneHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SceneHandlers\Intro\IntroJ1Handler.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SurviveTheHuntClient.Models\SurviveTheHuntClient.Models.csproj">

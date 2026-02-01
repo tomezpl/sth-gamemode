@@ -2,9 +2,11 @@
 using SurviveTheHuntClient.Attributes;
 using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
+using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
-using static SurviveTheHuntShared.Plugins.Cupid.Constants;
+using static SurviveTheHuntClient.Plugins.Cupid.Constants;
+using PlayerType = SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType;
 
 namespace SurviveTheHuntClient.Plugins.Cupid
 {
@@ -17,7 +19,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         internal IGameState GameState;
 
-        public class PluginState
+        internal class PluginState
         {
             public PlayerType LocalRole = PlayerType.Cop;
             private float CurrentClothesChangeDelaySeconds = -1f;
@@ -33,12 +35,19 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             public bool IsWaitingForClothesChange => CurrentClothesChangeDelaySeconds >= 0f;
             public bool ShouldChangeClothes => CurrentClothesChangeElapsedSeconds > CurrentClothesChangeDelaySeconds;
 
-            public DirectedScene CurrentScene = DirectedScene.IntroJason;
+            internal Constants.DirectedScene CurrentScene = Constants.DirectedScene.IntroJason;
         }
+
+        private int ScriptCamera;
 
         private PluginState _state = new PluginState();
 
-        public PluginState State { get => _state; }
+        internal PluginState State { get => _state; }
+
+        private Dictionary<DirectedScene, ISceneHandler> SceneHandlers = new Dictionary<DirectedScene, ISceneHandler>()
+        {
+            { DirectedScene.IntroJason, new SceneHandlers.Intro.IntroJ1Handler() }
+        };
 
         public CupidPlugin(PluginContext context) : base("cupid", context)
         {
@@ -51,6 +60,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         public override void OnHuntStarted(IGameState gameState, IPlayerState playerState)
         {
             base.OnHuntStarted(gameState, playerState);
+
+            ScriptCamera = CreateCam("DEFAULT_SCRIPTED_CAMERA", true);
 
             GameState = gameState;
             _state = new PluginState();
@@ -71,6 +82,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             Debug.WriteLine($"{nameof(CupidPlugin)}.{nameof(OnHuntStarted)}: Local player's role is {State.LocalRole}");
 
             State.RequestClothesChange();
+            SetScene(DirectedScene.IntroJason);
+        }
+
+        private void SetScene(DirectedScene scene)
+        {
+            State.CurrentScene = scene;
+            SceneHandlers[scene].StartScene(in GameState, ScriptCamera);
+        }
+
+        public override void OnHuntEnded(IGameState gameState, IPlayerState playerState)
+        {
+            base.OnHuntEnded(gameState, playerState);
+
+            DestroyCam(ScriptCamera, true);
+            ScriptCamera = default;
         }
 
         public override void OnPlayerSpawned()
@@ -186,6 +212,20 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 if(State.ShouldChangeClothes)
                 {
                     SetPlayerClothing(State.LocalRole, State.CurrentScene);
+                }
+            }
+
+            if(GameState != null)
+            {
+                if (!SceneHandlers[State.CurrentScene].IsOver)
+                {
+                    SceneHandlers[State.CurrentScene].Tick(deltaTime);
+                }
+                else
+                {
+                    SetCamActive(ScriptCamera, false);
+                    RenderScriptCams(false, false, 0, false, false);
+                    SetFocusEntity(PlayerPedId());
                 }
             }
         }

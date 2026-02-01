@@ -1,12 +1,7 @@
 ﻿namespace SurviveTheHuntShared.Plugins.Cupid
 {
-    public static class Constants
+    public static partial class Constants
     {
-        public enum DirectedScene
-        {
-            IntroJason
-        }
-
         public enum PlayerType
         {
             HuntedJ,

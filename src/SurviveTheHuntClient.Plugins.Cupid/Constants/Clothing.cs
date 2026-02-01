@@ -1,7 +1,7 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Models;
 using System.Collections.Generic;
-using static SurviveTheHuntShared.Plugins.Cupid.Constants;
+using PlayerType = SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType;
 
 namespace SurviveTheHuntClient.Plugins.Cupid
 {
