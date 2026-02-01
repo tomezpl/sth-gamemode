@@ -15,12 +15,83 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         public override bool IsGameMode => true;
 
+        internal IGameState GameState;
+
+        public class PluginState
+        {
+            public PlayerType LocalRole = PlayerType.Cop;
+        }
+
+        private PluginState _state = new PluginState();
+
+        public PluginState State { get => _state; }
+
         public CupidPlugin(PluginContext context) : base("cupid", context)
         {
         }
 
         public class Events : PluginEvents
         {
+        }
+
+        public override void OnHuntStarted(IGameState gameState, IPlayerState playerState)
+        {
+            base.OnHuntStarted(gameState, playerState);
+
+            GameState = gameState;
+            _state = new PluginState();
+
+            PlayerType playerType = PlayerType.Cop;
+            int localPlayerId = PlayerId();
+            for(int i = 0; i < GameState.Hunt.HuntedPlayers.Length; i++)
+            {
+                if (GameState.Hunt.HuntedPlayers[i].PlayerHandle == localPlayerId)
+                {
+                    playerType = (PlayerType)i;
+                    break;
+                }
+            }
+
+            State.LocalRole = playerType;
+
+            Debug.WriteLine($"{nameof(CupidPlugin)}.{nameof(OnHuntStarted)}: Local player's role is {State.LocalRole}");
+        }
+
+        internal bool TryGetPlayer(PlayerType playerType, out HuntPlayer? huntPlayer, int index = 0)
+        {
+            switch(playerType)
+            {
+                case PlayerType.HuntedJ:
+                case PlayerType.HuntedL:
+                    if(GameState.Hunt.HuntedPlayers.Length > (int)playerType)
+                    {
+                        huntPlayer = GameState.Hunt.HuntedPlayers[(int)playerType];
+                        return true;
+                    }
+                    else
+                    {
+                        huntPlayer = null;
+                        return false;
+                    }
+                default:
+                    int nbPlayers = GetNumberOfPlayers();
+                    int counter = 0;
+                    foreach(Player player in PlayerList.Players)
+                    {
+                        if(player.Handle != GameState.Hunt.HuntedPlayers[(int)PlayerType.HuntedL].PlayerHandle && player.Handle != GameState.Hunt.HuntedPlayers[(int)PlayerType.HuntedJ].PlayerHandle)
+                        {
+                            if(counter == index)
+                            {
+                                // TODO: shouldn't we be doing server time offset here too?
+                                huntPlayer = new HuntPlayer(player, System.DateTime.UtcNow);
+                                return true;
+                            }
+                            counter++;
+                        }
+                    }
+                    huntPlayer = null;
+                    return false;
+            }
         }
 
         internal void SetPlayerClothing(PlayerType playerType)
