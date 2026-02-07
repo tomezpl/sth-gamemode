@@ -7,5 +7,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Interfaces
         bool IsOver { get; }
 
         void StartScene(in IGameState gameState, int cameraId);
+
+        void Cleanup();
     }
 }

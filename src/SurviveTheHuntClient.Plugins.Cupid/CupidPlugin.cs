@@ -1,8 +1,8 @@
 ﻿using CitizenFX.Core;
-using SurviveTheHuntClient.Attributes;
 using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
+using System;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 using static SurviveTheHuntClient.Plugins.Cupid.Constants;
@@ -49,12 +49,46 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             { DirectedScene.IntroJason, new SceneHandlers.Intro.IntroJ1Handler() }
         };
 
+        private static DirectedScene[] GetAllHandledScenes(Dictionary<DirectedScene, ISceneHandler> sceneHandlers)
+        {
+            Array allValues = Enum.GetValues(typeof(DirectedScene));
+            List<DirectedScene> defined = new List<DirectedScene>();
+
+            for(int i = 0; i < allValues.Length; i++)
+            {
+                foreach(DirectedScene handledScene in sceneHandlers.Keys)
+                {
+                    if(handledScene == (DirectedScene)allValues.GetValue(i))
+                    {
+                        defined.Add(handledScene);
+                        break;
+                    }
+                }
+            }
+
+            return defined.ToArray();
+        }
+
+        private readonly DirectedScene _lastScene;
+
         public CupidPlugin(PluginContext context) : base("cupid", context)
         {
+            DirectedScene[] allScenes = GetAllHandledScenes(SceneHandlers);
+            _lastScene = allScenes[allScenes.Length - 1];
         }
 
         public class Events : PluginEvents
         {
+        }
+
+        public override void OnResourceStopping()
+        {
+            base.OnResourceStopping();
+
+            foreach(ISceneHandler handler in SceneHandlers.Values)
+            {
+                handler.Cleanup();
+            }
         }
 
         public override void OnHuntStarted(IGameState gameState, IPlayerState playerState)
@@ -91,12 +125,31 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             SceneHandlers[scene].StartScene(in GameState, ScriptCamera);
         }
 
+        private void AdvanceScene()
+        {
+            if(State.CurrentScene == _lastScene)
+            {
+                SetCamActive(ScriptCamera, false);
+                RenderScriptCams(false, false, 0, false, false);
+
+                SetFocusEntity(PlayerPedId());
+            } else
+            {
+                SetScene(State.CurrentScene + 1);
+            }
+        }
+
         public override void OnHuntEnded(IGameState gameState, IPlayerState playerState)
         {
             base.OnHuntEnded(gameState, playerState);
 
             DestroyCam(ScriptCamera, true);
             ScriptCamera = default;
+
+            foreach(ISceneHandler handler in SceneHandlers.Values)
+            {
+                handler.Cleanup();
+            }
         }
 
         public override void OnPlayerSpawned()
@@ -223,9 +276,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 }
                 else
                 {
-                    SetCamActive(ScriptCamera, false);
-                    RenderScriptCams(false, false, 0, false, false);
-                    SetFocusEntity(PlayerPedId());
+                    AdvanceScene();
                 }
             }
         }
