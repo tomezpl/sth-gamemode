@@ -70,6 +70,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             [SceneStageTick(SceneStage.IntroWideShot)]
             public static void IntroWideShot(float deltaTime, ref State state)
             {
+                // TODO: disable traffic
+
                 const float initCamPosX = -3196.27783203125f, initCamPosY = 366.26983642578125f, initCamPosZ = 7.800143718719482f;
                 const float initCamRotX = -2.3481221199035645f, initCamRotY = 0.000919112004339695f, initCamRotZ = -47.3736686706543f;
                 const float initCamFov = 40.037540435791016f;
@@ -174,7 +176,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
                 if (state.StageJustSwitched)
                 {
-                    SetEntityCoords(state.JasPed, -3060.115f, 448.0133f, 9.643686f, false, false, false, true);
+                    SetEntityCoords(state.JasPed, -3060.115f, 448.0133f, 9.043686f, false, false, false, true);
                     SetEntityHeading(state.JasPed, 253.25f);
                     TaskGoStraightToCoord(state.JasPed, -3059.47f, 450f, 9.65f, 1f, 3000, 56.4f, 0.01f);
                 }

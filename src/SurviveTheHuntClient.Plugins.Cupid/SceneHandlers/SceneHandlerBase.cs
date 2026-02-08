@@ -67,6 +67,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers
                 {
                     object stage = tickInfo.Stage;
                     ESceneStage castStage = (ESceneStage)stage;
+                    Debug.WriteLine($"Creating {nameof(SceneStageTickMethod)} for {castStage}");
                     methods[castStage] = (SceneStageTickMethod)tickerMethod.CreateDelegate(typeof(SceneStageTickMethod));
                 }
             }
@@ -92,6 +93,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers
             }
             else
             {
+                Debug.WriteLine($"Could not get a {nameof(SceneStageTickMethod)} for {stage}");
                 CurrentTickMethod = FallbackSceneStageTick;
             }
 

@@ -46,7 +46,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         private Dictionary<DirectedScene, ISceneHandler> SceneHandlers = new Dictionary<DirectedScene, ISceneHandler>()
         {
-            { DirectedScene.IntroJason, new SceneHandlers.Intro.IntroJ1Handler() }
+            { DirectedScene.IntroJason, new SceneHandlers.Intro.IntroJ1Handler() },
+            { DirectedScene.JasonDrivingHood, new SceneHandlers.Intro.IntroJ2Handler() }
         };
 
         private static DirectedScene[] GetAllHandledScenes(Dictionary<DirectedScene, ISceneHandler> sceneHandlers)
