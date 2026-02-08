@@ -1,9 +1,4 @@
 ﻿using SurviveTheHuntClient.Interfaces;
-using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
-using System;
-using System.CodeDom;
-using System.Collections.Generic;
-using System.Reflection;
 using static SurviveTheHuntShared.Plugins.Cupid.Constants;
 using static CitizenFX.Core.Native.API;
 using CitizenFX.Core;
@@ -11,8 +6,10 @@ using SurviveTheHuntClient.Plugins.Cupid.Utils;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 {
-    internal class IntroJ1Handler : ITickable, ISceneHandler
+    internal class IntroJ1Handler : SceneHandlerBase<IntroJ1Handler.SceneStage, IntroJ1Handler.Tickers, IntroJ1Handler.State>
     {
+        private class SceneStageTick : SceneStageTickBaseAttribute { internal SceneStageTick(SceneStage stage) : base((int)stage) { } }
+
         internal enum SceneStage
         {
             IntroWideShot,
@@ -25,47 +22,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             JasWalk
         }
 
-        internal class SceneStageTick : Attribute
-        {
-            private readonly SceneStage _stage;
-            internal SceneStage Stage { get => _stage; }
-
-            internal SceneStageTick(SceneStage stage)
-            {
-                _stage = stage;
-            }
-        }
-
-        internal SceneStage _currentStage = SceneStage.IntroWideShot;
-        internal SceneStage CurrentStage { get => _currentStage; }
-
-        protected bool IsStageOver = false;
-
-        internal void SetStage(SceneStage stage)
-        {
-            Debug.WriteLine($"Changing stage to {stage}");
-            _currentStage = stage;
-            IsStageOver = false;
-            CurrentState.CurrentStageDuration = GetStageDuration(stage);
-            CurrentState.CurrentStageTime = 0f;
-            if(SceneTickMethods.TryGetValue(stage, out SceneStageTickMethod method))
-            {
-                CurrentTickMethod = method;
-            }
-            else
-            {
-                CurrentTickMethod = FallbackSceneStageTick;
-            }
-
-            CurrentState.StageJustSwitched = true;
-        }
-
-        private static readonly Array s_AllStages = Enum.GetValues(typeof(SceneStage));
-        private static readonly SceneStage s_LastStage = (SceneStage)s_AllStages.GetValue(s_AllStages.Length - 1);
-
-        public bool IsOver => CurrentStage == s_LastStage && IsStageOver;
-
-        private static float GetStageDuration(SceneStage stage)
+        internal override float GetStageDuration(SceneStage stage)
         {
             switch(stage)
             {
@@ -90,36 +47,25 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             }
         }
         
-        private struct State
+        internal class State : SceneHandlerBaseState
         {
             internal int SimeonPed;
             internal int SimeonCar;
             internal int JasPed;
             internal int Camera;
-            internal bool StageJustSwitched;
 
-            internal float CurrentStageDuration;
-            internal float CurrentStageTime;
+            public State() : base() { }
 
-            internal State(int jasPed, int camera)
+            internal State(int jasPed, int camera) : base()
             {
                 SimeonPed = 0;
                 SimeonCar = 0;
                 JasPed = jasPed;
                 Camera = camera;
-                StageJustSwitched = false;
-                CurrentStageDuration = 0f;
-                CurrentStageTime = 0f;
             }
         }
 
-        private State CurrentState = new State();
-
-        private IGameState GameState;
-
-        private delegate void SceneStageTickMethod(float deltaTime, ref State state);
-
-        private static class Tickers
+        internal class Tickers
         {
             [SceneStageTick(SceneStage.IntroWideShot)]
             public static void IntroWideShot(float deltaTime, ref State state)
@@ -184,8 +130,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
                     // TODO: talking anim
 
-                    SetEntityCoords(state.JasPed, -3059f, 447f, 9.6f, false, false, false, false);
-                    SetEntityHeading(state.JasPed, 249f);
+                    SetEntityCoords(state.JasPed, -3061.032f, 443.9454f, 9.644347f, false, false, false, false);
+                    SetEntityHeading(state.JasPed, 270f);
                 }
             }
 
@@ -212,8 +158,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     SetCamFov(state.Camera, 25.7f);
 
                     TaskEnterVehicle(state.SimeonPed, state.SimeonCar, 4000, -1, 1f, 0, 0);
-                    SetEntityCoords(state.JasPed, -3059.527f, 447.32f, 9.65f, false, false, false, false);
-                    SetEntityHeading(state.JasPed, 255.25f);
                 }
             }
 
@@ -230,6 +174,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
                 if (state.StageJustSwitched)
                 {
+                    SetEntityCoords(state.JasPed, -3060.115f, 448.0133f, 9.643686f, false, false, false, true);
+                    SetEntityHeading(state.JasPed, 253.25f);
                     TaskGoStraightToCoord(state.JasPed, -3059.47f, 450f, 9.65f, 1f, 3000, 56.4f, 0.01f);
                 }
 
@@ -237,51 +183,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             }
         }
 
-        private static Dictionary<SceneStage, SceneStageTickMethod> CreateTickMethods()
+        public override void StartScene(in IGameState gameState, int cameraId)
         {
-            Dictionary<SceneStage, SceneStageTickMethod> methods = new Dictionary<SceneStage, SceneStageTickMethod>();
-
-            MethodInfo[] tickersMethods = typeof(Tickers).GetMethods();
-            foreach(MethodInfo tickerMethod in tickersMethods)
-            {
-                SceneStageTick tickInfo = tickerMethod.GetCustomAttribute<SceneStageTick>();
-                if(tickInfo != null)
-                {
-                    methods[tickInfo.Stage] = (SceneStageTickMethod)tickerMethod.CreateDelegate(typeof(SceneStageTickMethod));
-                }
-            }
-
-            return methods;
-        }
-
-        private readonly Dictionary<SceneStage, SceneStageTickMethod> SceneTickMethods = CreateTickMethods();
-
-        private static void FallbackSceneStageTick(float deltaTime, ref State state)
-        {
-        }
-
-        private SceneStageTickMethod CurrentTickMethod = FallbackSceneStageTick;
-
-        public void StartScene(in IGameState gameState, int cameraId)
-        {
-            GameState = gameState;
+            base.StartScene(in gameState, cameraId);
 
             CurrentState = new State(GetPlayerPed(gameState.Hunt.HuntedPlayers[(int)PlayerType.HuntedJ].PlayerHandle), cameraId);
 
             SetFocusEntity(CurrentState.JasPed);
 
             RequestModel((int)PedHash.SiemonYetarian);
-
-            SetStage(SceneStage.IntroWideShot);
         }
 
         private static class Constants
         {
             internal static Vector3 JasInitialPos = new Vector3(-3062.71f, 444.8849f, 13.08625f);
             internal const float JasInitialHeading = 258.6868f;
-            internal static Vector3 CameraInitialPos = new Vector3(-3150f, 450f, 13.08625f);
-            internal const float CameraInitialHeading = 250f;
-            internal const float CameraInitialFOV = 45f;
         }
 
         private void EnsureSimeon()
@@ -313,8 +229,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             }
         }
 
-        public void Cleanup()
+        public override void Cleanup()
         {
+            base.Cleanup();
+
             if(DoesEntityExist(CurrentState.SimeonPed))
             {
                 DeleteEntity(ref CurrentState.SimeonPed);
@@ -326,34 +244,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             }
         }
 
-        public void Tick(float deltaTime)
+        public override void Tick(float deltaTime)
         {
+            base.Tick(deltaTime);
+
             EnsureSimeon();
-
-            CurrentTickMethod(deltaTime, ref CurrentState);
-
-            CurrentState.StageJustSwitched = false;
-
-            if(CurrentState.CurrentStageTime >= CurrentState.CurrentStageDuration)
-            {
-                bool wasOver = IsStageOver;
-
-                IsStageOver = true;
-
-                if(!wasOver)
-                {
-                    Debug.WriteLine("Reached the end");
-                }
-            }
-            else
-            {
-                CurrentState.CurrentStageTime += deltaTime;
-            }
-
-            if (IsStageOver && !IsOver)
-            {
-                SetStage(CurrentStage + 1);
-            }
 
             RenderScriptCams(true, false, 0, false, false);
         }
