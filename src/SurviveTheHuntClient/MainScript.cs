@@ -332,6 +332,12 @@ namespace SurviveTheHuntClient
                     Debug.WriteLine($"X = {pos.X}, Y = {pos.Y}, Z = {pos.Z}, W = {heading}");
                 }), false);
 
+                RegisterCommand("anim", new Action<int, List<object>, string>((player, args, raw) =>
+                {
+                    RequestAnimDict((string)args[0]);
+                    TaskPlayAnim(PlayerPedId(), (string)args[0], (string)args[1], 8f, -1f, -1, 0, 0f, false, false, false);
+                }), false);
+
                 ExecutePlugins(plugin => plugin.OnResourceStarted(), true);
             }
 

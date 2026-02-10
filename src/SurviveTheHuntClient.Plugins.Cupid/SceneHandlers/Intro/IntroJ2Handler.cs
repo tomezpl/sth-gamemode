@@ -1,5 +1,8 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Interfaces;
+using SurviveTheHuntClient.Models;
+using SurviveTheHuntClient.Plugins.Cupid.Utils;
+using System;
 using static CitizenFX.Core.Native.API;
 using static SurviveTheHuntShared.Plugins.Cupid.Constants;
 
@@ -18,42 +21,177 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
         internal enum SceneStage
         {
-            Driving
+            Driving,
+            BitchSlap,
+            GrabMoney,
+            DriveHighway,
+            Lift,
+            Beer,
+            DriveHood,
+            PrisonOverhead,
+            PrisonTalk1,
+            PrisonTalk2,
+            PrisonTalk3,
+            PrisonTalk4,
+            PrisonTalk5,
+            PrisonBuzzGate,
+            PrisonWalkOut,
+            PrisonGreet1,
+            PrisonGreet2,
+            PrisonGreet3,
+            Fade,
+            Bed
         }
 
         internal class State : SceneHandlerBaseState
         {
             internal int Car;
-            internal readonly int JasPed;
+            internal int Lady;
+            internal int LadyCar;
+            internal int PopSphereId;
+            internal int Clerk;
+            internal int TaskSequence;
+            internal int BeerBox;
+            internal float FPPCarPitch;
+            internal float FPPCarYaw;
+
+            /// <summary>
+            /// Owned by this script (clone)
+            /// </summary>
+            internal int JasPed;
+            
+            /// <summary>
+            /// Owned by this script (clone)
+            /// </summary>
+            internal int LuPed;
+            
             internal readonly int Camera;
 
             public State()
             {
                 Car = 0;
+                LadyCar = 0;
+                Lady = 0;
+                PopSphereId = 0;
+                Clerk = 0;
+                TaskSequence = 0;
+                FPPCarPitch = 0;
+                FPPCarYaw = 0;
+                BeerBox = 0;
+
                 Camera = 0;
                 JasPed = 0;
             }
 
-            internal State(int jasPedId, int camera) : this()
+            internal State(int jasPedId, int luPedId, int camera) : this()
             {
                 JasPed = jasPedId;
+                LuPed = luPedId;
                 Camera = camera;
             }
         }
 
         internal override float GetStageDuration(SceneStage stage)
         {
-            return 5.5f;
+            switch(stage)
+            {
+                case SceneStage.Driving:
+                    return 4.95f;
+                case SceneStage.BitchSlap:
+                    return 0.9f;
+                case SceneStage.GrabMoney:
+                    return 1.4f;
+                case SceneStage.DriveHighway:
+                    return 3.8f;
+                case SceneStage.Lift:
+                    return 3.2f;
+                case SceneStage.Beer:
+                    return 3.667f;
+                case SceneStage.DriveHood:
+                    return 4.55f;
+                case SceneStage.PrisonOverhead:
+                    return 1.95f;
+                case SceneStage.PrisonTalk1:
+                    return 2.4f;
+                case SceneStage.PrisonTalk2:
+                    return 1.05f;
+                case SceneStage.PrisonTalk3:
+                    return 1.85f;
+                case SceneStage.PrisonTalk4:
+                    return 2f;
+                case SceneStage.PrisonTalk5:
+                    return 1.45f;
+                case SceneStage.PrisonBuzzGate:
+                    return 2.55f;
+                case SceneStage.PrisonWalkOut:
+                    return 3.1f;
+                case SceneStage.PrisonGreet1:
+                    return 0.73f;
+                case SceneStage.PrisonGreet2:
+                    return 1.05f;
+                case SceneStage.PrisonGreet3:
+                    return 1.2f;
+                case SceneStage.Fade:
+                    return 0f;
+                case SceneStage.Bed:
+                    return 5.65f;
+                default:
+                    return 0f;
+            }
         }
 
         public override void StartScene(in IGameState gameState, int cameraId)
         {
             base.StartScene(gameState, cameraId);
 
-            CurrentState = new State(GetPlayerPed(gameState.Hunt.HuntedPlayers[(int)PlayerType.HuntedJ].PlayerHandle), cameraId);
+            HuntPlayer pJ = gameState.Hunt.HuntedPlayers[(int)PlayerType.HuntedJ];
+            HuntPlayer pL = gameState.Hunt.HuntedPlayers.Length > 1 ? gameState.Hunt.HuntedPlayers[(int)PlayerType.HuntedL] : pJ;
+            // who the fuck made `isNetwork` a float
+            CurrentState = new State(ClonePed(GetPlayerPed(pJ.PlayerHandle), 0f, false, false), ClonePed(GetPlayerPed(pL.PlayerHandle), 0f, false, false), cameraId);
+
+            CurrentState.PopSphereId = AddPopMultiplierSphere(Constants.CarStartPos.X, Constants.CarStartPos.Y, Constants.CarStartPos.Z, 100f, 0, 0, false, false);
+
+            ClearAreaOfVehicles(Constants.CarStartPos.X, Constants.CarStartPos.Y, Constants.CarStartPos.Z, 40f, false, false, false, false, false);
+            ClearAreaOfPeds(Constants.CarStartPos.X, Constants.CarStartPos.Y, Constants.CarStartPos.Z, 40f, 0);
 
             SetFocusEntity(CurrentState.JasPed);
+
+            SetEntityAsMissionEntity(CurrentState.JasPed, false, true);
+            SetEntityAsMissionEntity(CurrentState.LuPed, false, true);
+
+            SetEntityInvincible(CurrentState.JasPed, true);
+            SetEntityInvincible(CurrentState.LuPed, true);
+
             RequestModel((uint)_carHash);
+        }
+
+        private static class Constants
+        {
+            internal static Vector3 CarStartPos = new Vector3(-3059.198f, 408.4283f, 6.45f);
+            
+            internal const string TakedownAnimDict = "melee@unarmed@streamed_variations";
+            internal const string TakedownAnimClipKiller = "plyr_takedown_front_backslap";
+            internal const string TakedownAnimClipVictim = "victim_takedown_front_backslap";
+            internal const string GrabMoneyAnimDict = "oddjobs@shop_robbery@rob_till";
+            internal const string GrabMoneyAnimClip = "loop";
+            
+            internal const float HighwayStartX = -392.4063f, HighwayStartY = -1072.351f;
+            
+            internal const string LiftAnimDict = "switch@franklin@gym";
+            internal const string LiftAnimClip = "001942_02_gc_fras_ig_5_base";
+
+            internal const float HoodCarStartX = -12.91f, HoodCarStartY = -1457.97f;
+            internal const float HoodCarStartHeading = 97.62f;
+
+            internal static readonly uint BeerBoxHash = (uint)GetHashKey("prop_cs_beer_box");
+
+            internal const float JasPrison1X = 1830.58f, JasPrison1Y = 2604.86f, JasPrison1Heading = 213.43f;
+
+            internal const float PrisonGuardX = 1832f, PrisonGuardY = 2602.426f, PrisonGuardZ = 44.889f, PrisonGuardHeading = 27.47f;
+
+            internal const float LuPrison1X = 1837.853f, LuPrison1Y = 2609.089f, LuPrison1Heading = 271.8625f;
+            internal const float LuPrison2X = 1849.379f, LuPrison2Y = 2609.139f, LuPrison2Heading = 257.2621f;
+            internal const float JasPrison2X = 1852.834912109375f, JasPrison2Y = 2610.071728515625f, JasPrison2Heading = 90.03719f;
         }
 
         internal class Tickers
@@ -61,17 +199,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             [SceneStageTick(SceneStage.Driving)]
             public static void Ticker(float deltaTime, ref State state)
             {
-                if(state.Car == 0)
+                if (state.Car == 0)
                 {
                     RequestModel((uint)_carHash);
 
-                    if(HasModelLoaded((uint)_carHash))
+                    if (HasModelLoaded((uint)_carHash))
                     {
-                        state.Car = CreateVehicle((uint)_carHash, -3051.95f, 428.1f, 6.45f, 159.6f, false, false);
+                        state.Car = CreateVehicle((uint)_carHash, Constants.CarStartPos.X, Constants.CarStartPos.Y, Constants.CarStartPos.Z, 159.6f, false, false);
                         SetEntityAsMissionEntity(state.Car, false, true);
                         SetVehicleEngineOn(state.Car, true, true, true);
+                        SetVehicleForwardSpeed(state.Car, 2.5f);
                         SetPedIntoVehicle(state.JasPed, state.Car, -1);
-                        TaskVehicleDriveWander(state.JasPed, state.Car, 10f, 0);
+                        TaskVehicleDriveWander(state.JasPed, state.Car, 5f, 0);
                         Vector3 fwdVec = GetEntityForwardVector(state.Car);
                         Vector3 rightVec = -Vector3.Cross(fwdVec, Vector3.Up);
                         Vector3 pedPos = GetEntityCoords(state.JasPed, false);
@@ -82,6 +221,300 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                         HardAttachCamToEntity(state.Camera, state.Car, 0, 0, -90f, offset.X, offset.Y, offset.Z, true);
                         SetVehicleRadioEnabled(state.Car, false);
                     }
+                }
+
+                if (state.LadyCar == 0)
+                {
+                    RequestModel((uint)VehicleHash.Penumbra);
+                    RequestModel((uint)PedHash.AmandaTownley);
+
+                    if (HasModelLoaded((uint)VehicleHash.Penumbra) && HasModelLoaded((uint)PedHash.AmandaTownley))
+                    {
+                        state.LadyCar = CreateVehicle((uint)VehicleHash.Penumbra, -3072.135f, 394.408f, 6.271485f, 250f, false, false);
+                        SetEntityAsMissionEntity(state.LadyCar, false, true);
+                        state.Lady = CreatePed(0, (uint)PedHash.AmandaTownley, -3071.66f, 397.2125f, 6.968524f, 245.9f, false, false);
+                        SetEntityAsMissionEntity(state.Lady, false, true);
+                    }
+                }
+
+                SetUseHiDof();
+                SetCamNearDof(state.Camera, 0.1f);
+                SetCamFarDof(state.Camera, 0.5f);
+                SetCamDofStrength(state.Camera, 0.6f);
+                SetCamUseShallowDofMode(state.Camera, true);
+            }
+
+            [SceneStageTick(SceneStage.BitchSlap)]
+            public static void BitchSlap(float deltaTime, ref State state)
+            {
+                if (state.StageJustSwitched)
+                {
+                    DetachCam(state.Camera);
+                    SetEntityCoords(state.JasPed, -3042.045f, 585.9725f, 5.908928f, false, false, false, false);
+                    SetEntityHeading(state.JasPed, 199.6f);
+                    SetCamCoord(state.Camera, -3040.19946289062f, 583.2584838867188f, 8.370817184448242f);
+                    SetCamRot(state.Camera, -2.0012354850769043f, 0.00011842657841043547f, 33.33742904663086f, 2);
+                    SetCamFov(state.Camera, 36.6f);
+                    SetCamShakeAmplitude(state.Camera, 1f);
+                    ShakeCam(state.Camera, "HAND_SHAKE", 0.5f);
+
+                    OpenSequenceTask(ref state.TaskSequence);
+                    TaskPlayAnim(0, Constants.TakedownAnimDict, Constants.TakedownAnimClipVictim, 8f, -1f, 850, 0, 0, false, false, false);
+                    TaskCower(0, -1);
+                    CloseSequenceTask(state.TaskSequence);
+
+                    TaskPlayAnim(state.JasPed, Constants.TakedownAnimDict, Constants.TakedownAnimClipKiller, 8f, -1f, -1, 0, 0, false, false, false);
+                    TaskPerformSequence(state.Clerk, state.TaskSequence);
+                }
+
+                RequestCollisionAtCoord(Constants.HighwayStartX, Constants.HighwayStartY, 36f);
+            }
+
+            [SceneStageTick(SceneStage.GrabMoney)]
+            public static void GrabMoney(float deltaTime, ref State state)
+            {
+                if(state.StageJustSwitched)
+                {
+                    SetCamCoord(state.Camera, -3040.95546289062f, 585.417114258f, 9.018735885620117f);
+                    SetCamRot(state.Camera, -38.00886154174805f, -6.84211540222168f, 152.7925567f, 2);
+                    SetCamFov(state.Camera, 26.4f);
+                    SetCamShakeAmplitude(state.Camera, 0f);
+                    SetEntityCoords(state.JasPed, -3041.219f, 583.8357f, 6.908928f, false, false, false, false);
+                    SetEntityCoords(state.Clerk, -3042.219f, 583.7357f, 6.408928f, false, false, false, false);
+                    SetEntityHeading(state.JasPed, 18.17478f);
+
+                    TaskPlayAnim(state.JasPed, Constants.GrabMoneyAnimDict, Constants.GrabMoneyAnimClip, 8f, -1f, -1, 0, 0, false, false, false);
+                }
+
+                RequestCollisionAtCoord(Constants.HighwayStartX, Constants.HighwayStartY, 36f);
+            }
+
+            [SceneStageTick(SceneStage.DriveHighway)]
+            public static void DriveHighway(float deltaTime, ref State state)
+            {
+                if(state.StageJustSwitched)
+                {
+                    const float startHeading = 1.62f;
+                    float startZ = Math.Min(36f, GetHeightmapTopZForPosition(Constants.HighwayStartX, Constants.HighwayStartY));
+
+                    float startHeadingFinal = startHeading;
+                    Vector3 startPos = new Vector3(Constants.HighwayStartX, Constants.HighwayStartY, startZ);
+                    //GetClosestVehicleNodeWithHeading(Constants.HighwayStartX, Constants.HighwayStartY, startZ, ref startPos, ref startHeadingFinal, 0, 0.2f, 1);
+
+                    SetPedIntoVehicle(state.JasPed, state.Car, -1);
+                    SetEntityCoords(state.Car, startPos.X, startPos.Y, startPos.Z, false, false, false, false);
+                    SetEntityHeading(state.Car, startHeadingFinal);
+                    SetVehicleForwardSpeed(state.Car, 15f);
+                    TaskVehicleDriveWander(state.JasPed, state.Car, 13.5f, 0);
+                    HardAttachCamToEntity(state.Camera, state.Car, 0f, 0f, 0f, -0.35f, 0.15f, 0.85f, true);
+                    SetCamFov(state.Camera, 55f);
+                    SetCamShakeAmplitude(state.Camera, 0.4f);
+                    ShakeCam(state.Camera, "HAND_SHAKE", 0.45f);
+                    InstantlyFillVehiclePopulation();
+                }
+
+                if(state.CurrentStageTime >= 1f && state.CurrentStageTime <= 3f)
+                {
+                    const float pitchDelta = 6f, yawDelta = 2f;
+                    //Vector3 camRot = GetCamRot(state.Camera, 2);
+                    state.FPPCarPitch += pitchDelta * deltaTime;
+                    state.FPPCarYaw += yawDelta * deltaTime;
+                    //SetCamRot(state.Camera, camRot.X + pitchDelta * deltaTime, camRot.Y, camRot.Z + yawDelta * deltaTime, 2);
+                    HardAttachCamToEntity(state.Camera, state.Car, state.FPPCarPitch, 0f, state.FPPCarYaw, -0.35f, 0.15f, 0.85f, true);
+                }
+
+                // prevent the noggin from clipping into the camera
+                SetPedResetFlag(state.JasPed, 166, true);
+            }
+
+            [SceneStageTick(SceneStage.Lift)]
+            public static void Lift(float deltaTime, ref State state)
+            {
+                if(state.StageJustSwitched)
+                {
+                    SetEntityCoords(state.JasPed, -1244.868f, -1613.661f, 3.4026925563812256f, false, false, false, true);
+                    SetEntityHeading(state.JasPed, 34.8f);
+                    TaskPlayAnim(state.JasPed, Constants.LiftAnimDict, Constants.LiftAnimClip, 8f, -1f, -1, 1, 0f, false, false, false);
+                    DetachCam(state.Camera);
+                    SetCamShakeAmplitude(state.Camera, 0f);
+                    SetCamCoord(state.Camera, -1253.62f, -1613.45f, 4.65f);
+                    SetCamRot(state.Camera, -1.66f, 0.09f, -86.76f, 2);
+                    SetCamFov(state.Camera, 21f);
+                }
+
+                RequestCollisionAtCoord(Constants.HoodCarStartX, Constants.HoodCarStartY, 31f);
+            }
+
+            [SceneStageTick(SceneStage.Beer)]
+            public static void Beer(float dT, ref State state)
+            {
+                if(state.StageJustSwitched)
+                {
+                    Vector3 coords = GetEntityCoords(state.JasPed, false);
+                    state.BeerBox = CreateObject((int)Constants.BeerBoxHash, coords.X, coords.Y, coords.Z, false, false, false);
+                    
+                    // TODO: flip the box around
+                    AttachEntityToEntity(state.BeerBox, state.JasPed, GetPedBoneIndex(state.JasPed, (int)Bone.IK_R_Hand), 0f, 0f, 0f, 0f, 0f, 0f, false, false, false, true, 2, true);
+
+                    ClearPedTasksImmediately(state.JasPed);
+                    const float startX = -1223.8632812f, startY = -906.5182495117188f, startZ = 10.964961051940918f;
+                    SetEntityCoords(state.JasPed, startX, startY, startZ, false, false, false, false);
+                    SetEntityHeading(state.JasPed, 34.5f);
+                    Vector3 fwd = GetEntityForwardVector(state.JasPed);
+                    SetCamRot(state.Camera, 0f, 0f, 34.5f, 0);
+                    SetCamFov(state.Camera, 40f);
+                    HardAttachCamToEntity(state.Camera, state.JasPed, 0f, 0f, 0f, 0f, -1.45f, -0.15f, true);
+                    Vector3 target = new Vector3(startX, startY, startZ) + (fwd * 6.7f);
+
+                    TaskGoStraightToCoord(state.JasPed, target.X, target.Y, target.Z, 0.5f, -1, 34.5f, 0.001f);
+                }
+
+                RequestCollisionAtCoord(Constants.HoodCarStartX, Constants.HoodCarStartY, 31f);
+            }
+
+            [SceneStageTick(SceneStage.DriveHood)]
+            public static void DriveHood(float deltaTime, ref State state)
+            {
+                if(state.StageJustSwitched)
+                {
+                    if(state.BeerBox != 0)
+                    {
+                        DeleteEntity(ref state.BeerBox);
+                        state.BeerBox = 0;
+                    }
+
+                    ClearPedTasksImmediately(state.JasPed);
+
+                    float startZ = Math.Min(32.4f, GetHeightmapBottomZForPosition(Constants.HoodCarStartX, Constants.HoodCarStartY));
+
+                    float startHeadingFinal = Constants.HoodCarStartHeading;
+                    Vector3 startPos = new Vector3(Constants.HoodCarStartX, Constants.HoodCarStartY, startZ);
+                    //GetClosestVehicleNodeWithHeading(Constants.HoodCarStartX, Constants.HoodCarStartY, startZ, ref startPos, ref startHeadingFinal, 0, 0.2f, 1);
+
+                    SetPedIntoVehicle(state.JasPed, state.Car, -1);
+                    SetEntityCoords(state.Car, startPos.X, startPos.Y, startPos.Z, false, false, false, false);
+                    SetEntityHeading(state.Car, startHeadingFinal);
+                    SetVehicleForwardSpeed(state.Car, 5.5f);
+                    TaskVehicleDriveWander(state.JasPed, state.Car, 6.5f, 0);
+                    HardAttachCamToEntity(state.Camera, state.Car, 0f, 0f, 0f, 0.1f, -0.15f, 0.8f, true);
+                    SetCamFov(state.Camera, 45f);
+                    SetCamShakeAmplitude(state.Camera, 0.4f);
+                    ShakeCam(state.Camera, "HAND_SHAKE", 0.55f);
+                    InstantlyFillVehiclePopulation();
+                }
+
+                const float pitchDelta = -1.5f, yawDelta = 6f;
+                state.FPPCarPitch += pitchDelta * deltaTime;
+                state.FPPCarYaw += yawDelta * deltaTime;
+                HardAttachCamToEntity(state.Camera, state.Car, state.FPPCarPitch, 0f, state.FPPCarYaw, 0.1f, -0.15f, 0.8f, true);
+
+
+                RequestCollisionAtCoord(Constants.JasPrison1X, Constants.JasPrison1Y, 44f);
+            }
+
+            [SceneStageTick(SceneStage.PrisonOverhead)]
+            public static void PrisonOverhead(float deltaTime, ref State state)
+            {
+                if(state.StageJustSwitched)
+                {
+                    DetachCam(state.Camera);
+
+                    const float z = 44f;
+
+                    SetEntityCoords(state.JasPed, Constants.JasPrison1X, Constants.JasPrison1Y, z, false, false, false, false);
+                    SetEntityHeading(state.JasPed, Constants.JasPrison1Heading);
+                }
+
+                const float camStartPosX = 1901.8f, camStartPosY = 2645.8f, camStartPosZ = 45.08f;
+                const float camEndPosX = 1903.467f, camEndPosY = 2648.04f, camEndPosZ = 45.08f;
+                const float camStartRotX = 11.8577f, camStartRotY = 0.093f, camStartRotZ = 54.845f;
+                const float camEndRotX = camStartRotX, camEndRotY = camStartRotY, camEndRotZ = 54.855f;
+                const float camFov = 15.64f;
+                
+                CamUtils.Lerp(state.Camera, camStartPosX, camStartPosY, camStartPosZ, camStartRotX, camStartRotY, camStartRotZ, camFov, camEndPosX, camEndPosY, camEndPosZ, camEndRotX, camEndRotY, camEndRotZ, camFov, state.CurrentStageDuration, state.CurrentStageTime);
+            }
+
+            [SceneStageTick(SceneStage.PrisonTalk1)]
+            public static void PrisonTalk1(float deltaTime, ref State state)
+            {
+                if(state.StageJustSwitched)
+                {
+                    const float camStartPosX = 1829.656f, camStartPosY = 2605.177f, camStartPosZ = 46.56636f;
+                    const float camStartRotX = -14.8395f, camStartRotY = -6.14592266082f, camStartRotZ = -130.03939819335938f;
+                    const float camStartFov = 37f;
+
+                    SetCamCoord(state.Camera, camStartPosX, camStartPosY, camStartPosZ);
+                    SetCamRot(state.Camera, camStartRotX, camStartRotY, camStartRotZ, 2);
+                    SetCamFov(state.Camera, camStartFov);
+                    SetCamShakeAmplitude(state.Camera, 1f);
+                    ShakeCam(state.Camera, "HAND_SHAKE", 0.65f);
+                }
+            }
+
+            [SceneStageTick(SceneStage.PrisonBuzzGate)]
+            public static void PrisonBuzzGate(float deltaTime, ref State state)
+            {
+                if (state.StageJustSwitched)
+                {
+                    const float camStartPosX = 1853.78662109375f, camStartPosY = 2609.88525390625f, camStartPosZ = 46.33966827392578f;
+                    const float camStartRotX = -6.158645582199096f, camStartRotY = 0.001460685976780951f, camStartRotZ = 94.22196960449219f;
+                    const float camStartFov = 20.91f;
+
+                    SetEntityCoords(state.JasPed, Constants.JasPrison2X, Constants.JasPrison2Y, 44f, false, false, false, true);
+                    SetEntityCoords(state.LuPed, Constants.LuPrison1X, Constants.LuPrison1Y, 44f, false, false, false, false);
+                    SetEntityHeading(state.LuPed, Constants.LuPrison1Heading);
+
+                    SetEntityHeading(state.JasPed, Constants.JasPrison2Heading + 180f);
+                    TaskAchieveHeading(state.JasPed, Constants.JasPrison2Heading, 3000);
+
+                    SetCamCoord(state.Camera, camStartPosX, camStartPosY, camStartPosZ);
+                    SetCamRot(state.Camera, camStartRotX, camStartRotY, camStartRotZ, 2);
+                    SetCamFov(state.Camera, camStartFov);
+                    SetCamShakeAmplitude(state.Camera, 1f);
+                    ShakeCam(state.Camera, "HAND_SHAKE", 0.65f);
+                }
+            }
+
+            [SceneStageTick(SceneStage.PrisonWalkOut)]
+            public static void PrisonWalkOut(float deltaTime, ref State state)
+            {
+                const float camStartPosX = 1844.73583984375f, camStartPosY = 2606.576416015625f, camStartPosZ = 45.413582f;
+                const float camStartRotX = -0.33496195077f, camStartRotY = -0.5372275513f, camStartRotZ = 71.35124969482f;
+                const float camStartFov = 17.24954f;
+
+                const float camEndPosX = camStartPosX + 2f, camEndPosY = camStartPosY - 0.2f;
+
+                if (state.StageJustSwitched)
+                {
+                    SetCamShakeAmplitude(state.Camera, 0.5f);
+                    ShakeCam(state.Camera, "HAND_SHAKE", 0.15f);
+
+                    TaskGoStraightToCoord(state.LuPed, Constants.LuPrison2X, Constants.LuPrison2Y, 44f, 0.5f, -1, Constants.LuPrison2Heading, 0.001f);
+                }
+
+                CamUtils.Lerp(state.Camera, camStartPosX, camStartPosY, camStartPosZ, camStartRotX, camStartRotY, camStartRotZ, camStartFov, camEndPosX, camEndPosY, camStartPosZ, camStartRotX, camStartRotY, camStartRotZ, camStartFov, state.CurrentStageDuration, state.CurrentStageTime);
+            }
+
+            [SceneStageTick(SceneStage.PrisonGreet1)]
+            public static void PrisonGreet1(float deltaTime, ref State state)
+            {
+                if (state.StageJustSwitched)
+                {
+                    const float camStartPosX = 1845.1439208984375f, camStartPosY = 2607.478759765625f, camStartPosZ = 46.21189880371094f;
+                    const float camStartRotX = -1.2146679162979126f, camStartRotY = 0.000753010855987668f, camStartRotZ = -72.495872497558f;
+                    const float camStartFov = 8.23f;
+
+                    SetCamCoord(state.Camera, camStartPosX, camStartPosY, camStartPosZ);
+                    SetCamRot(state.Camera, camStartRotX, camStartRotY, camStartRotZ, 2);
+                    SetCamFov(state.Camera, camStartFov);
+                    SetCamShakeAmplitude(state.Camera, 1f);
+                    ShakeCam(state.Camera, "HAND_SHAKE", 0.05f);
+
+                    float offsetX = Constants.LuPrison2X - Constants.LuPrison1X, offsetY = Constants.LuPrison2Y - Constants.LuPrison1Y;
+                    const float skipTo = 0.85f;
+                    ClearPedTasksImmediately(state.LuPed);
+                    SetEntityCoords(state.LuPed, Constants.LuPrison1X + offsetX * skipTo, Constants.LuPrison1Y + offsetY * skipTo, 44f, false, false, false, false);
+                    TaskGoStraightToCoord(state.LuPed, Constants.LuPrison2X, Constants.LuPrison2Y, 44f, 0.5f, -1, Constants.LuPrison2Heading, 0.001f);
                 }
             }
         }
@@ -95,11 +528,88 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 ClearPedTasks(CurrentState.JasPed);
                 DeleteEntity(ref CurrentState.Car);
             }
+
+            if(CurrentState.LadyCar != 0)
+            {
+                DeleteEntity(ref CurrentState.LadyCar);
+                DeleteEntity(ref CurrentState.Lady);
+            }
+
+            if(CurrentState.Clerk != 0)
+            {
+                DeleteEntity(ref CurrentState.Clerk);
+            }
+
+            if(CurrentState.TaskSequence != 0)
+            {
+                ClearSequenceTask(ref CurrentState.TaskSequence);
+            }
+
+            if(CurrentState.BeerBox != 0)
+            {
+                DeleteEntity(ref CurrentState.BeerBox);
+            }
+
+            if(CurrentState.JasPed != 0)
+            {
+                DeleteEntity(ref CurrentState.JasPed);
+            }
+
+            if(CurrentState.LuPed != 0)
+            {
+                DeleteEntity(ref CurrentState.LuPed);
+            }
+
+            ClearPopSphere();
+        }
+
+        private void ClearPopSphere()
+        {
+            if (CurrentState.PopSphereId != 0)
+            {
+                RemovePopMultiplierSphere(CurrentState.PopSphereId, false);
+                CurrentState.PopSphereId = 0;
+            }
         }
 
         public override void Tick(float deltaTime)
         {
+            if(CurrentState.Clerk == 0)
+            {
+                uint model = (uint)PedHash.ShopKeep01;
+                RequestModel(model);
+                if(HasModelLoaded(model))
+                {
+                    CurrentState.Clerk = CreatePed(0, model, -3041.861f, 584.9562f, 7.908928f, 19.71f, false, false);
+                    SetEntityAsMissionEntity(CurrentState.Clerk, false, true);
+                }
+            }
+
+            bool wasOver = IsOver;
+
             base.Tick(deltaTime);
+
+            if(!wasOver && IsOver)
+            {
+                ClearPedTasks(CurrentState.JasPed);
+                RemoveAnimDict(Constants.TakedownAnimDict);
+                RemoveAnimDict(Constants.GrabMoneyAnimDict);
+                RemoveAnimDict(Constants.LiftAnimDict);
+                SetModelAsNoLongerNeeded(Constants.BeerBoxHash);
+                ClearPopSphere();
+            }
+            else if(!wasOver)
+            {
+                RequestAnimDict(Constants.TakedownAnimDict);
+                RequestAnimDict(Constants.GrabMoneyAnimDict);
+                RequestAnimDict(Constants.LiftAnimDict);
+                RequestModel(Constants.BeerBoxHash);
+            }
+
+            if(CurrentStage <= SceneStage.DriveHighway)
+            {
+                RequestCollisionAtCoord(Constants.HighwayStartX, Constants.HighwayStartY, 30f);
+            }
 
             RenderScriptCams(true, false, 0, false, false);
         }

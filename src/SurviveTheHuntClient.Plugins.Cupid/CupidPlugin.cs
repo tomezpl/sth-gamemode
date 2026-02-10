@@ -126,7 +126,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             SceneHandlers[scene].StartScene(in GameState, ScriptCamera);
         }
 
-        private void AdvanceScene()
+        private bool AdvanceScene()
         {
             if(State.CurrentScene == _lastScene)
             {
@@ -134,9 +134,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 RenderScriptCams(false, false, 0, false, false);
 
                 SetFocusEntity(PlayerPedId());
+
+                return false;
             } else
             {
                 SetScene(State.CurrentScene + 1);
+                return true;
             }
         }
 
@@ -257,6 +260,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             State.RequestClothesChange(false);
         }
 
+        public override void OnClockReceived(int hours, int minutes, int seconds)
+        {
+            base.OnClockReceived(hours, minutes, seconds);
+
+            // Set time to 10AM at the start
+            SetClockTime(10, 0, 0);
+            NetworkOverrideClockTime(10, 0, 0);
+        }
+
         public void Tick(float deltaTime)
         {
             if(State.IsWaitingForClothesChange)
@@ -269,6 +281,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 }
             }
 
+            bool isIntroOver = false;
+
             if(GameState != null)
             {
                 if (!SceneHandlers[State.CurrentScene].IsOver)
@@ -277,8 +291,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 }
                 else
                 {
-                    AdvanceScene();
+                    isIntroOver = !AdvanceScene();
                 }
+            }
+
+            if (GameState?.Hunt?.IsStarted == true && State.CurrentScene != _lastScene && !isIntroOver)
+            {
+                DisableAllControlActions(0);
             }
         }
     }

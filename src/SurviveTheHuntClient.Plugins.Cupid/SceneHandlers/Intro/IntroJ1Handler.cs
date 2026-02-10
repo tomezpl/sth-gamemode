@@ -27,21 +27,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             switch(stage)
             {
                 case SceneStage.IntroWideShot:
-                    return 5.25f;
+                    return 8.32f;
                 case SceneStage.GroundShot:
-                    return 1.75f;
+                    return 1.45f;
                 case SceneStage.SimeonArriveOverhead:
-                    return 1.2f;
+                    return 1.65f;
                 case SceneStage.JasDownLadder:
-                    return 2f;
+                    return 2.2f;
                 case SceneStage.SimeonTalk1:
-                    return 4.5f;
+                    return 5.2f;
                 case SceneStage.JasTalk1:
-                    return 1.1f;
+                    return 1.6f;
                 case SceneStage.SimeonTalk2:
-                    return 2.6f;
+                    return 2.8f;
                 case SceneStage.JasWalk:
-                    return 3.5f;
+                    return 4.1f;
                 default:
                     return 0f;
             }
@@ -53,6 +53,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             internal int SimeonCar;
             internal int JasPed;
             internal int Camera;
+            internal int PopSphereId;
 
             public State() : base() { }
 
@@ -70,8 +71,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             [SceneStageTick(SceneStage.IntroWideShot)]
             public static void IntroWideShot(float deltaTime, ref State state)
             {
-                // TODO: disable traffic
-
                 const float initCamPosX = -3196.27783203125f, initCamPosY = 366.26983642578125f, initCamPosZ = 7.800143718719482f;
                 const float initCamRotX = -2.3481221199035645f, initCamRotY = 0.000919112004339695f, initCamRotZ = -47.3736686706543f;
                 const float initCamFov = 40.037540435791016f;
@@ -82,7 +81,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
                 if (state.StageJustSwitched)
                 {
+                    SetOverrideWeather("CLEAR");
+
                     SetEntityCoords(state.JasPed, Constants.JasInitialPos.X, Constants.JasInitialPos.Y, Constants.JasInitialPos.Z, false, false, false, false);
+                    state.PopSphereId = AddPopMultiplierSphere(Constants.JasInitialPos.X, Constants.JasInitialPos.Y, Constants.JasInitialPos.Z, 100f, 0, 0, false, false);
                 }
 
                 CamUtils.Lerp(state.Camera, initCamPosX, initCamPosY, initCamPosZ, initCamRotX, initCamRotY, initCamRotZ, initCamFov, targetCamPosX, targetCamPosY, targetCamPosZ, targetCamRotX, targetCamRotY, targetCamRotZ, targetCamFov, state.CurrentStageDuration, state.CurrentStageTime);
@@ -96,6 +98,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     SetCamCoord(state.Camera, -3044.657f, 427.0898f, 5.5f);
                     SetCamRot(state.Camera, 10f, 0f, 41f, 0);
                     SetCamFov(state.Camera, 30f);
+
+                    SetEntityVisible(state.SimeonCar, false, false);
+                    SetEntityVisible(state.SimeonPed, false, false);
                 }
             }
 
@@ -104,9 +109,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             {
                 if (state.StageJustSwitched)
                 {
-                    SetCamCoord(state.Camera, -3057.732421875f, 446.678131103515f, 8.835713386535645f);
-                    SetCamRot(state.Camera, -23.03775405883789f, 0.016376100480556488f, -93.70833587646484f, 2);
-                    SetCamFov(state.Camera, 33f);
+                    SetEntityVisible(state.SimeonCar, true, false);
+                    SetEntityVisible(state.SimeonPed, true, false);
+                    SetCamCoord(state.Camera, -3059.81665039062f, 444.3040771484375f, 9.577336311340332f);
+                    SetCamRot(state.Camera, -26.49459457397461f, 0.00015853659715503454f, -88.13221740722656f, 2);
+                    SetCamFov(state.Camera, 32.3f);
                 }
             }
 
@@ -118,6 +125,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     SetCamCoord(state.Camera, -3054.14501953125f, 446.2530517578125f, 11.143379211425781f);
                     SetCamRot(state.Camera, 2.918590784072876f, 0.01671551540493965f, 117.45038604736328f, 2);
                     SetCamFov(state.Camera, 17.5f);
+                    ShakeCam(state.Camera, "HAND_SHAKE", 0.15f);
                 }
             }
 
@@ -147,6 +155,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     SetCamFov(state.Camera, 20f);
 
                     // TODO slight camera shake
+
                 }
             }
 
@@ -158,6 +167,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     SetCamCoord(state.Camera, -3063.165283203125f, 441.1617126464844f, 11.294121742248535f);
                     SetCamRot(state.Camera, -23.594791412353516f, 4.382942199707031f, -60.67698669433594f, 2);
                     SetCamFov(state.Camera, 25.7f);
+
+                    ShakeCam(state.Camera, "HAND_SHAKE", 0.25f);
 
                     TaskEnterVehicle(state.SimeonPed, state.SimeonCar, 4000, -1, 1f, 0, 0);
                 }
@@ -178,6 +189,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 {
                     SetEntityCoords(state.JasPed, -3060.115f, 448.0133f, 9.043686f, false, false, false, true);
                     SetEntityHeading(state.JasPed, 253.25f);
+                    SetCamShakeAmplitude(state.Camera, 0);
                     TaskGoStraightToCoord(state.JasPed, -3059.47f, 450f, 9.65f, 1f, 3000, 56.4f, 0.01f);
                 }
 
@@ -192,6 +204,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             CurrentState = new State(GetPlayerPed(gameState.Hunt.HuntedPlayers[(int)PlayerType.HuntedJ].PlayerHandle), cameraId);
 
             SetFocusEntity(CurrentState.JasPed);
+
+            ClearAreaOfVehicles(Constants.JasInitialPos.X, Constants.JasInitialPos.Y, Constants.JasInitialPos.Z, 100f, false, false, false, false, false);
 
             RequestModel((int)PedHash.SiemonYetarian);
         }
@@ -219,10 +233,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             
             if(HasModelLoaded((int)PedHash.SiemonYetarian) && HasModelLoaded(caracaraHash))
             {
-                Vector3 pos = new Vector3(-3048f, 443f, 6.15f);
+                Vector3 pos = new Vector3(-3051.50366210937f, 443.6261596679687f, 6.15f);
                 CurrentState.SimeonPed = CreatePed(0, (uint)PedHash.SiemonYetarian, pos.X, pos.Y, pos.Z, 88f, false, false);
                 Vector3 rightVec = Vector3.Cross(GetEntityForwardVector(CurrentState.SimeonPed), Vector3.Up);
-                Vector3 carPos = pos + rightVec * 2.5f;
+                Vector3 carPos = pos + rightVec * 1.5f;
                 CurrentState.SimeonCar = CreateVehicle(caracaraHash, carPos.X, carPos.Y, carPos.Z, 90f, false, false);
                 SetVehicleColours(CurrentState.SimeonCar, (int)VehicleColor.MetallicSteelGray, (int)VehicleColor.MetallicSilver);
                 SetEntityAsMissionEntity(CurrentState.SimeonPed, false, true);
@@ -244,6 +258,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             {
                 DeleteEntity(ref CurrentState.SimeonCar);
             }
+
+            RemovePopMultiplierSphere(CurrentState.PopSphereId, false);
+            ClearOverrideWeather();
         }
 
         public override void Tick(float deltaTime)
