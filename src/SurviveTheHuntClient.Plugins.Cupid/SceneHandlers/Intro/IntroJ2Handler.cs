@@ -14,6 +14,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
         private static readonly int _carHash = GetHashKey("boor");
 
+        private static readonly Random s_RNG = new Random();
+
         internal IntroJ2Handler() : base()
         {
             RequestModel((uint)_carHash);
@@ -65,6 +67,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             /// </summary>
             internal int LuPed;
             
+            internal int Guard;
+            internal int Girl1, Girl2;
+            
             internal readonly int Camera;
 
             public State()
@@ -78,6 +83,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 FPPCarPitch = 0;
                 FPPCarYaw = 0;
                 BeerBox = 0;
+                Guard = 0;
+                Girl1 = Girl2 = 0;
 
                 Camera = 0;
                 JasPed = 0;
@@ -192,6 +199,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             internal const float LuPrison1X = 1837.853f, LuPrison1Y = 2609.089f, LuPrison1Heading = 271.8625f;
             internal const float LuPrison2X = 1849.379f, LuPrison2Y = 2609.139f, LuPrison2Heading = 257.2621f;
             internal const float JasPrison2X = 1852.834912109375f, JasPrison2Y = 2610.071728515625f, JasPrison2Heading = 90.03719f;
+
+            internal static readonly uint GirlModelHash = (uint)GetHashKey("a_f_y_carclub_01");
+            internal const string GirlAnimDict1 = "amb@world_human_prostitute@hooker@idle_a";
+            internal const string GirlAnimDict2 = "amb@world_human_prostitute@french@idle_a";
+            internal static readonly string[] GirlAnimClips = { "idle_a", "idle_b", "idle_c" };
+
+            internal const float BedX = -1146.581f, BedY = -1515.909f, BedZ = 10f, BedHeading = 215.3f;
+            internal const float
+                BedCamPosX = -1147.5504150390625f, BedCamPosY = -1515.123779296875f, BedCamPosZ = 10.453112602233887f,
+                BedCamRotX = -2.594290018081665f, BedCamRotY = 0.00026729164528660476f, BedCamRotZ = -140.4815673828125f,
+                BedCamFov = 38f;
+
+            internal const string BedAnimDict = "anim@heists@ornate_bank@managers_room";
+            internal const string BedAnimJasClip = "ig_11_managers_room_player";
+            internal const string BedAnimLuClip = "ig_11_managers_room_manager";
         }
 
         internal class Tickers
@@ -419,8 +441,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 {
                     DetachCam(state.Camera);
 
+                    // Disable camera shake
+                    SetCamShakeAmplitude(state.Camera, 0f);
+                    ShakeCam(state.Camera, "HAND_SHAKE", 0f);
+
                     const float z = 44f;
 
+                    state.Guard = CreatePed(0, (uint)PedHash.Prisguard01SMM, Constants.PrisonGuardX, Constants.PrisonGuardY, Constants.PrisonGuardZ, Constants.PrisonGuardHeading, false, false);
+                    SetEntityAsMissionEntity(state.Guard, false, true);
+                    
                     SetEntityCoords(state.JasPed, Constants.JasPrison1X, Constants.JasPrison1Y, z, false, false, false, false);
                     SetEntityHeading(state.JasPed, Constants.JasPrison1Heading);
                 }
@@ -516,6 +545,32 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     SetEntityCoords(state.LuPed, Constants.LuPrison1X + offsetX * skipTo, Constants.LuPrison1Y + offsetY * skipTo, 44f, false, false, false, false);
                     TaskGoStraightToCoord(state.LuPed, Constants.LuPrison2X, Constants.LuPrison2Y, 44f, 0.5f, -1, Constants.LuPrison2Heading, 0.001f);
                 }
+
+            [SceneStageTick(SceneStage.Bed)]
+            public static void Bed(float deltaTime, ref State state)
+            {
+                const float bedSeconds = 3.633f;
+
+                if(state.StageJustSwitched)
+                {
+                    const float heading = Constants.BedHeading + 90f;
+
+                    DetachCam(state.Camera);
+                    SetCamCoord(state.Camera, Constants.BedCamPosX, Constants.BedCamPosY, Constants.BedCamPosZ);
+                    SetCamRot(state.Camera, Constants.BedCamRotX, Constants.BedCamRotY, Constants.BedCamRotZ, 2);
+                    SetCamFov(state.Camera, Constants.BedCamFov);
+
+                    SetEntityCoords(state.JasPed, Constants.BedX, Constants.BedY, Constants.BedZ, false, false, false, false);
+                    SetEntityNoCollisionEntity(state.JasPed, state.LuPed, false);
+                    SetEntityNoCollisionEntity(state.LuPed, state.JasPed, false);
+                    SetEntityCoords(state.LuPed, Constants.BedX, Constants.BedY, Constants.BedZ, false, false, false, false);
+                    SetEntityHeading(state.LuPed, heading);
+                    SetEntityHeading(state.JasPed, heading);
+
+                    const float offsetX = -1.4f + 4.3f + 1.4f - 1.1f, offsetY = -3.64f + 4.8f - 0.6f - 0.8f, offsetZ = 0.6f;
+                    TaskPlayAnimAdvanced(state.JasPed, Constants.BedAnimDict, Constants.BedAnimJasClip, Constants.BedX + offsetX + 3f - 2.3f + 1.1f + 0.6f, Constants.BedY + offsetY + 3f - 2.2f + 0.5f - 2.4f, Constants.BedZ + offsetZ - 0.15f, 0f, 0f, heading + 120f, 8f, 8f, -1, 2 | 512 | 8 | 2048, 0.8f, 0, 0);
+                    TaskPlayAnimAdvanced(state.LuPed, Constants.BedAnimDict, Constants.BedAnimLuClip, Constants.BedX + offsetX, Constants.BedY + offsetY, Constants.BedZ + offsetZ - 0.1f, 0f, 0f, heading + 150f, 8f, 8f, -1, 2 | 512 | 8 | 2048, 0.8f, 0, 0);
+                }
             }
         }
 
@@ -560,6 +615,17 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 DeleteEntity(ref CurrentState.LuPed);
             }
 
+            if(CurrentState.Guard != 0)
+            {
+                DeleteEntity(ref CurrentState.Guard);
+            }
+
+            if(CurrentState.Girl1 != 0)
+            {
+                DeleteEntity(ref CurrentState.Girl1);
+                DeleteEntity(ref CurrentState.Girl2);
+            }
+
             ClearPopSphere();
         }
 
@@ -585,6 +651,37 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 }
             }
 
+            if(CurrentState.Girl1 == 0)
+            {
+                if(HasModelLoaded(Constants.GirlModelHash) && HasAnimDictLoaded(Constants.GirlAnimDict1) && HasAnimDictLoaded(Constants.GirlAnimDict2))
+                {
+                    const float posX = -1242.145f, posY = -1610f, maxPosZ = 3.7f, heading = 128.4f;
+                    float posZ = maxPosZ;
+                    CurrentState.Girl1 = CreatePed(0, Constants.GirlModelHash, posX, posY, posZ, heading, false, false);
+                    Vector3 rightVec = Vector3.Cross(Vector3.Up, GetEntityForwardVector(CurrentState.Girl1));
+                    const float distance = 0.45f;
+                    CurrentState.Girl2 = CreatePed(0, Constants.GirlModelHash, posX + rightVec.X * distance, posY + rightVec.Y * distance, posZ + rightVec.Z * distance, heading, false, false);
+                    
+                    SetEntityAsMissionEntity(CurrentState.Girl1, false, true);
+                    SetEntityAsMissionEntity(CurrentState.Girl2, false, true);
+
+                    SetPedRandomComponentVariation(CurrentState.Girl1, false);
+                    SetPedRandomComponentVariation(CurrentState.Girl2, false);
+                    SetPedRandomProps(CurrentState.Girl1);
+                    SetPedRandomProps(CurrentState.Girl2);
+
+                    string randomAnim = Constants.GirlAnimClips[s_RNG.Next(Constants.GirlAnimClips.Length)];
+                    TaskPlayAnim(CurrentState.Girl1, Constants.GirlAnimDict1, randomAnim, 1f, 1f, -1, 1, 0f, false, false, false);
+                    randomAnim = Constants.GirlAnimClips[s_RNG.Next(Constants.GirlAnimClips.Length)];
+                    TaskPlayAnim(CurrentState.Girl2, Constants.GirlAnimDict2, randomAnim, 1f, 1f, -1, 1, 0f, false, false, false);
+                }
+                else
+                {
+                    RequestAnimDict(Constants.GirlAnimDict1);
+                    RequestAnimDict(Constants.GirlAnimDict2);
+            }
+            }
+
             bool wasOver = IsOver;
 
             base.Tick(deltaTime);
@@ -595,7 +692,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 RemoveAnimDict(Constants.TakedownAnimDict);
                 RemoveAnimDict(Constants.GrabMoneyAnimDict);
                 RemoveAnimDict(Constants.LiftAnimDict);
+                RemoveAnimDict(Constants.GirlAnimDict1);
+                RemoveAnimDict(Constants.GirlAnimDict2);
+                RemoveAnimDict(Constants.BedAnimDict);
                 SetModelAsNoLongerNeeded(Constants.BeerBoxHash);
+                SetModelAsNoLongerNeeded((uint)PedHash.Prisguard01SMM);
+                SetModelAsNoLongerNeeded(Constants.GirlModelHash);
                 ClearPopSphere();
             }
             else if(!wasOver)
@@ -604,6 +706,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 RequestAnimDict(Constants.GrabMoneyAnimDict);
                 RequestAnimDict(Constants.LiftAnimDict);
                 RequestModel(Constants.BeerBoxHash);
+                RequestModel((uint)PedHash.Prisguard01SMM);
+                RequestModel(Constants.GirlModelHash);
+                RequestAnimDict(Constants.BedAnimDict);
             }
 
             if(CurrentStage <= SceneStage.DriveHighway)
