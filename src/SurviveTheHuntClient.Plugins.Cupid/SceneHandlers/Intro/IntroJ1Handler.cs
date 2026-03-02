@@ -3,11 +3,15 @@ using static SurviveTheHuntShared.Plugins.Cupid.Constants;
 using static CitizenFX.Core.Native.API;
 using CitizenFX.Core;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
+using SurviveTheHuntClient.Models;
+using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 {
     internal class IntroJ1Handler : SceneHandlerBase<IntroJ1Handler.SceneStage, IntroJ1Handler.Tickers, IntroJ1Handler.State>
     {
+        internal IntroJ1Handler(TriggerEventProxyDelegate triggerEventProxyDelegate) : base(triggerEventProxyDelegate) { }
+
         private class SceneStageTick : SceneStageTickBaseAttribute { internal SceneStageTick(SceneStage stage) : base((int)stage) { } }
 
         internal enum SceneStage
@@ -54,15 +58,17 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             internal int JasPed;
             internal int Camera;
             internal int PopSphereId;
+            internal IntroJ1Handler Handler;
 
             public State() : base() { }
 
-            internal State(int jasPed, int camera) : base()
+            internal State(int jasPed, int camera, IntroJ1Handler handler) : base()
             {
                 SimeonPed = 0;
                 SimeonCar = 0;
                 JasPed = jasPed;
                 Camera = camera;
+                Handler = handler;
             }
         }
 
@@ -85,6 +91,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
                     SetEntityCoords(state.JasPed, Constants.JasInitialPos.X, Constants.JasInitialPos.Y, Constants.JasInitialPos.Z, false, false, false, false);
                     state.PopSphereId = AddPopMultiplierSphere(Constants.JasInitialPos.X, Constants.JasInitialPos.Y, Constants.JasInitialPos.Z, 100f, 0, 0, false, false);
+
+                    // Start the music
+                    state.Handler.AVControllerHelper.StartStage("Intro");
                 }
 
                 CamUtils.Lerp(state.Camera, initCamPosX, initCamPosY, initCamPosZ, initCamRotX, initCamRotY, initCamRotZ, initCamFov, targetCamPosX, targetCamPosY, targetCamPosZ, targetCamRotX, targetCamRotY, targetCamRotZ, targetCamFov, state.CurrentStageDuration, state.CurrentStageTime);
@@ -201,7 +210,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
         {
             base.StartScene(in gameState, cameraId);
 
-            CurrentState = new State(GetPlayerPed(gameState.Hunt.HuntedPlayers[(int)PlayerType.HuntedJ].PlayerHandle), cameraId);
+            CurrentState = new State(GetPlayerPed(gameState.Hunt.HuntedPlayers[(int)PlayerType.HuntedJ].PlayerHandle), cameraId, this);
 
             SetFocusEntity(CurrentState.JasPed);
 

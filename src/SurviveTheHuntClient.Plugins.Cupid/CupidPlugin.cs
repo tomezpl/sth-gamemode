@@ -44,11 +44,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         internal PluginState State { get => _state; }
 
-        private Dictionary<DirectedScene, ISceneHandler> SceneHandlers = new Dictionary<DirectedScene, ISceneHandler>()
-        {
-            { DirectedScene.IntroJason, new SceneHandlers.Intro.IntroJ1Handler() },
-            { DirectedScene.JasonDrivingHood, new SceneHandlers.Intro.IntroJ2Handler() }
-        };
+        private Dictionary<DirectedScene, ISceneHandler> SceneHandlers;
 
         private static DirectedScene[] GetAllHandledScenes(Dictionary<DirectedScene, ISceneHandler> sceneHandlers)
         {
@@ -74,6 +70,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         public CupidPlugin(PluginContext context) : base("cupid", context)
         {
+            SceneHandlers = new Dictionary<DirectedScene, ISceneHandler>()
+            {
+                { DirectedScene.IntroJason, new SceneHandlers.Intro.IntroJ1Handler(context.TriggerEventProxy) },
+                { DirectedScene.JasonDrivingHood, new SceneHandlers.Intro.IntroJ2Handler(context.TriggerEventProxy) }
+            };
+
             DirectedScene[] allScenes = GetAllHandledScenes(SceneHandlers);
             _lastScene = allScenes[allScenes.Length - 1];
         }

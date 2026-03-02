@@ -1,5 +1,7 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Interfaces;
+using SurviveTheHuntClient.Models;
+using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -27,6 +29,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers
 
     internal class SceneHandlerBase<ESceneStage, TTickers, TState> : ITickable, ISceneHandler where TTickers : class where TState : SceneHandlerBaseState, new() where ESceneStage : Enum
     {
+        protected readonly TriggerEventProxyDelegate TriggerEventProxy;
+        protected readonly AVControllerHelper AVControllerHelper;
+
+        internal SceneHandlerBase(TriggerEventProxyDelegate triggerEventProxyDelegate)
+        {
+            TriggerEventProxy = triggerEventProxyDelegate;
+            AVControllerHelper = new AVControllerHelper(triggerEventProxyDelegate);
+        }
+
         protected static readonly Array s_AllStages = Enum.GetValues(typeof(ESceneStage));
         protected static readonly ESceneStage s_LastStage = (ESceneStage)s_AllStages.GetValue(s_AllStages.Length - 1);
 

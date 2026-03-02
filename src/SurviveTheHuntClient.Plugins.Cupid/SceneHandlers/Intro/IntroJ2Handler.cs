@@ -16,7 +16,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
         private static readonly Random s_RNG = new Random();
 
-        internal IntroJ2Handler() : base()
+        internal IntroJ2Handler(TriggerEventProxyDelegate triggerEventProxyDelegate) : base(triggerEventProxyDelegate)
         {
             RequestModel((uint)_carHash);
         }
@@ -66,7 +66,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             /// Owned by this script (clone)
             /// </summary>
             internal int LuPed;
-            
+
             internal int Guard;
             internal int Girl1, Girl2;
             
@@ -545,6 +545,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     SetEntityCoords(state.LuPed, Constants.LuPrison1X + offsetX * skipTo, Constants.LuPrison1Y + offsetY * skipTo, 44f, false, false, false, false);
                     TaskGoStraightToCoord(state.LuPed, Constants.LuPrison2X, Constants.LuPrison2Y, 44f, 0.5f, -1, Constants.LuPrison2Heading, 0.001f);
                 }
+            }
 
             [SceneStageTick(SceneStage.Bed)]
             public static void Bed(float deltaTime, ref State state)
@@ -679,7 +680,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 {
                     RequestAnimDict(Constants.GirlAnimDict1);
                     RequestAnimDict(Constants.GirlAnimDict2);
-            }
+                }
             }
 
             bool wasOver = IsOver;
@@ -711,10 +712,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 RequestAnimDict(Constants.BedAnimDict);
             }
 
-            if(CurrentStage <= SceneStage.DriveHighway)
+            /*if(CurrentStage <= SceneStage.DriveHighway)
             {
                 RequestCollisionAtCoord(Constants.HighwayStartX, Constants.HighwayStartY, 30f);
-            }
+            }*/
 
             RenderScriptCams(true, false, 0, false, false);
         }
