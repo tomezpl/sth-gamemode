@@ -54,6 +54,7 @@
     <Compile Include="SceneHandlers\Intro\IntroJ2Handler.cs" />
     <Compile Include="SceneHandlers\SceneHandlerBase.cs" />
     <Compile Include="Utils\CamUtils.cs" />
+    <Compile Include="Utils\PlayerUtils.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SurviveTheHuntClient.Models\SurviveTheHuntClient.Models.csproj">

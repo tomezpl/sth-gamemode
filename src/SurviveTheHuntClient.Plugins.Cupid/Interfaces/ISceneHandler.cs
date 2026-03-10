@@ -9,5 +9,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Interfaces
         void StartScene(in IGameState gameState, int cameraId);
 
         void Cleanup();
+
+        void OnNetEntityReceived(int netId, string name);
     }
 }

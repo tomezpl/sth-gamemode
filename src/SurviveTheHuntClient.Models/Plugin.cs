@@ -234,5 +234,10 @@ namespace SurviveTheHuntClient.Models
         {
 
         }
+
+        public virtual void OnNetEntityReceived(int netId, string name)
+        {
+
+        }
     }
 }

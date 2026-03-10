@@ -10,7 +10,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 {
     internal class IntroJ1Handler : SceneHandlerBase<IntroJ1Handler.SceneStage, IntroJ1Handler.Tickers, IntroJ1Handler.State>
     {
-        internal IntroJ1Handler(TriggerEventProxyDelegate triggerEventProxyDelegate) : base(triggerEventProxyDelegate) { }
+        internal IntroJ1Handler(TriggerEventProxyDelegate triggerEventProxyDelegate, TriggerServerEventProxyDelegate triggerServerEventProxyDelegate) 
+            : base(triggerEventProxyDelegate, triggerServerEventProxyDelegate) { }
 
         private class SceneStageTick : SceneStageTickBaseAttribute { internal SceneStageTick(SceneStage stage) : base((int)stage) { } }
 

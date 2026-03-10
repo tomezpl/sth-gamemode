@@ -83,6 +83,8 @@ namespace SurviveTheHuntShared
             public const string XmasReceiveSantaSpawn = "sth:xmas:recvSantaSpawn";
 
             public const string UIRecvGameModes = "sth:ui:recvGameModes";
+
+            public const string RecvNetEntity = "sth:recvNetId";
         }
 
         /// <summary>
@@ -113,6 +115,8 @@ namespace SurviveTheHuntShared
             public const string XmasBroadcastHuntedCaptured = "sth:xmas:broadcastCaptured";
             public const string XmasBroadcastSleighSpawn = "sth:xmas:broadcastSleigh";
             public const string XmasBroadcastSantaSpawn = "sth:xmas:broadcastSantaSpawn";
+
+            public const string NotifyNetEntity = "sth:notifyNetId";
         }
     }
 }

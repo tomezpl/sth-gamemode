@@ -107,5 +107,13 @@ namespace SurviveTheHuntClient
                 Debug.WriteLine("Requested teleport to spawn, but player is already within the spawn area bounds (safe zone)");
             }
         }
+
+        [EventHandler(Events.Client.RecvNetEntity)]
+        public void OnNetEntityReceived(int netId, string name)
+        {
+            name = string.IsNullOrWhiteSpace(name) ? null : name;
+
+            ExecutePlugins(p => p.OnNetEntityReceived(netId, name));
+        }
     }
 }

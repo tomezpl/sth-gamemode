@@ -2,6 +2,7 @@
 using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
+using SurviveTheHuntClient.Plugins.Cupid.Utils;
 using System;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
@@ -72,8 +73,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         {
             SceneHandlers = new Dictionary<DirectedScene, ISceneHandler>()
             {
-                { DirectedScene.IntroJason, new SceneHandlers.Intro.IntroJ1Handler(context.TriggerEventProxy) },
-                { DirectedScene.JasonDrivingHood, new SceneHandlers.Intro.IntroJ2Handler(context.TriggerEventProxy) }
+                { DirectedScene.IntroJason, new SceneHandlers.Intro.IntroJ1Handler(context.TriggerEventProxy, context.TriggerServerEventProxy) },
+                { DirectedScene.JasonDrivingHood, new SceneHandlers.Intro.IntroJ2Handler(context.TriggerEventProxy, context.TriggerServerEventProxy) }
             };
 
             DirectedScene[] allScenes = GetAllHandledScenes(SceneHandlers);
@@ -103,18 +104,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             GameState = gameState;
             _state = new PluginState();
 
-            PlayerType playerType = PlayerType.Cop;
-            int localPlayerId = PlayerId();
-            for(int i = 0; i < GameState.Hunt.HuntedPlayers.Length; i++)
-            {
-                if (GameState.Hunt.HuntedPlayers[i].PlayerHandle == localPlayerId)
-                {
-                    playerType = (PlayerType)i;
-                    break;
-                }
-            }
-
-            State.LocalRole = playerType;
+            State.LocalRole = PlayerUtils.GetPlayerType(PlayerId(), GameState.Hunt.HuntedPlayers);
 
             Debug.WriteLine($"{nameof(CupidPlugin)}.{nameof(OnHuntStarted)}: Local player's role is {State.LocalRole}");
 
@@ -269,6 +259,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             // Set time to 10AM at the start
             SetClockTime(10, 0, 0);
             NetworkOverrideClockTime(10, 0, 0);
+        }
+
+        public override void OnNetEntityReceived(int netId, string name)
+        {
+            base.OnNetEntityReceived(netId, name);
+
+            foreach(ISceneHandler handler in SceneHandlers.Values)
+            {
+                handler.OnNetEntityReceived(netId, name);
+            }
         }
 
         public void Tick(float deltaTime)

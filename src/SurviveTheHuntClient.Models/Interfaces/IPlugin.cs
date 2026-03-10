@@ -1,5 +1,6 @@
 ﻿using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Models.UI;
+using System;
 
 namespace SurviveTheHuntClient.Interfaces
 {
@@ -45,5 +46,6 @@ namespace SurviveTheHuntClient.Interfaces
         SurviveTheHuntShared.Utils.Coord[] CarSpawnPointsOverride { get; }
         bool? IsVehicleWeaponAllowed(int vehicleHandle, uint weapon);
         void OnPlayerSpawned();
+        void OnNetEntityReceived(int netId, string name = null);
     }
 }

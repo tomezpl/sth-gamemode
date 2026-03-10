@@ -30,11 +30,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers
     internal class SceneHandlerBase<ESceneStage, TTickers, TState> : ITickable, ISceneHandler where TTickers : class where TState : SceneHandlerBaseState, new() where ESceneStage : Enum
     {
         protected readonly TriggerEventProxyDelegate TriggerEventProxy;
+        protected readonly TriggerServerEventProxyDelegate TriggerServerEventProxy;
         protected readonly AVControllerHelper AVControllerHelper;
 
-        internal SceneHandlerBase(TriggerEventProxyDelegate triggerEventProxyDelegate)
+        internal SceneHandlerBase(TriggerEventProxyDelegate triggerEventProxyDelegate, TriggerServerEventProxyDelegate triggerServerEventProxyDelegate)
         {
             TriggerEventProxy = triggerEventProxyDelegate;
+            TriggerServerEventProxy = triggerServerEventProxyDelegate;
             AVControllerHelper = new AVControllerHelper(triggerEventProxyDelegate);
         }
 
@@ -54,7 +56,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers
 
         public virtual void Cleanup()
         {
-
+            AVControllerHelper.EndStage();
         }
 
         public virtual void StartScene(in IGameState gameState, int cameraId)
@@ -148,6 +150,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers
                 ESceneStage newStageDyn = (ESceneStage)(object)newStage;
                 SetStage(newStageDyn);
             }
+        }
+
+        public virtual void OnNetEntityReceived(int netId, string name)
+        {
+
         }
     }
 }

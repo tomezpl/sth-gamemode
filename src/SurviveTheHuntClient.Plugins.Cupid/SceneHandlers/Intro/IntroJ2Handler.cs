@@ -12,13 +12,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
     {
         internal class SceneStageTick : SceneStageTickBaseAttribute { internal SceneStageTick(SceneStage stage) : base((int)stage) { } }
 
-        private static readonly int _carHash = GetHashKey("boor");
+        private static readonly int _carHash = GetHashKey("boor"), _carHash2 = GetHashKey("tulip");
 
         private static readonly Random s_RNG = new Random();
 
-        internal IntroJ2Handler(TriggerEventProxyDelegate triggerEventProxyDelegate) : base(triggerEventProxyDelegate)
+        internal IntroJ2Handler(TriggerEventProxyDelegate triggerEventProxyDelegate, TriggerServerEventProxyDelegate triggerServerEventProxyDelegate) : base(triggerEventProxyDelegate, triggerServerEventProxyDelegate)
         {
             RequestModel((uint)_carHash);
+            RequestModel((uint)_carHash2);
         }
 
         internal enum SceneStage
@@ -42,12 +43,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             PrisonGreet2,
             PrisonGreet3,
             Fade,
-            Bed
+            Bed,
+            DriveTogether,
+            Outro
         }
 
         internal class State : SceneHandlerBaseState
         {
-            internal int Car;
+            internal int Car, Car2;
             internal int Lady;
             internal int LadyCar;
             internal int PopSphereId;
@@ -72,9 +75,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             
             internal readonly int Camera;
 
+            internal readonly IntroJ2Handler Handler;
+
+            internal readonly PlayerType LocalPlayerType;
+
             public State()
             {
                 Car = 0;
+                Car2 = 0;
                 LadyCar = 0;
                 Lady = 0;
                 PopSphereId = 0;
@@ -88,13 +96,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
                 Camera = 0;
                 JasPed = 0;
+                LocalPlayerType = PlayerType.Cop;
             }
 
-            internal State(int jasPedId, int luPedId, int camera) : this()
+            internal State(int jasPedId, int luPedId, int camera, PlayerType localPlayerType, IntroJ2Handler handler) : this()
             {
                 JasPed = jasPedId;
                 LuPed = luPedId;
                 Camera = camera;
+                Handler = handler;
+                LocalPlayerType = localPlayerType;
             }
         }
 
@@ -139,9 +150,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 case SceneStage.PrisonGreet3:
                     return 1.2f;
                 case SceneStage.Fade:
-                    return 0f;
+                    return 0.5f;
                 case SceneStage.Bed:
                     return 5.65f;
+                case SceneStage.DriveTogether:
+                    return 4f;
+                case SceneStage.Outro:
+                    return 37f;
                 default:
                     return 0f;
             }
@@ -154,7 +169,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             HuntPlayer pJ = gameState.Hunt.HuntedPlayers[(int)PlayerType.HuntedJ];
             HuntPlayer pL = gameState.Hunt.HuntedPlayers.Length > 1 ? gameState.Hunt.HuntedPlayers[(int)PlayerType.HuntedL] : pJ;
             // who the fuck made `isNetwork` a float
-            CurrentState = new State(ClonePed(GetPlayerPed(pJ.PlayerHandle), 0f, false, false), ClonePed(GetPlayerPed(pL.PlayerHandle), 0f, false, false), cameraId);
+            CurrentState = new State(ClonePed(GetPlayerPed(pJ.PlayerHandle), 0f, false, false), ClonePed(GetPlayerPed(pL.PlayerHandle), 0f, false, false), cameraId, PlayerUtils.GetPlayerType(PlayerId(), gameState.Hunt.HuntedPlayers), this);
 
             CurrentState.PopSphereId = AddPopMultiplierSphere(Constants.CarStartPos.X, Constants.CarStartPos.Y, Constants.CarStartPos.Z, 100f, 0, 0, false, false);
 
@@ -214,6 +229,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             internal const string BedAnimDict = "anim@heists@ornate_bank@managers_room";
             internal const string BedAnimJasClip = "ig_11_managers_room_player";
             internal const string BedAnimLuClip = "ig_11_managers_room_manager";
+
+            internal const float Car2X = 2898.972f, Car2Y = 4142.792f, Car2Z = 49.74251f;
+            internal const float Car2Heading = 18.75201f;
         }
 
         internal class Tickers
@@ -480,6 +498,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 }
             }
 
+            [SceneStageTick(SceneStage.PrisonTalk5)]
+            public static void PrisonTalk5(float deltaTime, ref State state)
+            {
+                if(state.StageJustSwitched)
+                {
+                    state.Handler.AVControllerHelper.StartStage("Prison");
+                }
+            }
+
             [SceneStageTick(SceneStage.PrisonBuzzGate)]
             public static void PrisonBuzzGate(float deltaTime, ref State state)
             {
@@ -572,6 +599,64 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     TaskPlayAnimAdvanced(state.JasPed, Constants.BedAnimDict, Constants.BedAnimJasClip, Constants.BedX + offsetX + 3f - 2.3f + 1.1f + 0.6f, Constants.BedY + offsetY + 3f - 2.2f + 0.5f - 2.4f, Constants.BedZ + offsetZ - 0.15f, 0f, 0f, heading + 120f, 8f, 8f, -1, 2 | 512 | 8 | 2048, 0.8f, 0, 0);
                     TaskPlayAnimAdvanced(state.LuPed, Constants.BedAnimDict, Constants.BedAnimLuClip, Constants.BedX + offsetX, Constants.BedY + offsetY, Constants.BedZ + offsetZ - 0.1f, 0f, 0f, heading + 150f, 8f, 8f, -1, 2 | 512 | 8 | 2048, 0.8f, 0, 0);
                 }
+
+                RequestCollisionAtCoord(Constants.Car2X, Constants.Car2Y, Constants.Car2Z);
+            }
+
+            [SceneStageTick(SceneStage.DriveTogether)]
+            public static void DriveTogether(float deltaTime, ref State state)
+            {
+                if(state.StageJustSwitched)
+                {
+                    int localPlayerId = PlayerId();
+                    PlayerType playerType = PlayerUtils.GetPlayerType(localPlayerId, state.Handler.GameState.Hunt.HuntedPlayers);
+                    int playerPed = GetPlayerPed(localPlayerId);
+
+                    SetFocusEntity(playerPed);
+
+
+                    if (playerType != PlayerType.Cop)
+                    {
+                        SetEntityCoords(state.Car2, Constants.Car2X, Constants.Car2Y, Constants.Car2Z, false, false, false, true);
+                        SetPedIntoVehicle(playerPed, state.Car2, playerType == PlayerType.HuntedJ ? -1 : 0);
+                        FreezeEntityPosition(state.Car2, false);
+                        
+                        if(playerType == PlayerType.HuntedJ)
+                        {
+                            const float carDestX = 2821.6f, carDestY = 4383.233f, carDestZ = 48.84974f, carDestHeading = 22.7f;
+                            SetVehicleForwardSpeed(state.Car2, 27.5f);
+                            TaskVehicleDriveToCoord(playerPed, state.Car2, carDestX, carDestY, carDestZ, 75f, 1, (uint)_carHash2, 5 | 32, 1f, 1f);
+                            //TaskVehicleDriveWander(playerPed, state.Car2, 15f, 0);
+                        }
+                    }
+                }
+
+                if(state.LocalPlayerType != PlayerType.Cop)
+                {
+                    const float camPosAX = 2907.81665039062f, camPosAY = 4136.63232421875f, camPosAZ = 49.86284637451172f;
+                    const float camRotAX = -0.02635776996612549f, camRotAY = 0.0007176236249506474f, camRotAZ = 61.15264129638672f;
+                    const float camFovA = 15.432522773742676f;
+
+                    const float camPosBX = 2829.90087890625f, camPosBY = 4383.27539062f, camPosBZ = 51.829647064208984f;
+                    const float camRotBX = -12.320538520812988f, camRotBY = -17.3291969299316f, camRotBZ = 86.11876678466797f;
+                    const float camFovB = 32.36821746826172f;
+
+                    CamUtils.Lerp(state.Camera, camPosAX, camPosAY, camPosAZ, camRotAX, camRotAY, camRotAZ, camFovA, camPosBX, camPosBY, camPosBZ, camRotBX, camRotBY, camRotBZ, camFovB, state.CurrentStageDuration + 3f, state.CurrentStageTime * 0.55f);
+                }
+            }
+
+            [SceneStageTick(SceneStage.Outro)]
+            public static void Outro(float deltaTime, ref State state)
+            {
+                if(state.StageJustSwitched)
+                {
+                    ClearPedTasks(PlayerPedId());
+                    SetFocusEntity(PlayerPedId());
+                    SetCamActive(state.Camera, false);
+                }
+
+                // allow control in this bit, we just need to let the stage run till end so music and UI can play.
+                EnableAllControlActions(0);
             }
         }
 
@@ -627,6 +712,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 DeleteEntity(ref CurrentState.Girl2);
             }
 
+            if (CurrentState.Car2 != 0)
+            {
+                SetEntityAsMissionEntity(CurrentState.Car2, true, true);
+                DeleteEntity(ref CurrentState.Car2);
+                CurrentState.Car2 = 0;
+            }
+
             ClearPopSphere();
         }
 
@@ -636,6 +728,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             {
                 RemovePopMultiplierSphere(CurrentState.PopSphereId, false);
                 CurrentState.PopSphereId = 0;
+            }
+        }
+
+        private const string TulipNetEntName = "CupidTulip";
+
+        public override void OnNetEntityReceived(int netId, string name)
+        {
+            base.OnNetEntityReceived(netId, name);
+
+            if(CurrentState.Car2 == 0 && name == TulipNetEntName)
+            {
+                CurrentState.Car2 = NetworkGetEntityFromNetworkId(netId);
             }
         }
 
@@ -689,6 +793,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
             if(!wasOver && IsOver)
             {
+                AVControllerHelper.EndStage();
                 ClearPedTasks(CurrentState.JasPed);
                 RemoveAnimDict(Constants.TakedownAnimDict);
                 RemoveAnimDict(Constants.GrabMoneyAnimDict);
@@ -700,6 +805,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 SetModelAsNoLongerNeeded((uint)PedHash.Prisguard01SMM);
                 SetModelAsNoLongerNeeded(Constants.GirlModelHash);
                 ClearPopSphere();
+
+                if (CurrentState.Car2 != 0)
+                {
+                    SetVehicleRadioEnabled(CurrentState.Car2, false);
+                }
+
+                // TODO: remove simeon, amanda, car, clones, etc.
             }
             else if(!wasOver)
             {
@@ -712,12 +824,29 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 RequestAnimDict(Constants.BedAnimDict);
             }
 
-            /*if(CurrentStage <= SceneStage.DriveHighway)
+            if(CurrentStage >= SceneStage.BitchSlap && CurrentStage <= SceneStage.DriveHighway)
             {
                 RequestCollisionAtCoord(Constants.HighwayStartX, Constants.HighwayStartY, 30f);
-            }*/
+            }
 
-            RenderScriptCams(true, false, 0, false, false);
+            // need to spawn car2 eventually
+            // only huntedj should do this to make sure they own the car
+            // this then needs to be synced with huntedl over a server event
+            if(CurrentState.LocalPlayerType == PlayerType.HuntedJ)
+            {
+                if(CurrentState.Car2 == 0)
+                {
+                    RequestModel((uint)_carHash2);
+                    if(HasModelLoaded((uint)_carHash2))
+                    {
+                        CurrentState.Car2 = CreateVehicle((uint)_carHash2, Constants.Car2X, Constants.Car2Y, Constants.Car2Z, Constants.Car2Heading, true, true);
+                        FreezeEntityPosition(CurrentState.Car2, true);
+                        TriggerServerEventProxy(SurviveTheHuntShared.Events.Server.NotifyNetEntity, NetworkGetNetworkIdFromEntity(CurrentState.Car2), TulipNetEntName);
+                    }
+                }
+            }
+
+            RenderScriptCams(CurrentStage < s_LastStage, CurrentStage == s_LastStage, 1500, true, false);
         }
     }
 }

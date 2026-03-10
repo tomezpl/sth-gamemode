@@ -172,5 +172,12 @@ namespace SurviveTheHuntServer
             KillFeedServerPayload killfeedPayload = KillFeedDispatcher.GetKillFeedPayload(killInfo, GameState, RNG);
             TriggerClientEvent(Events.Client.DisplayKill, KillFeedServerPayload.Serialize(killfeedPayload));
         }
+
+        [EventHandler(Events.Server.NotifyNetEntity)]
+        public void NotifyNetEntity(int netId, string name)
+        {
+            Debug.WriteLine($"Notifying all players about entity {netId}{(string.IsNullOrWhiteSpace(name) ? "." : $" (named \"{name}\").")}");
+            TriggerClientEvent(Events.Client.RecvNetEntity, netId, name);
+        }
     }
 }

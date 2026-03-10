@@ -22,12 +22,23 @@ namespace SurviveTheHuntClient.Models
         /// </summary>
         public DateTime MugshotExpiry;
 
-        public HuntPlayer(Player player, DateTime currentTime)
+        /// <summary>
+        /// Custom (possibly plugin-specific) flags to set for a given player.
+        /// </summary>
+        public byte Flags;
+
+        public HuntPlayer(Player player, DateTime currentTime, byte flags = 0)
         {
             PlayerHandle = player.Handle;
             MugshotTimestamp = currentTime;
             MugshotExpiry = currentTime;
             Mugshot = null;
+            Flags = flags;
+        }
+
+        public static bool CheckFlag(HuntPlayer player, int bit)
+        {
+            return (player.Flags & (1 << bit)) != 0;
         }
     }
 }
