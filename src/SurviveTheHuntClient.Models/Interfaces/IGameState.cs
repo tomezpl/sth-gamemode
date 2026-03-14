@@ -11,5 +11,10 @@
         /// Details about the current hunt session.
         /// </summary>
         IHuntDetails Hunt { get; }
+
+        /// <summary>
+        /// The name of the currently active mode
+        /// </summary>
+        string Mode { get; }
     }
 }

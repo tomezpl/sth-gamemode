@@ -156,5 +156,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers
         {
 
         }
+
+        public virtual bool CanShowHud { get => true; }
     }
 }

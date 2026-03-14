@@ -281,5 +281,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
             RenderScriptCams(true, false, 0, false, false);
         }
+
+        public sealed override bool CanShowHud => false;
     }
 }

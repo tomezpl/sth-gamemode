@@ -239,5 +239,7 @@ namespace SurviveTheHuntClient.Models
         {
 
         }
+
+        public virtual bool CanShowHud => true;
     }
 }

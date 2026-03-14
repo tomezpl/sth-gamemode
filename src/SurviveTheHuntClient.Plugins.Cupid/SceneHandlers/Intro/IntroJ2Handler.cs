@@ -548,7 +548,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     TaskGoStraightToCoord(state.LuPed, Constants.LuPrison2X, Constants.LuPrison2Y, 44f, 0.5f, -1, Constants.LuPrison2Heading, 0.001f);
                 }
 
-                CamUtils.Lerp(state.Camera, camStartPosX, camStartPosY, camStartPosZ, camStartRotX, camStartRotY, camStartRotZ, camStartFov, camEndPosX, camEndPosY, camStartPosZ, camStartRotX, camStartRotY, camStartRotZ, camStartFov, state.CurrentStageDuration, state.CurrentStageTime);
+                const float camOffsetX = -1f, camOffsetY = 1f, camOffsetZ = 0.5f;
+
+                CamUtils.Lerp(state.Camera, camStartPosX + camOffsetX, camStartPosY + camOffsetY, camStartPosZ + camOffsetZ, camStartRotX, camStartRotY, camStartRotZ, camStartFov, camEndPosX + camOffsetX, camEndPosY + camOffsetY, camStartPosZ + camOffsetZ, camStartRotX, camStartRotY, camStartRotZ, camStartFov, state.CurrentStageDuration, state.CurrentStageTime);
             }
 
             [SceneStageTick(SceneStage.PrisonGreet1)]
@@ -619,6 +621,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     {
                         SetEntityCoords(state.Car2, Constants.Car2X, Constants.Car2Y, Constants.Car2Z, false, false, false, true);
                         SetPedIntoVehicle(playerPed, state.Car2, playerType == PlayerType.HuntedJ ? -1 : 0);
+                        SetVehicleRadioEnabled(state.Car2, false);
                         FreezeEntityPosition(state.Car2, false);
                         
                         if(playerType == PlayerType.HuntedJ)
@@ -653,6 +656,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     ClearPedTasks(PlayerPedId());
                     SetFocusEntity(PlayerPedId());
                     SetCamActive(state.Camera, false);
+                    SetVehicleForwardSpeed(state.Car2, 20f);
                 }
 
                 // allow control in this bit, we just need to let the stage run till end so music and UI can play.
@@ -806,12 +810,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 SetModelAsNoLongerNeeded(Constants.GirlModelHash);
                 ClearPopSphere();
 
-                if (CurrentState.Car2 != 0)
-                {
-                    SetVehicleRadioEnabled(CurrentState.Car2, false);
-                }
-
                 // TODO: remove simeon, amanda, car, clones, etc.
+
+                SetVehicleRadioEnabled(CurrentState.Car2, true);
             }
             else if(!wasOver)
             {
@@ -848,5 +849,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
             RenderScriptCams(CurrentStage < s_LastStage, CurrentStage == s_LastStage, 1500, true, false);
         }
+
+        public sealed override bool CanShowHud => CurrentStage >= s_LastStage && CurrentState.CurrentStageTime > 4.5;
     }
 }

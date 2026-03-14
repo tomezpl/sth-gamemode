@@ -685,7 +685,22 @@ namespace SurviveTheHuntClient
 
             GameState.Hunt.UpdateHuntedMugshot();
             HuntUI.SetBigmap(ref PlayerState);
-            HuntUI.DrawRemainingTime(ref GameState);
+
+            bool canShowHud = true;
+            ExecutePlugins(p => canShowHud = canShowHud && p.CanShowHud);
+
+            if (canShowHud)
+            {
+                HuntUI.DrawRemainingTime(ref GameState);
+            }
+            else
+            {
+                HideHudAndRadarThisFrame();
+                HideHudNotificationsThisFrame();
+                HideHudComponentThisFrame(10);
+                HideHudComponentThisFrame(15);
+            }
+
             HuntUI.FadeBlips();
             HuntUI.UpdateTeammateBlips(Players, ref GameState, ref PlayerState);
 

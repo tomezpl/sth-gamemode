@@ -1855,6 +1855,11 @@ namespace SurviveTheHuntClient.Plugins.Xmas
 
         public void Tick(float deltaTime)
         {
+            if(GameState?.Mode != "xmas")
+            {
+                return;
+            }
+
             int playerPed = PlayerPedId();
             Vector3 playerPos = GetEntityCoords(playerPed, false);
 

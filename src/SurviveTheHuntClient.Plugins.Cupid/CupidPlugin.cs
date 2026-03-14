@@ -271,8 +271,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
         }
 
+        private bool _canShowHud = true;
+        public sealed override bool CanShowHud => base.CanShowHud && _canShowHud;
+
         public void Tick(float deltaTime)
         {
+            if(GameState?.Mode != "cupid")
+            {
+                return;
+            }
+
             if(State.IsWaitingForClothesChange)
             {
                 State.CurrentClothesChangeElapsedSeconds += deltaTime;
@@ -296,6 +304,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     isIntroOver = !AdvanceScene();
                 }
             }
+
+            // Hide the HUD for the majority of the intro until control is given back to the player
+            _canShowHud = GameState?.Hunt?.IsStarted != true || isIntroOver || SceneHandlers[State.CurrentScene].CanShowHud;
 
             if (GameState?.Hunt?.IsStarted == true && State.CurrentScene != _lastScene && !isIntroOver)
             {

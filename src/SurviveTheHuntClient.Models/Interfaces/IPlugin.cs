@@ -47,5 +47,6 @@ namespace SurviveTheHuntClient.Interfaces
         bool? IsVehicleWeaponAllowed(int vehicleHandle, uint weapon);
         void OnPlayerSpawned();
         void OnNetEntityReceived(int netId, string name = null);
+        bool CanShowHud { get; }
     }
 }
