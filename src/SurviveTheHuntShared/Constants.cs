@@ -153,9 +153,11 @@ namespace SurviveTheHuntShared
         };
 
         /// <summary>
-        /// Y-axis out of bounds limit for the allowed hunt area.
+        /// Y-axis out of bounds limit for the allowed hunt area (LS).
         /// </summary>
-        public static readonly float OutOfBoundsYLimit = 1130f;
+        public const float OutOfBoundsYLimit = 1130f;
+
+        public const float OutOfBoundsYMin = -3920f;
 
         /// <summary>
         /// How long before a ping should the mugshot be generated?

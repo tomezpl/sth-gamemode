@@ -241,5 +241,7 @@ namespace SurviveTheHuntClient.Models
         }
 
         public virtual bool CanShowHud => true;
+
+        public virtual float? YLimitOverride => null;
     }
 }

@@ -48,5 +48,6 @@ namespace SurviveTheHuntClient.Interfaces
         void OnPlayerSpawned();
         void OnNetEntityReceived(int netId, string name = null);
         bool CanShowHud { get; }
+        float? YLimitOverride { get; }
     }
 }

@@ -17,18 +17,52 @@ namespace SurviveTheHuntClient.Helpers
         private const int ApproachingOutOfBoundsNotificationDuration = 20;
         private float TimePassedSinceLastOOBNotification = 0;
 
-        internal void Init()
+        private float _oobYLimit = SharedConstants.OutOfBoundsYLimit;
+
+        internal float OutOfBoundsYLimit
+        {
+            get => _oobYLimit;
+            set
+            {
+                if (PlayAreaBlip != null && value != _oobYLimit)
+                {
+                    int playAreaBlip = PlayAreaBlip.Value;
+                    RemoveBlip(ref playAreaBlip);
+                    PlayAreaBlip = null;
+                }
+                
+                _oobYLimit = value;
+                
+                if (PlayAreaBlip == null)
+                {
+                    PlayAreaBlip = CreatePlayAreaBlip(value);
+                }
+            }
+        }
+
+        private static int CreatePlayAreaBlip(float outOfBoundsYLimit = SharedConstants.OutOfBoundsYLimit)
         {
             const float yOffset = 0f;
-            PlayAreaBlip = AddBlipForArea(-100f , (SharedConstants.DockSpawn.Y + SharedConstants.OutOfBoundsYLimit) * .5f + yOffset, SharedConstants.DockSpawn.Z, 4250f, Math.Abs(SharedConstants.OutOfBoundsYLimit - SharedConstants.DockSpawn.Y) + Math.Abs(yOffset) * .5f);
-            SetBlipDisplay(PlayAreaBlip.Value, 0);
+            float height = Math.Abs(outOfBoundsYLimit - SharedConstants.OutOfBoundsYMin) + Math.Abs(yOffset) * .5f;
+            int blip = AddBlipForArea(-100f, outOfBoundsYLimit - (height * .5f), SharedConstants.DockSpawn.Z, 4250f, height);
+
+            SetBlipDisplay(blip, 0);
             uint colour = 0xFFA83366;
-            SetBlipColour(PlayAreaBlip.Value, (int)colour);
+            SetBlipColour(blip, (int)colour);
+
+            return blip;
+        }
+
+        internal void Init(float outOfBoundsYLimit = SharedConstants.OutOfBoundsYLimit)
+        {
+            _oobYLimit = outOfBoundsYLimit;
+
+            PlayAreaBlip = CreatePlayAreaBlip(outOfBoundsYLimit);
         }
 
         public void Tick(float deltaTime)
         {
-            bool approachingBounds = CheckIsApproachingBounds();
+            bool approachingBounds = CheckIsApproachingBounds(OutOfBoundsYLimit);
             if (approachingBounds != WasApproachingBoundsLastTick && PlayAreaBlip.HasValue)
             {
                 SetBlipDisplay(PlayAreaBlip.Value, approachingBounds ? 10 : 0);
@@ -62,24 +96,47 @@ namespace SurviveTheHuntClient.Helpers
             WasApproachingBoundsLastTick = approachingBounds;
         }
 
-        private static bool CheckIsApproachingBounds()
+        private static bool CheckIsApproachingBounds(float outOfBoundsYLimit = SharedConstants.OutOfBoundsYLimit)
+        {
+            int localPlayerPed = PlayerPedId();
+            if (DoesEntityExist(localPlayerPed))
+            {
+                return CheckIsApproachingBounds(localPlayerPed, outOfBoundsYLimit) == BoundsTestResult.NearEdge;
+            }
+
+            return false;
+        }
+
+        public enum BoundsTestResult
+        {
+            Within,
+            NearEdge,
+            Outside
+        }
+
+        public static BoundsTestResult CheckIsApproachingBounds(int localPlayerPed, float outOfBoundsYLimit = SharedConstants.OutOfBoundsYLimit)
         {
             // Distance inside the bounds at which the player should be notified.
             const float margin = 250f;
 
-            int localPlayerPed = PlayerPedId();
-            if (DoesEntityExist(localPlayerPed))
+            // TODO: when we finally get to implementing #55 (configurable play areas),
+            // this will not work because it only does a 1D check against the player's Y-coord. But that's good enough for now.
+            Vector3 pos = GetEntityCoords(localPlayerPed, false);
+            if(pos.Y >= outOfBoundsYLimit)
             {
-                // TODO: when we finally get to implementing #55 (configurable play areas),
-                // this will not work because it only does a 1D check against the player's Y-coord. But that's good enough for now.
-                Vector3 pos = GetEntityCoords(localPlayerPed, false);
-                if(pos.Y >= SharedConstants.OutOfBoundsYLimit - margin)
-                {
-                    return true;
-                }
+                return BoundsTestResult.Outside;
+            }
+            if(pos.Y >= outOfBoundsYLimit - margin)
+            {
+                return BoundsTestResult.NearEdge;
             }
 
-            return false;
+            return BoundsTestResult.Within;
+        }
+
+        public BoundsTestResult CheckIsApproachingBounds(int localPlayerPed)
+        {
+            return CheckIsApproachingBounds(localPlayerPed, OutOfBoundsYLimit);
         }
     }
 }

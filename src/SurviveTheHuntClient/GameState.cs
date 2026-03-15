@@ -6,6 +6,7 @@ using static CitizenFX.Core.Native.API;
 using SurviveTheHuntShared.Core;
 using SurviveTheHuntClient.Models;
 using System.Collections.Generic;
+using SurviveTheHuntClient.Helpers;
 
 namespace SurviveTheHuntClient
 {
@@ -176,9 +177,9 @@ namespace SurviveTheHuntClient
         /// </summary>
         /// <param name="ped">The ped to check.</param>
         /// <returns>true if player is out of bounds, false otherwise.</returns>
-        public static bool IsPedTooFar(Ped ped)
+        internal static bool IsPedTooFar(Ped ped, BoundsTracker boundsTracker = null)
         {
-            return ped.Position.Y >= SharedConstants.OutOfBoundsYLimit;
+            return boundsTracker == null ? ped.Position.Y >= SharedConstants.OutOfBoundsYLimit : (boundsTracker.CheckIsApproachingBounds(ped.Handle) == BoundsTracker.BoundsTestResult.Outside);
         }
     }
 

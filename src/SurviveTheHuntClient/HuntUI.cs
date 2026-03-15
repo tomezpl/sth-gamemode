@@ -112,6 +112,13 @@ namespace SurviveTheHuntClient
             }
         }
 
+        internal readonly BoundsTracker BoundsTracker;
+
+        internal HuntUI(BoundsTracker boundsTracker)
+        {
+            BoundsTracker = boundsTracker;
+        }
+
         public void DisplayObjective(Interfaces.IGameState gameState, Interfaces.IPlayerState playerState, bool ended = false, bool skipAddingHuntedName = false)
         {
             if (!string.IsNullOrWhiteSpace(gameState.CurrentObjective))
@@ -500,7 +507,7 @@ namespace SurviveTheHuntClient
             List<int> pedsToDelete = new List<int>();
 
             // Show the local player's overhead name if they're outside the play area.
-            SetMpGamerTagVisibility(Game.Player.Handle, 0, gameState.Hunt.IsStarted && GameState.IsPedTooFar(Game.PlayerPed));
+            SetMpGamerTagVisibility(Game.Player.Handle, 0, gameState.Hunt.IsStarted && GameState.IsPedTooFar(Game.PlayerPed, BoundsTracker));
 
             foreach(int ped in PlayerBlips.Keys)
             {
@@ -518,7 +525,7 @@ namespace SurviveTheHuntClient
                     isHunted = playerId == gameState.Hunt.HuntedPlayers[i].PlayerHandle;
                 }
 
-                if(gameState.Hunt.IsStarted && ((!isHunted && playerState.Team == Team.Hunted) || isHunted) && !GameState.IsPedTooFar(new Ped(ped)))
+                if(gameState.Hunt.IsStarted && ((!isHunted && playerState.Team == Team.Hunted) || isHunted) && !GameState.IsPedTooFar(new Ped(ped), BoundsTracker))
                 {
                     // Hide the blip if it's within the play area bounds and the player is on the opposite team.
                     Blip blip = PlayerBlips[ped].blip;

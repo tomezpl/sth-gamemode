@@ -274,6 +274,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         private bool _canShowHud = true;
         public sealed override bool CanShowHud => base.CanShowHud && _canShowHud;
 
+        public sealed override float? YLimitOverride => 7180f;
+
         public void Tick(float deltaTime)
         {
             if(GameState?.Mode != "cupid")

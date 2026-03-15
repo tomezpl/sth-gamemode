@@ -32,7 +32,7 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// The UI drawing functions.
         /// </summary>
-        protected HuntUI HuntUI = new HuntUI();
+        protected readonly HuntUI HuntUI;
 
         /// <summary>
         /// Event handlers specific to this implementation of the Survive the Hunt gamemode.
@@ -135,6 +135,8 @@ namespace SurviveTheHuntClient
             KillTracker = new KillTracker();
             BoundsTracker = new BoundsTracker();
             WastedAnim = new WastedAnim(ExecutePlugins);
+
+            HuntUI = new HuntUI(BoundsTracker);
 
             PluginContext context = new PluginContext(TriggerEvent, TriggerServerEvent, EventHandlers, Tickables, TickablesToRemove);
 
@@ -1027,6 +1029,10 @@ namespace SurviveTheHuntClient
 
             PlayerState.TakeAwayWeapons(playerPed);
             AmmoCheckTimer = 0;
+
+            float? boundsYLimitOverride = null;
+            ExecutePlugins(p => boundsYLimitOverride = boundsYLimitOverride == null ? p.YLimitOverride : boundsYLimitOverride);
+            BoundsTracker.OutOfBoundsYLimit = boundsYLimitOverride != null ? boundsYLimitOverride.Value : SharedConstants.OutOfBoundsYLimit;
         }
 
         private void HuntStartedByServer(float secondsTillPing, DateTime endTime, TimeSpan? prepPhase = null)
