@@ -38,11 +38,16 @@ namespace SurviveTheHuntClient.Models
         }
     }
 
+    public enum GameModeSetting
+    {
+        AllowAutoRespawn
+    }
 
     public delegate void TriggerServerEventProxyDelegate(string eventName, params object[] payload);
     public delegate void TriggerEventProxyDelegate(string eventName, params object[] payload);
     public delegate void AddTickableDelegate(ITickable tickable);
     public delegate void RemoveTickableDelegate(ITickable tickable);
+    public delegate void ChangeGameModeSettingDelegate(GameModeSetting setting, object value);
 
     public struct PluginContext
     {
@@ -51,19 +56,21 @@ namespace SurviveTheHuntClient.Models
         public readonly AddTickableDelegate AddTickable;
         public readonly RemoveTickableDelegate RemoveTickable;
         public readonly EventHandlerDictionary EventHandlers;
+        public readonly ChangeGameModeSettingDelegate ChangeGameModeSetting;
 
-        public PluginContext(TriggerEventProxyDelegate triggerEvent, TriggerServerEventProxyDelegate triggerServerEvent, EventHandlerDictionary eventHandlers, List<ITickable> tickables, List<ITickable> tickablesToRemove)
-            : this(triggerEvent, triggerServerEvent, eventHandlers, (ITickable tickable) => tickables.Add(tickable), (ITickable tickable) => tickablesToRemove.Add(tickable))
+        public PluginContext(TriggerEventProxyDelegate triggerEvent, TriggerServerEventProxyDelegate triggerServerEvent, ChangeGameModeSettingDelegate changeGameModeSetting, EventHandlerDictionary eventHandlers, List<ITickable> tickables, List<ITickable> tickablesToRemove)
+            : this(triggerEvent, triggerServerEvent, changeGameModeSetting, eventHandlers, (ITickable tickable) => tickables.Add(tickable), (ITickable tickable) => tickablesToRemove.Add(tickable))
         {
         }
 
-        public PluginContext(TriggerEventProxyDelegate triggerEvent, TriggerServerEventProxyDelegate triggerServerEvent, EventHandlerDictionary eventHandlers, AddTickableDelegate addTickable, RemoveTickableDelegate removeTickable)
+        public PluginContext(TriggerEventProxyDelegate triggerEvent, TriggerServerEventProxyDelegate triggerServerEvent, ChangeGameModeSettingDelegate changeGameModeSetting, EventHandlerDictionary eventHandlers, AddTickableDelegate addTickable, RemoveTickableDelegate removeTickable)
         {
             TriggerEventProxy = triggerEvent;
             TriggerServerEventProxy = triggerServerEvent;
             AddTickable = addTickable;
             RemoveTickable = removeTickable;
             EventHandlers = eventHandlers;
+            ChangeGameModeSetting = changeGameModeSetting;
         }
     }
 
@@ -243,5 +250,7 @@ namespace SurviveTheHuntClient.Models
         public virtual bool CanShowHud => true;
 
         public virtual float? YLimitOverride => null;
+
+        public virtual bool PreventDeathDetection => false;
     }
 }

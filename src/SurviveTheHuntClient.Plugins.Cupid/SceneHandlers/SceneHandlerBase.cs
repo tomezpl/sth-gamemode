@@ -93,12 +93,19 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers
             return 0f;
         }
 
+        private const bool IsDebug = true;
+
         internal void SetStage(ESceneStage stage)
         {
             Debug.WriteLine($"Changing stage to {stage}");
             _currentStage = stage;
             IsStageOver = false;
             CurrentState.CurrentStageDuration = GetStageDuration(stage);
+            if(IsDebug)
+            {
+                // in debug mode, limit every scene to 1.5s to make it palatable
+                CurrentState.CurrentStageDuration = Math.Min(CurrentState.CurrentStageDuration, 1.5f);
+            }
             CurrentState.CurrentStageTime = 0f;
             if (SceneTickMethods.TryGetValue(stage, out SceneStageTickMethod method))
             {

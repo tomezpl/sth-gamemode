@@ -7,6 +7,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
     {
         private readonly TriggerEventProxyDelegate TriggerEventProxy;
 
+        private bool _isInStage = false;
+
         internal AVControllerHelper(TriggerEventProxyDelegate triggerEventProxyDelegate)
         {
             TriggerEventProxy = triggerEventProxyDelegate;
@@ -32,11 +34,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
             Debug.WriteLine($"Sending event {eventName} with {stage}");
 
             TriggerEventProxy(eventName, stage);
+
+            _isInStage = true;
         }
 
         internal void EndStage()
         {
-            TriggerEventProxy(BuildEventName(EventName.EndStage));
+            if (_isInStage)
+            {
+                TriggerEventProxy(BuildEventName(EventName.EndStage));
+            }
+
+            _isInStage = false;
         }
     }
 }

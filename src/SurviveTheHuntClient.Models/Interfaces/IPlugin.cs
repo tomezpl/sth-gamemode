@@ -49,5 +49,6 @@ namespace SurviveTheHuntClient.Interfaces
         void OnNetEntityReceived(int netId, string name = null);
         bool CanShowHud { get; }
         float? YLimitOverride { get; }
+        bool PreventDeathDetection { get; }
     }
 }

@@ -116,6 +116,16 @@ namespace SurviveTheHuntClient
         /// </summary>
         private readonly IPlugin[] Plugins;
 
+        public void ChangeSettingFromPlugin(GameModeSetting setting, object value)
+        {
+            switch(setting)
+            {
+                case GameModeSetting.AllowAutoRespawn:
+                    Exports["spawnmanager"].setAutoSpawn((bool)value);
+                    break;
+            }
+        }
+
         public MainScript()
         {
             PlayerState.GameState = GameState;
@@ -138,7 +148,7 @@ namespace SurviveTheHuntClient
 
             HuntUI = new HuntUI(BoundsTracker);
 
-            PluginContext context = new PluginContext(TriggerEvent, TriggerServerEvent, EventHandlers, Tickables, TickablesToRemove);
+            PluginContext context = new PluginContext(TriggerEvent, TriggerServerEvent, ChangeSettingFromPlugin, EventHandlers, Tickables, TickablesToRemove);
 
             Plugins.Xmas.XmasPlugin xmasPlugin = new Plugins.Xmas.XmasPlugin(context, PlayerState, HuntUI);
             Plugins.Cupid.CupidPlugin cupidPlugin = new Plugins.Cupid.CupidPlugin(context);
@@ -757,8 +767,13 @@ namespace SurviveTheHuntClient
             }
             if(!Game.Player.IsAlive && !PlayerState.DeathReported)
             {
+                bool canReportDeath = true;
+
+                // Check for any plugins blocking death detection
+                ExecutePlugins(p => canReportDeath = canReportDeath && !p.PreventDeathDetection);
+
                 // Instead of reporting immediately, defer it for the next tick, so the KillTracker can tick to build the KillInfo.
-                PlayerState.ReportDeathNextTick = true;
+                PlayerState.ReportDeathNextTick = canReportDeath;
             }
 
             if (SpawnedVehiclesNeedSync)

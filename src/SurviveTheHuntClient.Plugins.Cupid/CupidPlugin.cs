@@ -1,6 +1,8 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Attributes;
 using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
+using SurviveTheHuntClient.Plugins.Cupid.Controllers;
 using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
 using System;
@@ -19,6 +21,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         public override bool IsGameMode => true;
 
         internal IGameState GameState;
+
+        private readonly BleedoutController BleedoutController;
 
         internal class PluginState
         {
@@ -69,6 +73,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         private readonly DirectedScene _lastScene;
 
+        /// <summary>
+        /// Constructor for the valentines plugin (except we're so fucking late for valentines...)
+        /// </summary>
+        /// <param name="context"></param>
         public CupidPlugin(PluginContext context) : base("cupid", context)
         {
             SceneHandlers = new Dictionary<DirectedScene, ISceneHandler>()
@@ -79,10 +87,61 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             DirectedScene[] allScenes = GetAllHandledScenes(SceneHandlers);
             _lastScene = allScenes[allScenes.Length - 1];
+
+            BleedoutController = new BleedoutController(context.ChangeGameModeSetting, context.TriggerServerEventProxy);
+            BleedoutController.StartedDying += OnStartedDying;
+            BleedoutController.FinishedDying += OnFinishedDying;
         }
+
+        private void OnFinishedDying(int playerPed)
+        {
+            Debug.WriteLine($"{playerPed} died.");
+
+            // If it's the local player that died, disable the BleedoutController,
+            // so auto-respawn and death detection from the main client script can work.
+            BleedoutController.Enabled = false;
+        }
+
+        private void OnStartedDying(int playerPed)
+        {
+            Debug.WriteLine($"{playerPed} started dying.");
+
+            TriggerServerEventProxy(SurviveTheHuntShared.Events.Server.CupidNotifyRevivable, PedToNet(playerPed));
+        }
+
+        internal const bool AllowSelfRevive = true;
 
         public class Events : PluginEvents
         {
+            private new CupidPlugin _plugin { get => (CupidPlugin)base._plugin; }
+
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.CupidReceiveRevivable)]
+            public void ReceiveRevivablePed(int revivablePedNetId)
+            {
+                int pedId = NetToPed(revivablePedNetId);
+
+                if(AllowSelfRevive || pedId != PlayerPedId())
+                {
+                    _plugin.BleedoutController.SetRevivable(pedId, true);
+                }
+            }
+
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.CupidReceiveRevived)]
+            public void ReceiveRevivedPed(int revivedPedNetId)
+            {
+                int pedId = NetToPed(revivedPedNetId);
+
+                _plugin.BleedoutController.SetRevivable(pedId, false);
+
+                ResurrectPed(pedId);
+                if(pedId == PlayerPedId())
+                {
+                    Vector3 coords = GetEntityCoords(pedId, false);
+                    float heading = GetEntityHeading(pedId);
+                    NetworkResurrectLocalPlayer(coords.X, coords.Y, coords.Z, heading, false, false);
+                }
+                _plugin.BleedoutController.OnRevive(pedId);
+            }
         }
 
         public override void OnResourceStopping()
@@ -110,6 +169,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             State.RequestClothesChange();
             SetScene(DirectedScene.IntroJason);
+
+            BleedoutController.Enabled = true;
+            BleedoutController.Reset();
         }
 
         private void SetScene(DirectedScene scene)
@@ -156,6 +218,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 State.RequestClothesChange();
             }
+
+            BleedoutController.Enabled = GameState?.Mode == "cupid";
+            BleedoutController.OnRespawn();
         }
 
         internal bool TryGetPlayer(PlayerType playerType, out HuntPlayer? huntPlayer, int index = 0)
@@ -276,6 +341,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         public sealed override float? YLimitOverride => 7180f;
 
+        public sealed override bool PreventDeathDetection => BleedoutController.Enabled;
+
         public void Tick(float deltaTime)
         {
             if(GameState?.Mode != "cupid")
@@ -314,6 +381,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 DisableAllControlActions(0);
             }
+
+            BleedoutController.Tick(deltaTime);
         }
     }
 }

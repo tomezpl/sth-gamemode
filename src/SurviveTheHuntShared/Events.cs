@@ -85,6 +85,9 @@ namespace SurviveTheHuntShared
             public const string UIRecvGameModes = "sth:ui:recvGameModes";
 
             public const string RecvNetEntity = "sth:recvNetId";
+
+            public const string CupidReceiveRevivable = "sth:cupid:recvRevivable";
+            public const string CupidReceiveRevived = "sth:cupid:recvRevived";
         }
 
         /// <summary>
@@ -117,6 +120,9 @@ namespace SurviveTheHuntShared
             public const string XmasBroadcastSantaSpawn = "sth:xmas:broadcastSantaSpawn";
 
             public const string NotifyNetEntity = "sth:notifyNetId";
+
+            public const string CupidNotifyRevivable = "sth:cupid:notifyRevivable";
+            public const string CupidNotifyRevived = "sth:cupid:notifyRevived";
         }
     }
 }

@@ -49,6 +49,7 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="Events.cs" />
+    <Compile Include="Extensions\Cupid\EventHandlers.cs" />
     <Compile Include="Extensions\XmasModifier.cs" />
     <Compile Include="GameState.cs" />
     <Compile Include="Helpers\CarSpawner.cs" />

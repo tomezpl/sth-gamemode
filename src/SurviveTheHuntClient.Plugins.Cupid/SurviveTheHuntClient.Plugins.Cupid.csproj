@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="Constants\Clothing.cs" />
     <Compile Include="Constants\DirectedScenes.cs" />
+    <Compile Include="Controllers\BleedoutController.cs" />
     <Compile Include="CupidPlugin.cs" />
     <Compile Include="Helpers\AVControllerHelper.cs" />
     <Compile Include="Interfaces\ISceneHandler.cs" />
