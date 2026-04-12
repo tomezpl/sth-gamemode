@@ -104,7 +104,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers
             if(IsDebug)
             {
                 // in debug mode, limit every scene to 1.5s to make it palatable
-                CurrentState.CurrentStageDuration = Math.Min(CurrentState.CurrentStageDuration, 1.5f);
+                CurrentState.CurrentStageDuration = Math.Min(CurrentState.CurrentStageDuration, 0.5f);
             }
             CurrentState.CurrentStageTime = 0f;
             if (SceneTickMethods.TryGetValue(stage, out SceneStageTickMethod method))

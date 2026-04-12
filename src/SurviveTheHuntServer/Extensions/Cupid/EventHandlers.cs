@@ -32,12 +32,20 @@ namespace SurviveTheHuntServer
             }
         }
 
-        [EventHandler(SurviveTheHuntShared.Events.Server.CupidNotifyRevived)]
-        public void CupidNotifyRevived([FromSource] Player reviver, int pedNetId)
+        [EventHandler(SurviveTheHuntShared.Events.Server.CupidNotifyReviveEnd)]
+        public void CupidNotifyRevived([FromSource] Player reviver, int pedNetId, bool cancelled)
         {
-            Debug.WriteLine($"{nameof(CupidNotifyRevived)}: {reviver.Name} revived someone");
+            Debug.WriteLine($"{nameof(CupidNotifyRevived)}: {reviver.Name} finished reviving {pedNetId} ({nameof(cancelled)} = {cancelled})");
 
-            TriggerClientEvent(SurviveTheHuntShared.Events.Client.CupidReceiveRevived, pedNetId);
+            TriggerClientEvent(SurviveTheHuntShared.Events.Client.CupidReceiveEndRevive, pedNetId, cancelled);
+        }
+
+        [EventHandler(SurviveTheHuntShared.Events.Server.CupidNotifyReviveStart)]
+        public void CupidNotifyReviveStart([FromSource] Player player, int pedNetId)
+        {
+            Debug.WriteLine($"{nameof(CupidNotifyReviveStart)}: {player.Name} started reviving {pedNetId}");
+
+            TriggerClientEvent(SurviveTheHuntShared.Events.Client.CupidReceiveStartRevive, pedNetId);
         }
     }
 }

@@ -456,8 +456,8 @@ namespace SurviveTheHuntClient.Plugins.Xmas
                 SetBlipSprite(_presentBlips[i], PresentsBlipId);
                 SetBlipNameFromTextFile(_presentBlips[i], "PREZZIE_LABEL");
                 byte[] colour = _presentsToDeliver[i].Rgba;
-                int packedRgba = SurviveTheHuntShared.Utils.EncodingHelper.HexFromRgba(colour[0], colour[1], colour[2], colour[3]);
-                SetBlipColour(_presentBlips[i], packedRgba);
+                uint packedRgba = SurviveTheHuntShared.Utils.EncodingHelper.PackRgba(colour[0], colour[1], colour[2], colour[3]);
+                SetBlipColour(_presentBlips[i], (int)packedRgba);
 
                 // Hide all but the first presents from the hunted player's radar - they should go through them in order, to allow hunters to set up traps
                 if (IsHunted && i != 0)
@@ -470,13 +470,13 @@ namespace SurviveTheHuntClient.Plugins.Xmas
         public void OnDeliveryUpdate(int[] deliveredIndices, int[] remainingIndices, ref IGameState gameState)
         {
             PlaySoundFrontend(-1, "RACE_PLACED", "HUD_AWARDS", true);
-            int greyBlip = SurviveTheHuntShared.Utils.EncodingHelper.HexFromRgba(96, 96, 96, 255);
+            uint greyBlip = SurviveTheHuntShared.Utils.EncodingHelper.PackRgba(96, 96, 96, 255);
 
             foreach (int deliveredIndex in deliveredIndices)
             {
                 if (deliveredIndex < _presentBlips.Length && DoesBlipExist(_presentBlips[deliveredIndex]))
                 {
-                    SetBlipColour(_presentBlips[deliveredIndex], greyBlip);
+                    SetBlipColour(_presentBlips[deliveredIndex], (int)greyBlip);
 
                     _presentsToDeliver[deliveredIndex].HasPlaced = true;
                 }

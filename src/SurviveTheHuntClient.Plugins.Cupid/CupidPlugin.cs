@@ -2,6 +2,7 @@
 using SurviveTheHuntClient.Attributes;
 using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
+using SurviveTheHuntClient.Models.UI;
 using SurviveTheHuntClient.Plugins.Cupid.Controllers;
 using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
@@ -126,21 +127,36 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 }
             }
 
-            [SthNamedEvent(SurviveTheHuntShared.Events.Client.CupidReceiveRevived)]
-            public void ReceiveRevivedPed(int revivedPedNetId)
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.CupidReceiveEndRevive)]
+            public void ReceiveEndRevive(int revivedPedNetId, bool cancelled)
             {
                 int pedId = NetToPed(revivedPedNetId);
 
-                _plugin.BleedoutController.SetRevivable(pedId, false);
-
-                ResurrectPed(pedId);
-                if(pedId == PlayerPedId())
+                if(!cancelled)
                 {
-                    Vector3 coords = GetEntityCoords(pedId, false);
-                    float heading = GetEntityHeading(pedId);
-                    NetworkResurrectLocalPlayer(coords.X, coords.Y, coords.Z, heading, false, false);
+                    _plugin.BleedoutController.SetRevivable(pedId, false);
+
+                    ResurrectPed(pedId);
+                    if (pedId == PlayerPedId())
+                    {
+                        Vector3 coords = GetEntityCoords(pedId, false);
+                        float heading = GetEntityHeading(pedId);
+                        NetworkResurrectLocalPlayer(coords.X, coords.Y, coords.Z, heading, false, false);
+                    }
+                    _plugin.BleedoutController.OnRevive(pedId);
                 }
-                _plugin.BleedoutController.OnRevive(pedId);
+                else
+                {
+                    _plugin.BleedoutController.OnCancelRevive(pedId);
+                }
+            }
+
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.CupidReceiveStartRevive)]
+            public void ReceiveStartRevive(int revivedPetNetId)
+            {
+                int pedId = NetToPed(revivedPetNetId);
+
+                _plugin.BleedoutController.OnStartRevive(pedId);
             }
         }
 
@@ -342,6 +358,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         public sealed override float? YLimitOverride => 7180f;
 
         public sealed override bool PreventDeathDetection => BleedoutController.Enabled;
+
+        private static LabelledItem[] s_EmptyUI = new LabelledItem[0];
+
+        public override LabelledItem[] UICurrentItems => BleedoutController.Enabled ? BleedoutController.UIState.CurrentItems : s_EmptyUI;
 
         public void Tick(float deltaTime)
         {

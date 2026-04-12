@@ -166,7 +166,7 @@ namespace SurviveTheHuntClient
             Plugins = new IPlugin[]
             {
                 xmasPlugin,
-                cupidPlugin
+                cupidPlugin,
             };
 
             HuntUI.ExecutePlugins = ExecutePlugins;
@@ -178,7 +178,10 @@ namespace SurviveTheHuntClient
             GameState.Mode = mode;
             ExecutePlugins(plugin =>
             {
-                plugin.IsActive = plugin.Name == mode;
+                if (plugin.IsGameMode)
+                {
+                    plugin.IsActive = plugin.Name == mode;
+                }
             }, true);
         }
 

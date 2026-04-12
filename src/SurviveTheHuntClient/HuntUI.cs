@@ -230,12 +230,12 @@ namespace SurviveTheHuntClient
             }
 
             // Get rect width to fit the text.
-            SetTextScale(0f, 0.55f);
+            /*SetTextScale(0f, 0.55f);
             BeginTextCommandWidth("STRING");
             AddTextComponentString($"{header}  00:00");
-            float timebarWidth = EndTextCommandGetWidth(true);
+            float timebarWidth = EndTextCommandGetWidth(true);*/
 
-            float verticalOrigin = 0.855f;
+            const float verticalOrigin = 0.855f;
             const float horizOrigin = 0.94f;
             const float spritePadding = -0.02f;
             const float titleOffset = -0.01f;
@@ -243,30 +243,43 @@ namespace SurviveTheHuntClient
             const float timerbarHeight = 0.06f * 0.5f * 1.4f;
             const float timerbarGap = 0.012f;
 
+            UIUtils.Rect rect = new UIUtils.Rect
+            {
+                X = horizOrigin,
+                Y = verticalOrigin,
+                Width = -1f,
+                Height = timerbarHeight,
+            };
+
             // Load and draw the timerbar using the rect width we've measured.
             RequestStreamedTextureDict("timerbars", true);
             if (HasStreamedTextureDictLoaded("timerbars"))
             {
-                DrawSprite("timerbars", "all_black_bg", horizOrigin + spritePadding, verticalOrigin, timebarWidth, 0.06f * 0.5f * 1.4f, 0f, 255, 255, 255, 128);
+                //DrawSprite("timerbars", "all_black_bg", horizOrigin + spritePadding, verticalOrigin, timebarWidth, 0.06f * 0.5f * 1.4f, 0f, 255, 255, 255, 128);
             }
 
             // Draw the time string on top of the timerbar.
-            BeginTextCommandDisplayText("STRING");
+            UIUtils.DrawTimer(in header, in timeStr, in rect);
+            
+            /*BeginTextCommandDisplayText("STRING");
             AddTextComponentString(timeStr);
             EndTextCommandDisplayText(horizOrigin, verticalOrigin + valueOffset);
             SetTextScale(0, 0.35f);
             BeginTextCommandDisplayText("STRING");
             AddTextComponentString(header);
-            EndTextCommandDisplayText(horizOrigin - timebarWidth / 2.35f, verticalOrigin + titleOffset);
+            EndTextCommandDisplayText(horizOrigin - timebarWidth / 2.35f, verticalOrigin + titleOffset);*/
 
             ExecutePlugins(plugin =>
             {
                 LabelledItem[] items = plugin.UICurrentItems;
                 foreach(LabelledItem item in items)
                 {
-                    verticalOrigin -= timerbarHeight + timerbarGap;
+                    rect.Y -= timerbarHeight + timerbarGap;
+                    rect.Width = -1f;
 
-                    DrawSprite("timerbars", "all_black_bg", horizOrigin + spritePadding, verticalOrigin, timebarWidth, 0.06f * 0.5f * 1.4f, 0f, 255, 255, 255, 128);
+                    UIUtils.Draw(in item, in rect);
+
+                    /*DrawSprite("timerbars", "all_black_bg", horizOrigin + spritePadding, verticalOrigin, timebarWidth, 0.06f * 0.5f * 1.4f, 0f, 255, 255, 255, 128);
 
                     SetTextScale(0f, 0.55f);
                     BeginTextCommandDisplayText("STRING");
@@ -275,7 +288,7 @@ namespace SurviveTheHuntClient
                     SetTextScale(0, 0.35f);
                     BeginTextCommandDisplayText("STRING");
                     AddTextComponentString(item.Label);
-                    EndTextCommandDisplayText(horizOrigin - timebarWidth / 2.35f, verticalOrigin + titleOffset);
+                    EndTextCommandDisplayText(horizOrigin - timebarWidth / 2.35f, verticalOrigin + titleOffset);*/
                 }
             });
 
