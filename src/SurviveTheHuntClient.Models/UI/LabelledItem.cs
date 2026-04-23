@@ -17,6 +17,10 @@ namespace SurviveTheHuntClient.Models.UI
 
         public float XOffset = 0f;
 
+        private static LabelledItem[] _empty = new LabelledItem[0];
+
+        public static LabelledItem[] Empty => _empty;
+
         public LabelledItem(string label, string value, uint colour = uint.MaxValue)
         {
             Label = label;

@@ -5,6 +5,7 @@ using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Models.UI;
 using SurviveTheHuntClient.Plugins.Cupid.Controllers;
 using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
+using SurviveTheHuntClient.Plugins.Cupid.Managers;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
 using System;
 using System.Collections.Generic;
@@ -24,6 +25,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         internal IGameState GameState;
 
         private readonly BleedoutController BleedoutController;
+        private JobManager JobManager = null;
 
         internal class PluginState
         {
@@ -188,6 +190,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             BleedoutController.Enabled = true;
             BleedoutController.Reset();
+
+            if(JobManager != null)
+            {
+                JobManager.Cleanup();
+            }
+
+            JobManager = new JobManager(TriggerServerEventProxy, playerState, gameState);
         }
 
         private void SetScene(DirectedScene scene)
@@ -223,6 +232,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             foreach(ISceneHandler handler in SceneHandlers.Values)
             {
                 handler.Cleanup();
+            }
+
+            if(JobManager != null)
+            {
+                JobManager.Cleanup();
+                JobManager = null;
             }
         }
 
@@ -359,9 +374,28 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         public sealed override bool PreventDeathDetection => BleedoutController.Enabled;
 
-        private static LabelledItem[] s_EmptyUI = new LabelledItem[0];
+        private static LabelledItem[] s_EmptyUI = LabelledItem.Empty;
 
-        public override LabelledItem[] UICurrentItems => BleedoutController.Enabled ? BleedoutController.UIState.CurrentItems : s_EmptyUI;
+        public override LabelledItem[] UICurrentItems
+        {
+            get
+            {
+                // TODO: This could probably be made into a fixed size array; there's only so much we can show on the screen at once anyway
+                List<LabelledItem> items = new List<LabelledItem>();
+
+                if(BleedoutController.Enabled)
+                {
+                    items.AddRange(BleedoutController.UIState.CurrentItems);
+                }
+
+                if (JobManager != null)
+                {
+                    items.AddRange(JobManager.CurrentJobUI);
+                }
+
+                return items.ToArray();
+            }
+        }
 
         public void Tick(float deltaTime)
         {
@@ -386,10 +420,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 if (!SceneHandlers[State.CurrentScene].IsOver)
                 {
+                    // Run the tick for the current scene.
                     SceneHandlers[State.CurrentScene].Tick(deltaTime);
                 }
                 else
                 {
+                    // When the scene is over, move to the next one.
                     isIntroOver = !AdvanceScene();
                 }
             }
@@ -402,7 +438,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 DisableAllControlActions(0);
             }
 
+            if(isIntroOver && JobManager != null)
+            {
+                JobManager.Start();
+            }
+
             BleedoutController.Tick(deltaTime);
+            JobManager?.Tick(deltaTime);
         }
     }
 }

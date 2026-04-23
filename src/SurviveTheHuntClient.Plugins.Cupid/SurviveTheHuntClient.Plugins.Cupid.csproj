@@ -46,10 +46,17 @@
   <ItemGroup>
     <Compile Include="Constants\Clothing.cs" />
     <Compile Include="Constants\DirectedScenes.cs" />
+    <Compile Include="Constants\Heat.cs" />
+    <Compile Include="Constants\Locations.cs" />
     <Compile Include="Controllers\BleedoutController.cs" />
+    <Compile Include="Controllers\Jobs\JobControllerBase.cs" />
+    <Compile Include="Controllers\Jobs\SimpleRobberyJobController.cs" />
     <Compile Include="CupidPlugin.cs" />
     <Compile Include="Helpers\AVControllerHelper.cs" />
+    <Compile Include="Interfaces\IJobState.cs" />
     <Compile Include="Interfaces\ISceneHandler.cs" />
+    <Compile Include="Managers\JobManager.cs" />
+    <Compile Include="Models\JobStateBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SceneHandlers\Intro\IntroJ1Handler.cs" />
     <Compile Include="SceneHandlers\Intro\IntroJ2Handler.cs" />

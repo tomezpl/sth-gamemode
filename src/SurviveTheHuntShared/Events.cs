@@ -89,6 +89,7 @@ namespace SurviveTheHuntShared
             public const string CupidReceiveRevivable = "sth:cupid:recvRevivable";
             public const string CupidReceiveEndRevive = "sth:cupid:recvEndRevive";
             public const string CupidReceiveStartRevive = "sth:cupid:recvStartRevive";
+            public const string CupidReceiveSyncState = "sth:cupid:recvJobSyncState";
         }
 
         /// <summary>
@@ -125,6 +126,7 @@ namespace SurviveTheHuntShared
             public const string CupidNotifyRevivable = "sth:cupid:notifyRevivable";
             public const string CupidNotifyReviveEnd = "sth:cupid:notifyReviveEnd";
             public const string CupidNotifyReviveStart = "sth:cupid:notifyReviveStart";
+            public const string CupidJobSyncState = "sth:cupid:jobSyncState";
         }
     }
 }

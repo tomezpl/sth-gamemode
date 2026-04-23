@@ -276,6 +276,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             if (!isDead || CupidPlugin.AllowSelfRevive)
             {
                 // If the player pressed E, revive a nearby bleeding out player
+                // TODO: if we want to show a help notification instructing the player to revive when they're near a downed player, we'll have to flip this around so the distance checks come before input check
                 if (IsControlJustPressed(0, (int)ReviveControl) || IsDisabledControlJustPressed(0, (int)ReviveControl))
                 {
                     if (!IsRevivingSomeone)

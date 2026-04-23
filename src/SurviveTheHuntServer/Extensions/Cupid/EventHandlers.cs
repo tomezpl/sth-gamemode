@@ -47,5 +47,19 @@ namespace SurviveTheHuntServer
 
             TriggerClientEvent(SurviveTheHuntShared.Events.Client.CupidReceiveStartRevive, pedNetId);
         }
+
+        [EventHandler(SurviveTheHuntShared.Events.Server.CupidJobSyncState)]
+        public void CupidJobSyncState([FromSource] Player sender, string jobId, int propId, object propValue)
+        {
+            Debug.WriteLine($"{nameof(CupidJobSyncState)}: {sender.Name} is syncing prop {propId} with value of {propValue}");
+
+            foreach(Player player in Players)
+            {
+                if(player.Handle != sender.Handle)
+                {
+                    TriggerClientEvent(player, SurviveTheHuntShared.Events.Client.CupidReceiveSyncState, jobId, propId, propValue);
+                }
+            }
+        }
     }
 }
