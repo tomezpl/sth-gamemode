@@ -60,7 +60,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
 
         private void OnCurrentJobChanged(JobControllerBase prev, JobControllerBase current)
         {
-            Debug.WriteLine($"{nameof(JobManager)}: current job changed");
+            Debug.WriteLine($"{nameof(JobManager)}: current job changed from {prev?.Id} to {current?.Id}");
 
             if (prev != null)
             {

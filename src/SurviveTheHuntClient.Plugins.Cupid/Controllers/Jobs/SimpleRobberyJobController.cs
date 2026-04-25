@@ -61,7 +61,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             set
             {
                 float old = _grabProgress;
-                _grabProgress = value;
+                _grabProgress = Math.Min(1f, Math.Max(0f, value));
                 if(old != value)
                 {
                     GrabProgressChanged.Invoke(old, value, CanSync);
@@ -69,10 +69,27 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        internal event GenericStateChangedEvent<bool> IsOverChanged;
+        private bool _isOver = false;
+        internal bool IsOver
+        {
+            get => _isOver;
+            set
+            {
+                if(value != _isOver)
+                {
+                    IsOverChanged.Invoke(_isOver, value, CanSync);
+                }
+
+                _isOver = value;
+            }
+        }
+
         private enum PropId
         {
             JobStage,
-            GrabProgress
+            GrabProgress,
+            IsOver,
         }
 
         internal override void SetImpl(int statePropId, object statePropValue)
@@ -85,6 +102,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     break;
                 case PropId.GrabProgress:
                     GrabProgress = (float)statePropValue;
+                    break;
+                case PropId.IsOver:
+                    IsOver = (bool)statePropValue;
                     break;
             }
         }
@@ -106,6 +126,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     return JobStage;
                 case PropId.GrabProgress:
                     return GrabProgress;
+                case PropId.IsOver:
+                    return IsOver;
             }
 
             throw new ArgumentException($"{nameof(statePropId)} {statePropId} is not a valid {nameof(PropId)}");
@@ -140,7 +162,72 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 }
             }
 
-            internal readonly LabelledItem GrabbingProgress = new LabelledItem("Progress", 0f, SurviveTheHuntShared.Utils.EncodingHelper.PackRgba(48, 224, 48, 255));
+            internal readonly LabelledItem GrabbingProgress = new LabelledItem("LOOT", 0f, SurviveTheHuntShared.Utils.EncodingHelper.PackRgba(48, 192, 96, 255));
+
+            private float _grabbingProgressValue = 0f;
+            internal float GrabbingProgressValue
+            {
+                get => _grabbingProgressValue;
+                set
+                {
+                    const bool UseModulo = true;
+
+                    // We want the UI to progress in "chunks"
+                    if (UseModulo)
+                    {
+                        value -= value % TargetGrabInterval;
+                    }
+                    else
+                    {
+                        float target = value;
+                        value = 0f;
+                        for(float interval = TargetGrabInterval; interval <= target; target += TargetGrabInterval)
+                        {
+                            value = interval;
+                        }
+                    }
+
+                    value = Math.Max(0f, Math.Min(1f, value));
+                    if(value != _grabbingProgressValue)
+                    {
+                        _grabbingProgressValue = value;
+                        GrabbingProgress.Value = SurviveTheHuntShared.Utils.EncodingHelper.Utf16FromNormalFloat(value);
+                    }
+                }
+            }
+
+            private Stage _stage = Stage.WaitForHelpTrigger;
+
+            internal Stage Stage
+            {
+                get => _stage;
+                set
+                {
+                    if (value != _stage)
+                    {
+                        _stage = value;
+
+                        switch (value)
+                        {
+                            case Stage.TakingMoney:
+                                // TODO: these don't work :((
+                                BeginTextCommandObjective(Strings.TakeMoneyKey);
+                                EndTextCommandObjective(true);
+                                //EndTextCommandPrint(-1, true);
+                                break;
+                            case Stage.LeaveArea:
+                                BeginTextCommandObjective(Strings.LeaveKey);
+                                EndTextCommandObjective(true);
+                                //EndTextCommandPrint(-1, true);
+                                break;
+                            default:
+                                BeginTextCommandClearPrint("");
+                                EndTextCommandClearPrint();
+                                break;
+                        }
+                    }
+                }
+            }
         }
 
         private UIState _uiState = new UIState();
@@ -172,7 +259,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         /// <summary>
         /// The radius in which the target will be grabbed
         /// </summary>
-        internal const float TargetGrabRadius = 1.35f;
+        internal const float TargetGrabRadius = 3.35f;
         internal const float TargetGrabRadiusSq = TargetGrabRadius * TargetGrabRadius;
 
         internal const float TargetGrabRate = 0.1f;
@@ -186,7 +273,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         internal readonly RobberyType Type;
 
-        private int _blipId;
+        private int _startBlipId, _objectiveBlipId;
 
         internal readonly float StartTriggerRadius;
 
@@ -205,26 +292,56 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        private static class Strings
+        {
+            internal const string TakeMoneyKey = "STH_CUPID_TAKE_MONEY";
+            internal const string TakeMoneyText = "Grab the ~g~cash.";
+
+            internal const string LeaveKey = "BM_LVE_AREA";
+        }
+
         internal SimpleRobberyJobController(string jobId, JobStateRpcUpdateDelegate updateState, RobberyType type, in Vector3 startPos, float radius = DefaultStartTriggerRadius) : base(jobId, updateState)
         {
             _startTriggerPos = startPos;
             StartTriggerRadiusSq = radius * radius;
             StartTriggerRadius = radius;
 
+            // TODO
+            _targetGrabTriggerPos = startPos;
+
             Type = type;
 
             _state.StageChanged += OnStageChanged;
             _state.GrabProgressChanged += OnGrabProgressChanged;
+            _state.IsOverChanged += OnIsOverChanged;
+
+            RegisterStrings();
+        }
+
+        private static bool _registeredStrings = false;
+        private static void RegisterStrings()
+        {
+            if (!_registeredStrings)
+            {
+                _registeredStrings = true;
+                AddTextEntry(Strings.TakeMoneyKey, Strings.TakeMoneyText);
+            }
         }
 
         private void OnGrabProgressChanged(float prev, float current, bool canSync)
         {
-            _uiState.GrabbingProgress.Value = SurviveTheHuntShared.Utils.EncodingHelper.Utf16FromNormalFloat(current);
+            _uiState.GrabbingProgressValue = current;
 
             if(canSync)
             {
                 // TODO: can probably scope this to just the GrabProgress prop?
                 SyncState();
+            }
+
+            // Move to next stage when done
+            if(current >= 1f && _state.JobStage == Stage.TakingMoney)
+            {
+                SetStage(_state.JobStage + 1);
             }
         }
 
@@ -247,6 +364,36 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 SyncState();
             }
+
+            if (current == Stage.TakingMoney)
+            {
+                SetBlipDisplay(_objectiveBlipId, 6);
+            }
+            else
+            {
+                SetBlipDisplay(_objectiveBlipId, 0);
+            }
+
+            if(current == Stage.LeaveArea)
+            {
+                _state.Synced(() => _state.IsOver = true);
+            }
+        }
+
+        private void OnIsOverChanged(bool wasOver, bool isOver, bool canSync)
+        {
+            Debug.WriteLine($"{nameof(SimpleRobberyJobController)}.{nameof(OnIsOverChanged)}({nameof(wasOver)}: {wasOver}, {nameof(isOver)}: {isOver})");
+
+            if(canSync)
+            {
+                SyncState();
+            }
+
+            if(isOver)
+            {
+                IsActive = false;
+                OnJobFinished();
+            }
         }
 
         protected override void OnActiveChanged(bool isActive)
@@ -261,13 +408,22 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             _uiState.IsStartHelpTextShowing = false;
 
             // Hide the job blip when it's active, unhide when inactive
-            SetBlipDisplay(_blipId, isActive ? 0 : 6);
+            SetBlipDisplay(_startBlipId, isActive || _state.IsOver ? 0 : 6);
+
+            // Only show the objective blip during the TakingMoney stage.
+            SetBlipDisplay(_objectiveBlipId, isActive && _state.JobStage == Stage.TakingMoney ? 6 : 0);
         }
 
         internal override sealed bool IsInTrigger
         {
             get
             {
+                // A job that was already completed will always return false
+                if(_state.IsOver)
+                {
+                    return false;
+                }
+
                 float distanceSq = GetEntityCoords(PlayerPedId(), false).DistanceToSquared(StartTriggerPos);
                 //Debug.WriteLine($"{nameof(SimpleRobberyJobController)}.{nameof(IsInTrigger)}: {nameof(distanceSq)} = {distanceSq}, needs to be less than {nameof(TargetTriggerRadiusSq)} = {TargetTriggerRadiusSq}: {distanceSq <= TargetTriggerRadiusSq}");
                 return distanceSq <= StartTriggerRadiusSq;
@@ -278,11 +434,17 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         {
             base.Start(playerState, gameState);
 
-            _blipId = AddBlipForCoord(_startTriggerPos.X, _startTriggerPos.Y, _startTriggerPos.Z);
-            SetBlipSprite(_blipId, (int)GetBlipForType(Type));
+            _startBlipId = AddBlipForCoord(_startTriggerPos.X, _startTriggerPos.Y, _startTriggerPos.Z);
+            SetBlipSprite(_startBlipId, (int)GetBlipForType(Type));
             //SetBlipAlpha(_blipId, 64);
-            SetBlipDisplay(_blipId, 6);
+            SetBlipDisplay(_startBlipId, 6);
             //SetBlipColour(_blipId, (int)BlipColor.White);
+
+            _objectiveBlipId = AddBlipForCoord(_targetGrabTriggerPos.X, _targetGrabTriggerPos.Y, _targetGrabTriggerPos.Z);
+            // radar_cash_pickup
+            SetBlipSprite(_objectiveBlipId, 272);
+            SetBlipColour(_objectiveBlipId, (int)BlipColor.Green);
+            SetBlipDisplay(_objectiveBlipId, 0);
 
             Debug.WriteLine($"{nameof(SimpleRobberyJobController)} started");
         }
@@ -293,7 +455,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 _cleanedUp = true;
 
-                RemoveBlip(ref _blipId);
+                RemoveBlip(ref _startBlipId);
             }
         }
 
@@ -375,6 +537,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 needsToDeactivate = needsToDeactivate || allOutsideArea;
             }
 
+            _uiState.Stage = _state.JobStage;
+
             if(isPlayerInArea)
             {
                 if(_state.JobStage == SimpleRobberyJobState.Stage.WaitForStart)
@@ -398,7 +562,26 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                 if(_state.JobStage == Stage.TakingMoney)
                 {
-                    
+                    DrawMarker((int)MarkerType.VerticalCylinder, _targetGrabTriggerPos.X, _targetGrabTriggerPos.Y, _targetGrabTriggerPos.Z, 0, 0, 0, 0, 0, 0, TargetGrabRadius, TargetGrabRadius, 1f, 52, 224, 96, 128, false, false, 2, false, null, null, false);
+
+                    // If this is true, then every player contributes to the grabbing.
+                    // Otherwise we grab at the same rate regardless of number of hunted players in the grab trigger
+                    const bool AllowFasterGrabbing = false;
+
+                    foreach(HuntPlayer player in GameState.Hunt.HuntedPlayers)
+                    {
+                        Vector3 coords = GetEntityCoords(GetPlayerPed(player.PlayerHandle), false);
+                        if(coords.DistanceToSquared(_targetGrabTriggerPos) < TargetGrabRadiusSq)
+                        {
+                            // Track progress locally instead of syncing between clients - we'd be sending RPC every frame...
+                            _state.Local(() => _state.GrabProgress += TargetGrabRate * deltaTime);
+                        
+                            if(!AllowFasterGrabbing)
+                            {
+                                break;
+                            }
+                        }
+                    }
                 }
             }
 

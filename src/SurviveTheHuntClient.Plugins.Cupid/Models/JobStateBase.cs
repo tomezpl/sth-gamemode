@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Models
@@ -37,5 +38,25 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
         internal abstract object Get(int statePropId);
 
         internal delegate void GenericStateChangedEvent<T>(T prev, T current, bool canSync);
+
+        /// <summary>
+        /// A wrapper for performing state updates locally, without triggering sync with other clients.
+        /// </summary>
+        /// <param name="action">A callback that can contain updates to the state.</param>
+        internal void Local(Action action)
+        {
+            bool couldSyncBefore = _canSync;
+            _canSync = false;
+            action();
+            _canSync = couldSyncBefore;
+        }
+
+        internal void Synced(Action action)
+        {
+            bool couldSyncBefore = _canSync;
+            _canSync = true;
+            action();
+            _canSync = couldSyncBefore;
+        }
     }
 }

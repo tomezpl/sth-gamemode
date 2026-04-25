@@ -3,6 +3,7 @@ using SurviveTheHuntClient.Models.UI;
 using SurviveTheHuntClient.Plugins.Cupid.Models;
 using System.Collections.Generic;
 using CitizenFX.Core;
+using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 {
@@ -91,6 +92,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         protected virtual void OnActiveChanged(bool isActive)
         {
 
+        }
+
+        protected virtual void OnJobFinished()
+        {
+            string heatAmount = $"{(HeatValue / 100f):0.00}";
+            const string key = "STH_CUPID_HEAT_AWARD";
+            AddTextEntry(key, $"Job complete. You have been awarded {heatAmount} Heat.");
+            BeginTextCommandDisplayHelp(key);
+            EndTextCommandDisplayHelp(0, false, true, 10 * 1000);
         }
 
         internal virtual void Start(IPlayerState playerState, IGameState gameState)
