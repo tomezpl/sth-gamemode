@@ -76,12 +76,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             get => _isOver;
             set
             {
-                if(value != _isOver)
-                {
-                    IsOverChanged.Invoke(_isOver, value, CanSync);
-                }
-
+                bool old = _isOver;
                 _isOver = value;
+                if (value != old)
+                {
+                    IsOverChanged.Invoke(old, value, CanSync);
+                }
             }
         }
 
@@ -207,24 +207,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     {
                         _stage = value;
 
-                        switch (value)
-                        {
-                            case Stage.TakingMoney:
-                                // TODO: these don't work :((
-                                BeginTextCommandObjective(Strings.TakeMoneyKey);
-                                EndTextCommandObjective(true);
-                                //EndTextCommandPrint(-1, true);
-                                break;
-                            case Stage.LeaveArea:
-                                BeginTextCommandObjective(Strings.LeaveKey);
-                                EndTextCommandObjective(true);
-                                //EndTextCommandPrint(-1, true);
-                                break;
-                            default:
-                                BeginTextCommandClearPrint("");
-                                EndTextCommandClearPrint();
-                                break;
-                        }
+                        
                     }
                 }
             }
@@ -300,14 +283,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             internal const string LeaveKey = "BM_LVE_AREA";
         }
 
-        internal SimpleRobberyJobController(string jobId, JobStateRpcUpdateDelegate updateState, RobberyType type, in Vector3 startPos, float radius = DefaultStartTriggerRadius) : base(jobId, updateState)
+        internal SimpleRobberyJobController(string jobId, JobStateRpcUpdateDelegate updateState, RobberyType type, in Vector3 startPos, in Vector3 objectivePos, float radius = DefaultStartTriggerRadius) : base(jobId, updateState)
         {
             _startTriggerPos = startPos;
             StartTriggerRadiusSq = radius * radius;
             StartTriggerRadius = radius;
 
-            // TODO
-            _targetGrabTriggerPos = startPos;
+            _targetGrabTriggerPos = objectivePos;
 
             Type = type;
 
@@ -378,6 +360,36 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 _state.Synced(() => _state.IsOver = true);
             }
+
+            DisplayStageObjective(current);
+        }
+
+        private void DisplayStageObjective(Stage stage)
+        {
+            int duration = GameState?.Hunt != null ? (int)(GameState.Hunt.ActualEndTime - DateTime.UtcNow).TotalMilliseconds : 0;
+            switch (stage)
+            {
+                case Stage.TakingMoney:
+                    BeginTextCommandPrint(Strings.TakeMoneyKey);
+                    EndTextCommandPrint(duration, true);
+                    break;
+                case Stage.LeaveArea:
+                    BeginTextCommandPrint(Strings.LeaveKey);
+                    EndTextCommandPrint(duration, true);
+                    break;
+                default:
+                    ClearObjective();
+                    break;
+            }
+        }
+
+        private void ClearObjective()
+        {
+            Debug.WriteLine($"{nameof(SimpleRobberyJobController)}.{nameof(ClearObjective)}()");
+
+            BeginTextCommandPrint("STRING");
+            AddTextComponentString(" ");
+            EndTextCommandPrint(0, true);
         }
 
         private void OnIsOverChanged(bool wasOver, bool isOver, bool canSync)
@@ -396,6 +408,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        protected override void OnJobFinished()
+        {
+            base.OnJobFinished();
+        }
+
         protected override void OnActiveChanged(bool isActive)
         {
             base.OnActiveChanged(isActive);
@@ -412,6 +429,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             // Only show the objective blip during the TakingMoney stage.
             SetBlipDisplay(_objectiveBlipId, isActive && _state.JobStage == Stage.TakingMoney ? 6 : 0);
+
+            if(isActive && !_state.IsOver)
+            {
+                DisplayStageObjective(_state.JobStage);
+            } else
+            {
+                ClearObjective();
+            }
         }
 
         internal override sealed bool IsInTrigger
@@ -426,7 +451,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                 float distanceSq = GetEntityCoords(PlayerPedId(), false).DistanceToSquared(StartTriggerPos);
                 //Debug.WriteLine($"{nameof(SimpleRobberyJobController)}.{nameof(IsInTrigger)}: {nameof(distanceSq)} = {distanceSq}, needs to be less than {nameof(TargetTriggerRadiusSq)} = {TargetTriggerRadiusSq}: {distanceSq <= TargetTriggerRadiusSq}");
-                return distanceSq <= StartTriggerRadiusSq;
+                return distanceSq <= (_state.JobStage >= Stage.TakingMoney ? ActiveRadiusSq : StartTriggerRadiusSq);
             }
         }
 

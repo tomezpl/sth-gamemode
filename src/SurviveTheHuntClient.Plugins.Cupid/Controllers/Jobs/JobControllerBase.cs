@@ -96,7 +96,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         protected virtual void OnJobFinished()
         {
-            string heatAmount = $"{(HeatValue / 100f):0.00}";
+            string heatAmount = (HeatValue / 100f).ToString(HeatValue % 100 == 0 ? "0" : "0.00");
             const string key = "STH_CUPID_HEAT_AWARD";
             AddTextEntry(key, $"Job complete. You have been awarded {heatAmount} Heat.");
             BeginTextCommandDisplayHelp(key);

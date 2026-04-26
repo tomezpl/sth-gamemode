@@ -18,9 +18,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
         {
             return new JobControllerBase[]
             {
-                new SimpleRobberyJobController("fleeca_legion", syncState, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaLegion),
-                new SimpleRobberyJobController("fleeca_rockford", syncState, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaRockford),
-                new SimpleRobberyJobController("fleeca_chumash", syncState, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaChumash),
+                new SimpleRobberyJobController("fleeca_legion", syncState, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaLegion, Constants.Location.RobberyJob.FleecaLegion),
+                new SimpleRobberyJobController("fleeca_rockford", syncState, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaRockford, Constants.Location.RobberyJob.FleecaRockfordObjective),
+                new SimpleRobberyJobController("fleeca_chumash", syncState, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaChumash, Constants.Location.RobberyJob.FleecaChumash),
             };
         }
 
