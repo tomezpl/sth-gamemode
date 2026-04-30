@@ -61,5 +61,15 @@ namespace SurviveTheHuntServer
                 }
             }
         }
+
+        [EventHandler(SurviveTheHuntShared.Events.Server.CupidNotifyNewHeatScore)]
+        public void CupidNotifyNewHeatScore([FromSource] Player player, ushort heatScore)
+        {
+            Debug.WriteLine($"{nameof(CupidNotifyNewHeatScore)}({nameof(player)}: {player.Name}, {nameof(heatScore)}: {heatScore})");
+
+            // I feel like this is gonna be a bit problematic as every hunted player (there are more than 1 in this mode) can send this event.
+            // Then this broadcasts the new score to all clients. Meaning we'll send the data to all clients twice. oh well
+            TriggerLatentClientEvent(SurviveTheHuntShared.Events.Client.CupidReceiveHeatScore, sizeof(ushort), heatScore);
+        }
     }
 }

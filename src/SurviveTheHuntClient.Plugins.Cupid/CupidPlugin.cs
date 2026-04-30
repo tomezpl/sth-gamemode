@@ -26,6 +26,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         private readonly BleedoutController BleedoutController;
         private JobManager JobManager = null;
+        private HeatController HeatController = new HeatController();
 
         internal class PluginState
         {
@@ -44,6 +45,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             public bool ShouldChangeClothes => CurrentClothesChangeElapsedSeconds > CurrentClothesChangeDelaySeconds;
 
             internal Constants.DirectedScene CurrentScene = Constants.DirectedScene.IntroJason;
+
+            /// <summary>
+            /// The "heat" score awarded to hunted players for doing jobs. They need to reach <see cref="Constants.HeatValues.Target"/> to win.
+            /// </summary>
+            internal ushort HuntedHeatScore = 0;
         }
 
         private int ScriptCamera;
@@ -112,8 +118,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             TriggerServerEventProxy(SurviveTheHuntShared.Events.Server.CupidNotifyRevivable, PedToNet(playerPed));
         }
 
-        internal const bool AllowSelfRevive = true;
-
         public class Events : PluginEvents
         {
             private new CupidPlugin _plugin { get => (CupidPlugin)base._plugin; }
@@ -123,7 +127,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 int pedId = NetToPed(revivablePedNetId);
 
-                if(AllowSelfRevive || pedId != PlayerPedId())
+                if(Constants.Settings.AllowSelfRevive || pedId != PlayerPedId())
                 {
                     _plugin.BleedoutController.SetRevivable(pedId, true);
                 }
@@ -159,6 +163,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 int pedId = NetToPed(revivedPetNetId);
 
                 _plugin.BleedoutController.OnStartRevive(pedId);
+            }
+
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.CupidReceiveHeatScore)]
+            public void ReceiveNewHeatScore(int heatScore)
+            {
+                // if two clients sent a heat score at the "same" time, make sure we stick with the highest one
+                ushort heatScoreFinal = Math.Max(_plugin.State.HuntedHeatScore, (ushort)heatScore);
+
+                _plugin.HeatController.CurrentHeat = heatScoreFinal;
+                _plugin.State.HuntedHeatScore = heatScoreFinal;
             }
         }
 
@@ -197,6 +211,20 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
 
             JobManager = new JobManager(TriggerServerEventProxy, playerState, gameState);
+            JobManager.JobCompleted += OnJobCompleted;
+
+            if(HeatController != null)
+            {
+                HeatController.Cleanup();
+            }
+
+            HeatController = new HeatController();
+        }
+
+        private void OnJobCompleted(ushort heatValue)
+        {
+            // Heat can sometimes be awarded on both hunted clients - depending on the job - so we can't send just the delta; we have to send the full value
+            TriggerServerEventProxy(SurviveTheHuntShared.Events.Server.CupidNotifyNewHeatScore, _state.HuntedHeatScore + heatValue);
         }
 
         private void SetScene(DirectedScene scene)
@@ -373,9 +401,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         public sealed override float? YLimitOverride => 7180f;
 
         public sealed override bool PreventDeathDetection => BleedoutController.Enabled;
-
-        private static LabelledItem[] s_EmptyUI = LabelledItem.Empty;
-
         public override LabelledItem[] UICurrentItems
         {
             get
@@ -383,7 +408,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 // TODO: This could probably be made into a fixed size array; there's only so much we can show on the screen at once anyway
                 List<LabelledItem> items = new List<LabelledItem>();
 
-                if(BleedoutController.Enabled)
+                if (HeatController != null)
+                {
+                    items.AddRange(HeatController.UIItems);
+                }
+
+                if (BleedoutController.Enabled)
                 {
                     items.AddRange(BleedoutController.UIState.CurrentItems);
                 }
@@ -445,6 +475,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             BleedoutController.Tick(deltaTime);
             JobManager?.Tick(deltaTime);
+            HeatController?.Tick(deltaTime);
         }
     }
 }

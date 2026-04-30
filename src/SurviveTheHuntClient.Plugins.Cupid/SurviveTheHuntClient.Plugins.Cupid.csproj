@@ -48,7 +48,9 @@
     <Compile Include="Constants\DirectedScenes.cs" />
     <Compile Include="Constants\Heat.cs" />
     <Compile Include="Constants\Locations.cs" />
+    <Compile Include="Constants\Settings.cs" />
     <Compile Include="Controllers\BleedoutController.cs" />
+    <Compile Include="Controllers\HeatController.cs" />
     <Compile Include="Controllers\Jobs\JobControllerBase.cs" />
     <Compile Include="Controllers\Jobs\SimpleRobberyJobController.cs" />
     <Compile Include="CupidPlugin.cs" />

@@ -2,13 +2,12 @@
 using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Models.UI;
-using System;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 {
-    internal class BleedoutController : ITickable
+    internal sealed class BleedoutController : ITickable
     {
         private readonly ChangeGameModeSettingDelegate ChangeGameModeSetting;
         private readonly TriggerServerEventProxyDelegate TriggerServerEventProxy;
@@ -273,7 +272,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 
             UIState.UpdateRevive(ReviveProgress);
 
-            if (!isDead || CupidPlugin.AllowSelfRevive)
+            if (!isDead || Constants.Settings.AllowSelfRevive)
             {
                 // If the player pressed E, revive a nearby bleeding out player
                 // TODO: if we want to show a help notification instructing the player to revive when they're near a downed player, we'll have to flip this around so the distance checks come before input check
@@ -289,7 +288,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                         int revivedPed = 0;
                         foreach (int bleedingOutPed in RevivableTimeRemaining.Keys)
                         {
-                            if (!PausedBleedout.Contains(bleedingOutPed) && ((CupidPlugin.AllowSelfRevive && bleedingOutPed == playerPed) || (GetEntityCoords(bleedingOutPed, false).DistanceToSquared(playerPos) < MaxDistanceSq)))
+                            if (!PausedBleedout.Contains(bleedingOutPed) && ((Constants.Settings.AllowSelfRevive && bleedingOutPed == playerPed) || (GetEntityCoords(bleedingOutPed, false).DistanceToSquared(playerPos) < MaxDistanceSq)))
                             {
                                 revivedPed = bleedingOutPed;
                                 break;

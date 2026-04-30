@@ -127,7 +127,7 @@ namespace SurviveTheHuntClient.Helpers
             return x - ((x + width * 0.5f) - 1f);
         }
 
-        internal static void DrawProgress(in string label, in float progress, in uint colour, in Rect rect, in float contentXOffset = 0f, in float spritePadding = DefaultAlphaBarSpritePadding)
+        internal static void DrawProgress(in string label, float progress, in uint colour, in Rect rect, in byte dividers = 0, in float contentXOffset = 0f, in float spritePadding = DefaultAlphaBarSpritePadding)
         {
             float adjustedWidth = GetWidthAdjustedForProgressBar(in rect.Width, in label);
 
@@ -142,13 +142,36 @@ namespace SurviveTheHuntClient.Helpers
             const float progressBarHeight = 0.0115f;
             const float topOffset = 0.003f;
             const float padding = 0.011f;
-            const float progressBarWidth = 0.06f;
+            float progressBarWidth = 0.06f;
 
             x += (adjustedWidth * 0.5f) - (progressBarWidth * 0.5f) - padding;
             x += contentXOffset;
 
-            DrawRect(x, rect.Y + topOffset, progressBarWidth, progressBarHeight, r, g, b, (int)(a * 0.45f));
-            DrawRect(x - (progressBarWidth * (1f - progress) * 0.5f), rect.Y + topOffset, progressBarWidth * progress, progressBarHeight, r, g, b, byte.MaxValue);
+            if (dividers == 0)
+            {
+                DrawRect(x, rect.Y + topOffset, progressBarWidth, progressBarHeight, r, g, b, (int)(a * 0.45f));
+                DrawRect(x - (progressBarWidth * (1f - progress) * 0.5f), rect.Y + topOffset, progressBarWidth * progress, progressBarHeight, r, g, b, byte.MaxValue);
+            }
+            else
+            {
+                const float dividerWidth = 0.001f;
+                float dividerGap = dividers == 0 ? 0 : progressBarWidth / dividers;
+
+                x -= progressBarWidth / dividers;
+
+                progressBarWidth = dividerGap;
+                float progressPerStep = 1f / dividers;
+
+                for (byte i = 0; i < dividers; i++)
+                {
+                    DrawRect(x, rect.Y + topOffset, progressBarWidth, progressBarHeight, r, g, b, (int)(a * 0.45f));
+                    float progressThisStep = Math.Min(1f, progress / progressPerStep);
+                    DrawRect(x - (progressBarWidth * (1f - progressThisStep) * 0.5f), rect.Y + topOffset, progressBarWidth * progressThisStep, progressBarHeight, r, g, b, byte.MaxValue);
+
+                    x += progressBarWidth + dividerWidth;
+                    progress = Math.Max(0f, progress - progressPerStep);
+                }
+            }
         }
 
         internal static void Draw(in LabelledItem item, in Rect rect, in float spritePadding = DefaultAlphaBarSpritePadding)
@@ -159,7 +182,7 @@ namespace SurviveTheHuntClient.Helpers
                     DrawTimer(in item.Label, in item.Value, in rect, in item.Colour, in item.XOffset, in spritePadding);
                     break;
                 case LabelledItemType.Progress:
-                    DrawProgress(in item.Label, SurviveTheHuntShared.Utils.EncodingHelper.NormalFloatFromUtf16(item.Value), in item.Colour, in rect, in item.XOffset, in spritePadding);
+                    DrawProgress(in item.Label, SurviveTheHuntShared.Utils.EncodingHelper.NormalFloatFromUtf16(item.Value), in item.Colour, in rect, in item.ProgressBarDividers, in item.XOffset, in spritePadding);
                     break;
             }
         }

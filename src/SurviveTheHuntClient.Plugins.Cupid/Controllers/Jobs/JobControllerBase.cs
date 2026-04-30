@@ -101,6 +101,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             AddTextEntry(key, $"Job complete. You have been awarded {heatAmount} Heat.");
             BeginTextCommandDisplayHelp(key);
             EndTextCommandDisplayHelp(0, false, true, 10 * 1000);
+
+            // Award the heat value
+            OnComplete.Invoke(HeatValue);
         }
 
         internal virtual void Start(IPlayerState playerState, IGameState gameState)

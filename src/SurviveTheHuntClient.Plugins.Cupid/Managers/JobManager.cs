@@ -28,6 +28,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
         private readonly IGameState _gameState;
 
         private readonly TriggerServerEventProxyDelegate TriggerServerEvent;
+        internal event JobControllerBase.JobCompletedHandler JobCompleted;
 
         internal JobManager(TriggerServerEventProxyDelegate triggerServerEventProxy, IPlayerState playerState, IGameState gameState, IList<JobControllerBase> jobs) : this(triggerServerEventProxy, playerState, gameState)
         {
@@ -51,6 +52,19 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
             _playerState = playerState;
             _gameState = gameState;
             TriggerServerEvent = triggerServerEventProxy;
+        }
+
+        private void ConfigureJobs()
+        {
+            foreach(JobControllerBase job in _jobs)
+            {
+                job.OnComplete += OnJobCompleted;
+            }
+        }
+
+        private void OnJobCompleted(ushort heatValue)
+        {
+            JobCompleted.Invoke(heatValue);
         }
 
         private void SyncState(string jobId, int propId, object propValue)
@@ -88,6 +102,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
 
         internal void Start(bool force = false)
         {
+            if(!_hasStarted)
+            {
+                ConfigureJobs();
+            }
+
             if(force || !_hasStarted)
             {
                 _hasStarted = true;
