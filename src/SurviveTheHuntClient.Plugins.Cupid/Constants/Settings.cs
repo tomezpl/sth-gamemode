@@ -16,6 +16,11 @@
             /// If true, cutscenes will be reduced to 0.5s per scene
             /// </summary>
             internal const bool SkipThroughScenes = true;
+
+            /// <summary>
+            /// If true, sth-cupid-av-controller's spoiler guard will be enabled (used for testing).
+            /// </summary>
+            internal const bool ApplySpoilerGuard = true;
         }
     }
 }

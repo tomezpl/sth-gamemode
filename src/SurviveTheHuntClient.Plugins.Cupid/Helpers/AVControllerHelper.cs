@@ -33,7 +33,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
             string eventName = BuildEventName(EventName.StartStage);
             Debug.WriteLine($"Sending event {eventName} with {stage}");
 
-            TriggerEventProxy(eventName, stage);
+            TriggerEventProxy(eventName, stage, Constants.Settings.ApplySpoilerGuard);
 
             _isInStage = true;
         }
