@@ -76,7 +76,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: 'tomezpl/sth-cupid-av-controller'
-          token: ${{secrets.STH_PRIVATE_ASSETS_PAT}}
+          token: '${{secrets.STH_PRIVATE_ASSETS_PAT}}'
           path: 'extra-src/sth-cupid-av-controller'
       - 
         name: Build extras (sth-cupid-av-controller)
