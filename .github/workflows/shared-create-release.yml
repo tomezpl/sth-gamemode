@@ -88,7 +88,7 @@ jobs:
         run: |
           cd ${{github.workspace}}/extra-src/sth-cupid-av-controller
           npm install
-          npm build
+          npm run build
           mkdir ${{github.workspace}}/artifacts/${{env.STH_EXTRAS_ROOT_DIR_NAME}}/sth-cupid-av-controller
           cp fxmanifest.lua ${{github.workspace}}/artifacts/${{env.STH_EXTRAS_ROOT_DIR_NAME}}/sth-cupid-av-controller/fxmanifest.lua
           cp dist ${{github.workspace}}/artifacts/${{env.STH_EXTRAS_ROOT_DIR_NAME}}/sth-cupid-av-controller/dist
