@@ -10,3 +10,5 @@ jobs:
     with:
       version_number: "${{github.ref_name}}.0"
       prerelease: false
+    secrets:
+      sth_private_assets_pat: ${{secrets.STH_PRIVATE_ASSETS_PAT}}
