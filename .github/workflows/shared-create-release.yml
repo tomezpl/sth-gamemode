@@ -91,7 +91,7 @@ jobs:
           npm run build
           mkdir ${{github.workspace}}/artifacts/${{env.STH_EXTRAS_ROOT_DIR_NAME}}/sth-cupid-av-controller
           cp fxmanifest.lua ${{github.workspace}}/artifacts/${{env.STH_EXTRAS_ROOT_DIR_NAME}}/sth-cupid-av-controller/fxmanifest.lua
-          cp dist ${{github.workspace}}/artifacts/${{env.STH_EXTRAS_ROOT_DIR_NAME}}/sth-cupid-av-controller/dist
+          cp -Recurse -Path dist -Destination ${{github.workspace}}/artifacts/${{env.STH_EXTRAS_ROOT_DIR_NAME}}/sth-cupid-av-controller/dist
       -
         name: Prepare artifacts
         shell: pwsh
