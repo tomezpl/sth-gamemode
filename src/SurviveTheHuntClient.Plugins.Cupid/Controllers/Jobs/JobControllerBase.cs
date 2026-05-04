@@ -87,6 +87,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        internal virtual bool BlockOtherJobs => true;
+
         internal abstract bool IsInTrigger { get; }
 
         protected virtual void OnActiveChanged(bool isActive)
@@ -106,13 +108,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             OnComplete.Invoke(HeatValue);
         }
 
+        internal virtual void OnNetEntityReceived(int netId, string name)
+        {
+
+        }
+
         internal virtual void Start(IPlayerState playerState, IGameState gameState)
         {
             PlayerState = playerState;
             GameState = gameState;
         }
 
-        internal abstract void Cleanup();
+        internal abstract void Cleanup(bool force = false);
 
         internal virtual LabelledItem[] CurrentUI => LabelledItem.Empty;
 

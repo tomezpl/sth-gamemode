@@ -283,7 +283,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                         const float MaxDistance = 2f;
                         const float MaxDistanceSq = MaxDistance * MaxDistance;
 
-                        Vector3 playerPos = playerPos = GetEntityCoords(playerPed, false);
+                        Vector3 playerPos = GetEntityCoords(playerPed, false);
 
                         int revivedPed = 0;
                         foreach (int bleedingOutPed in RevivableTimeRemaining.Keys)

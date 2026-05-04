@@ -21,6 +21,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
                 new SimpleRobberyJobController("fleeca_legion", syncState, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaLegion, Constants.Location.RobberyJob.FleecaLegion),
                 new SimpleRobberyJobController("fleeca_rockford", syncState, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaRockford, Constants.Location.RobberyJob.FleecaRockfordObjective),
                 new SimpleRobberyJobController("fleeca_chumash", syncState, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaChumash, Constants.Location.RobberyJob.FleecaChumash),
+
+                new CarRobberyJobController("car_elysian", syncState, Constants.Location.CarRobberyJob.Elysian, Constants.Location.CarRobberyJob.ElysianHeading),
+                new CarRobberyJobController("car_delperro", syncState, Constants.Location.CarRobberyJob.DelPerro, Constants.Location.CarRobberyJob.DelPerroHeading),
             };
         }
 
@@ -86,15 +89,23 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
             }
         }
 
+        internal void OnNetEntityReceived(int netId, string name)
+        {
+            foreach(JobControllerBase job in _jobs)
+            {
+                job.OnNetEntityReceived(netId, name);
+            }
+        }
+
         internal LabelledItem[] CurrentJobUI => _currentJob != null && _currentJob.IsActive ? _currentJob.CurrentUI : LabelledItem.Empty;
 
-        internal void Cleanup()
+        internal void Cleanup(bool force = false)
         {
             Debug.WriteLine($"{nameof(JobManager)}.{nameof(Cleanup)}(): cleaning up {_jobs.Length} jobs...");
 
             foreach(JobControllerBase job in _jobs)
             {
-                job.Cleanup();
+                job.Cleanup(force);
             }
         }
 
@@ -151,7 +162,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
             }
 
             // Only switch current job if we don't have an active one already
-            if(newCurrentJob != _currentJob && (_currentJob == null || !_currentJob.IsActive))
+            if(newCurrentJob != _currentJob && (_currentJob == null || (!_currentJob.IsActive || !_currentJob.BlockOtherJobs)))
             {
                 JobControllerBase oldJob = _currentJob;
                 _currentJob = newCurrentJob;

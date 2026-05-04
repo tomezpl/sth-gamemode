@@ -3,6 +3,7 @@ using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Models.UI;
 using SurviveTheHuntClient.Plugins.Cupid.Models;
+using SurviveTheHuntClient.Plugins.Cupid.Utils;
 using System;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
@@ -378,18 +379,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     EndTextCommandPrint(duration, true);
                     break;
                 default:
-                    ClearObjective();
+                    HUDUtils.ClearObjective();
                     break;
             }
-        }
-
-        private void ClearObjective()
-        {
-            Debug.WriteLine($"{nameof(SimpleRobberyJobController)}.{nameof(ClearObjective)}()");
-
-            BeginTextCommandPrint("STRING");
-            AddTextComponentString(" ");
-            EndTextCommandPrint(0, true);
         }
 
         private void OnIsOverChanged(bool wasOver, bool isOver, bool canSync)
@@ -435,7 +427,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 DisplayStageObjective(_state.JobStage);
             } else
             {
-                ClearObjective();
+                HUDUtils.ClearObjective();
             }
         }
 
@@ -461,6 +453,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             _startBlipId = AddBlipForCoord(_startTriggerPos.X, _startTriggerPos.Y, _startTriggerPos.Z);
             SetBlipSprite(_startBlipId, (int)GetBlipForType(Type));
+            BeginTextCommandSetBlipName("STRING");
+            AddTextComponentString("Robbery");
+            EndTextCommandSetBlipName(_startBlipId);
             //SetBlipAlpha(_blipId, 64);
             SetBlipDisplay(_startBlipId, 6);
             //SetBlipColour(_blipId, (int)BlipColor.White);
@@ -474,7 +469,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             Debug.WriteLine($"{nameof(SimpleRobberyJobController)} started");
         }
 
-        internal sealed override void Cleanup()
+        internal sealed override void Cleanup(bool force = false)
         {
             if(!_cleanedUp)
             {

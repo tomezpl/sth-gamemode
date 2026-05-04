@@ -30,7 +30,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 
         private void OnHeatChanged(ushort old, ushort current)
         {
-            float progress = Math.Max(0f, Math.Min(1f, (float)current / (float)Constants.HeatValues.Target));
+            float progress = Math.Max(0f, Math.Min(1f, (float)current / (float)Constants.HeatThresholds.Target));
 
             _heatBar.Value = SurviveTheHuntShared.Utils.EncodingHelper.Utf16FromNormalFloat(progress);
             _heatBar.Colour = GetHeatColour(progress);

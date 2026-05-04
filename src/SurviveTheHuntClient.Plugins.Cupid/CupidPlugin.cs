@@ -7,6 +7,7 @@ using SurviveTheHuntClient.Plugins.Cupid.Controllers;
 using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
 using SurviveTheHuntClient.Plugins.Cupid.Managers;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
+using SurviveTheHuntShared.Core;
 using System;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
@@ -184,6 +185,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 handler.Cleanup();
             }
+
+            JobManager.Cleanup(true);
         }
 
         public override void OnHuntStarted(IGameState gameState, IPlayerState playerState)
@@ -393,6 +396,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 handler.OnNetEntityReceived(netId, name);
             }
+
+            JobManager.OnNetEntityReceived(netId, name);
         }
 
         private bool _canShowHud = true;
@@ -424,6 +429,26 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 }
 
                 return items.ToArray();
+            }
+        }
+
+        public override Teams.Team? WinningTeamOverride
+        {
+            get
+            {
+                if(IsActive && GameState != null)
+                {
+                    bool anyHuntedDead = false;
+                    foreach(HuntPlayer huntedPlayer in GameState.Hunt.HuntedPlayers)
+                    {
+                        // TODO: need to check if the players have died - but not through IsPedDeadOrDying as that'll consider bleedout states
+                    }
+                    return HeatController.CurrentHeat < (ushort)HeatThresholds.Target ? Teams.Team.Hunters : Teams.Team.Hunted;
+                }
+
+                Debug.WriteLine($"{nameof(CupidPlugin)}.{nameof(WinningTeamOverride)}: {nameof(IsActive)} is {IsActive} and {nameof(GameState)} is {GameState}; falling back to default winner pick logic");
+
+                return null;
             }
         }
 

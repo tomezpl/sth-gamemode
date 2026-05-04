@@ -51,6 +51,7 @@
     <Compile Include="Constants\Settings.cs" />
     <Compile Include="Controllers\BleedoutController.cs" />
     <Compile Include="Controllers\HeatController.cs" />
+    <Compile Include="Controllers\Jobs\CarRobberyJobController.cs" />
     <Compile Include="Controllers\Jobs\JobControllerBase.cs" />
     <Compile Include="Controllers\Jobs\SimpleRobberyJobController.cs" />
     <Compile Include="CupidPlugin.cs" />
@@ -63,6 +64,7 @@
     <Compile Include="SceneHandlers\Intro\IntroJ2Handler.cs" />
     <Compile Include="SceneHandlers\SceneHandlerBase.cs" />
     <Compile Include="Utils\CamUtils.cs" />
+    <Compile Include="Utils\HUDUtils.cs" />
     <Compile Include="Utils\PlayerUtils.cs" />
   </ItemGroup>
   <ItemGroup>

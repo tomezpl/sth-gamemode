@@ -6,13 +6,19 @@
         {
             Low = 25,
 
-            Medium = 75,
+            Medium = 50,
             /// <summary>
             /// Awarded for doing the "extra" objective of a medium stakes job
             /// </summary>
             MediumBonus = 50,
 
-            High = 175,
+            High = 175
+        }
+
+        internal enum HeatThresholds
+        {
+            Heat1 = 100,
+            Heat2 = 200,
 
             /// <summary>
             /// Score needed to win
