@@ -306,6 +306,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             if(current)
             {
                 OnJobFinished();
+
+                // make all peds in the car exit
+                int playerPed = PlayerPedId();
+                if(IsPedInVehicle(playerPed, _carHandle, true))
+                {
+                    TaskLeaveVehicle(playerPed, _carHandle, 0);
+                }
+
+                HUDUtils.ClearObjective();
             }
         }
 
@@ -542,8 +551,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     if(_timeElapsedInCurrentStage > 1f)
                     {
                         SetVehicleEngineOn(_carHandle, false, true, true);
-                        // TODO: this doesn't work
-                        TaskEveryoneLeaveVehicle(_carHandle);
                         SetVehicleDoorsLockedForAllPlayers(_carHandle, true);
                         _state.HasCompletedBonus = true;
                     }
