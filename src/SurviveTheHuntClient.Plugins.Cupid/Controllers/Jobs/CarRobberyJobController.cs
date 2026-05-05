@@ -314,6 +314,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     TaskLeaveVehicle(playerPed, _carHandle, 0);
                 }
 
+                // Hide the blips
+                SetBlipDisplay(_carDeliveryBlip, 0);
+                SetBlipDisplay(_carBlip, 0);
+
                 HUDUtils.ClearObjective();
             }
         }
@@ -505,17 +509,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private void OnCarEnteredOrExited(bool entered)
         {
+            if (!_state.HasCompletedBonus)
+            {
             SetBlipDisplay(_carBlip, entered ? 0 : 6);
             SetBlipDisplay(_carDeliveryBlip, entered ? 6 : 0);
 
-            if(entered)
+                if (entered)
             {
                 SetBlipFlashTimer(_carDeliveryBlip, 4000);
 
                 BeginTextCommandPrint(BonusObjectiveTextKey);
                 EndTextCommandPrint((int)(GameState.Hunt.ActualEndTime - DateTime.UtcNow).TotalMilliseconds, true);
             }
-            else
+            }
+
+            if(!entered)
             {
                 HUDUtils.ClearObjective();
             }
@@ -535,7 +543,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                 if(isDrivingCar)
                 {
-                    DrawMarker(0, Constants.Location.CarRobberyJob.DeliveryPosX, Constants.Location.CarRobberyJob.DeliveryPosY, Constants.Location.CarRobberyJob.DeliveryPosZ, 0f, 0f, 0f, 0f, 0f, 0f, Constants.Location.CarRobberyJob.DeliveryRadius, Constants.Location.CarRobberyJob.DeliveryRadius, Constants.Location.CarRobberyJob.DeliveryRadius, DeliveryMarkerColourR, DeliveryMarkerColourG, DeliveryMarkerColourB, DeliveryMarkerColourA, false, false, 2, false, null, null, false);
+                    DrawMarker((int)MarkerType.VerticalCylinder, Constants.Location.CarRobberyJob.DeliveryPosX, Constants.Location.CarRobberyJob.DeliveryPosY, Constants.Location.CarRobberyJob.DeliveryPosZ, 0f, 0f, 0f, 0f, 0f, 0f, Constants.Location.CarRobberyJob.DeliveryRadius, Constants.Location.CarRobberyJob.DeliveryRadius, Constants.Location.CarRobberyJob.DeliveryRadius, DeliveryMarkerColourR, DeliveryMarkerColourG, DeliveryMarkerColourB, DeliveryMarkerColourA, false, false, 2, false, null, null, false);
                 }
 
                 const float radiusSq = Constants.Location.CarRobberyJob.DeliveryRadius * Constants.Location.CarRobberyJob.DeliveryRadius;
