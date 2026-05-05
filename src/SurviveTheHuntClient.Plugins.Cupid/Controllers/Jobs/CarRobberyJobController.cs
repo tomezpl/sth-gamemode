@@ -170,7 +170,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private static readonly Random s_RNG = new Random();
 
-        internal const float TruckCarOffsetX = -0.5f, TruckCarOffsetY = 4.75f, TruckCarOffsetZ = 0.85f;
+        internal const float TruckCarOffsetX = 0f, TruckCarOffsetY = -4.75f, TruckCarOffsetZ = 0.85f;
 
         internal bool CarTruckSpawned => _carHandle != 0 && _truckHandle != 0;
 
@@ -466,17 +466,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 truckHandle = CreateVehicle(truckModel, baseX, baseY, baseZ, truckSpawnHeading, true, true);
                 Vector3 up = Vector3.Up;
                 Vector3 forward = GetEntityForwardVector(truckHandle), right = Vector3.Cross(forward, up);
+
                 float 
-                    offsetX = (forward.X * TruckCarOffsetX) + (right.X * TruckCarOffsetY) + (up.X * TruckCarOffsetZ),
-                    offsetY = (forward.Y * TruckCarOffsetX) + (right.Y * TruckCarOffsetY) + (up.Y * TruckCarOffsetZ),
-                    offsetZ = (forward.Z * TruckCarOffsetX) + (right.Z * TruckCarOffsetY) + (up.Z * TruckCarOffsetZ);
+                    offsetX = (forward.X * TruckCarOffsetY) + (right.X * TruckCarOffsetX) + (up.X * TruckCarOffsetZ),
+                    offsetY = (forward.Y * TruckCarOffsetY) + (right.Y * TruckCarOffsetX) + (up.Y * TruckCarOffsetZ),
+                    offsetZ = (forward.Z * TruckCarOffsetY) + (right.Z * TruckCarOffsetX) + (up.Z * TruckCarOffsetZ);
 
                 carHandle = CreateVehicle(carModel, baseX + offsetX, baseY + offsetY, baseZ + offsetZ, truckSpawnHeading, true, true);
 
                 SetEntityNoCollisionEntity(carHandle, truckHandle, false);
                 SetEntityInvincible(truckHandle, true);
                 SetEntityInvincible(carHandle, true);
-                AttachEntityToEntity(carHandle, truckHandle, 0, offsetX, offsetY, offsetZ, 0f, 0f, 0f, false, false, false, false, 2, true);
+                AttachEntityToEntity(carHandle, truckHandle, 0, TruckCarOffsetX, TruckCarOffsetY, TruckCarOffsetZ, 0f, 0f, 0f, false, false, false, false, 2, true);
                 
                 success = true;
             }
@@ -511,16 +512,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         {
             if (!_state.HasCompletedBonus)
             {
-            SetBlipDisplay(_carBlip, entered ? 0 : 6);
-            SetBlipDisplay(_carDeliveryBlip, entered ? 6 : 0);
+                SetBlipDisplay(_carBlip, entered ? 0 : 6);
+                SetBlipDisplay(_carDeliveryBlip, entered ? 6 : 0);
 
                 if (entered)
-            {
-                SetBlipFlashTimer(_carDeliveryBlip, 4000);
+                {
+                    SetBlipFlashTimer(_carDeliveryBlip, 4000);
 
-                BeginTextCommandPrint(BonusObjectiveTextKey);
-                EndTextCommandPrint((int)(GameState.Hunt.ActualEndTime - DateTime.UtcNow).TotalMilliseconds, true);
-            }
+                    BeginTextCommandPrint(BonusObjectiveTextKey);
+                    EndTextCommandPrint((int)(GameState.Hunt.ActualEndTime - DateTime.UtcNow).TotalMilliseconds, true);
+                }
             }
 
             if(!entered)
