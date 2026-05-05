@@ -199,7 +199,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private const string DriveOutHelpTextString = "Press ~INPUT_VEH_BRAKE~ to drive out.";
 
         private const string BonusObjectiveTextKey = "STH_CUPID_CARJOB_BONUS_OBJ";
-        private const string BonusObjectiveTextString = "Deliver the car to ~y~Terminal, LS~y~ for bonus heat.";
+        private const string BonusObjectiveTextString = "Deliver the car to ~y~Terminal, LS~w~ for bonus heat.";
 
         private readonly static bool s_HasInit = InitShared();
 
