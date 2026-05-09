@@ -532,9 +532,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private void TickActive(float deltaTime)
         {
+            int playerPed = PlayerPedId();
+
             if(_state.Stage == JobState.JobStage.WaitingToDeliver && !_state.HasCompletedBonus)
             {
-                bool isDrivingCar = GetVehiclePedIsIn(PlayerPedId(), false) == _carHandle;
+                bool isDrivingCar = GetVehiclePedIsIn(playerPed, false) == _carHandle;
 
                 if(isDrivingCar != _wasDrivingCarLastTick)
                 {
@@ -592,18 +594,70 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 }
             }
 
+            const float JumpTimeSeconds = 2f;
+
             if(_state.Stage == JobState.JobStage.Jumping)
             {
-                if (_timeElapsedInCurrentStage >= 2f && _playerInitiatedJump)
+                if (_timeElapsedInCurrentStage >= JumpTimeSeconds && _playerInitiatedJump)
                 {
                     _state.Stage = JobState.JobStage.Jumping + 1;
-                    SetPedIntoVehicle(PlayerPedId(), _carHandle, -1);
+                    SetPedIntoVehicle(playerPed, _carHandle, -2);
+                }
+            }
+
+            if(_state.Stage == JobState.JobStage.Jumping || _state.Stage == JobState.JobStage.PreparingJump)
+            {
+
+                // on foot
+                if(!IsPedInAnyVehicle(playerPed, true))
+                {
+                    const float ExpensiveTestRadius = 2.5f;
+                    const float ExpensiveTestRadiusSq = ExpensiveTestRadius * ExpensiveTestRadius;
+
+                    // if we're "inside" the car then just warp into a seat and advance to next stage.
+                    if(GetEntityCoords(playerPed, false).DistanceToSquared(GetEntityCoords(_carHandle, false)) < ExpensiveTestRadiusSq)
+                    {
+                        const float CarWidth = 1.5f;
+                        const float CarLength = 4.5f;
+                        const float CarHeight = 1.75f;
+
+                        Vector3 fwdVec = GetEntityForwardVector(_carHandle);
+                        Vector3 rightVec = Vector3.Cross(fwdVec, Vector3.Up);
+
+                        Vector3 carOrigin = GetEntityCoords(_carHandle, false);
+                        Vector3 offset = GetEntityCoords(playerPed, false) - carOrigin;
+                        float distance = offset.Length();
+                        Vector3 dir = offset / distance;
+
+                        float localXOffset = distance * Vector3.Dot(rightVec, dir);
+                        float localYOffset = distance * Vector3.Dot(fwdVec, dir);
+
+                        /* Debug stuff 
+                        Vector3 fullFrontLeftCorner = carOrigin + (fwdVec * CarLength * 0.5f) + (rightVec * CarWidth * -0.5f) + (Vector3.Up * CarHeight * 0.5f);
+                        Vector3 fullRearRightCorner = carOrigin + (fwdVec * CarLength * -0.5f) + (rightVec * CarWidth * 0.5f) + (Vector3.Up * CarHeight * -0.5f);
+
+                        Vector3 playerXMarkerPos = carOrigin + (fwdVec * CarLength * -0.5f) + (rightVec * localXOffset);
+                        Vector3 playerYMarkerPos = carOrigin + (fwdVec * localYOffset) + (rightVec * CarWidth * -0.5f);
+
+                        //DrawBox(fullFrontLeftCorner.X, fullFrontLeftCorner.Y, fullFrontLeftCorner.Z, fullRearRightCorner.X, fullRearRightCorner.Y, fullRearRightCorner.Z, 192, 100, 0, 128);
+                        //const float debugRadius = 0.35f;
+                        //DrawSphere(playerXMarkerPos.X, playerXMarkerPos.Y, playerXMarkerPos.Z, debugRadius, 255, 0, 0, 0.8f);
+                        //DrawSphere(playerYMarkerPos.X, playerYMarkerPos.Y, playerYMarkerPos.Z, debugRadius, 255, 0, 0, 0.8f);
+                        */
+
+                        if (Math.Abs(localXOffset) < CarWidth * 0.5f && Math.Abs(localYOffset) < CarLength * 0.5f)
+                        {
+                            _state.Stage = JobState.JobStage.Jumping;
+                            _timeElapsedInCurrentStage = JumpTimeSeconds;
+                            _playerInitiatedJump = true;
+                        }
+                    }
                 }
             }
 
             if(_state.Stage == JobState.JobStage.PreparingJump)
             {
-                if(!_playerInitiatedJump && IsControlJustPressed(0, (int)Control.Context))
+                if(!_playerInitiatedJump && IsPedInAnyVehicle(PlayerPedId(), false) && IsControlJustPressed(0, (int)Control.Context))
                 {
                     ClearAllHelpMessages();
                     _playerInitiatedJump = true;
