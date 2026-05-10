@@ -493,7 +493,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 return false;
             }
 
-
             const float doorOffset = 6.5f;
             const float vertOffset = 1.1f;
             Vector3 truckPos = GetEntityCoords(_truckHandle, false);

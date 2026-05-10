@@ -24,6 +24,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
 
                 new CarRobberyJobController("car_elysian", syncState, Constants.Location.CarRobberyJob.Elysian, Constants.Location.CarRobberyJob.ElysianHeading),
                 new CarRobberyJobController("car_delperro", syncState, Constants.Location.CarRobberyJob.DelPerro, Constants.Location.CarRobberyJob.DelPerroHeading),
+
+                new ShipJobController(syncState),
             };
         }
 
