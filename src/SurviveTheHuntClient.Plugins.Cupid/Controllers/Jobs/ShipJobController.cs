@@ -177,7 +177,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
 
             // Only the first player should spawn
-            if(!_hasStartedSpawningPeds && GameState?.Hunt != null && GameState.Hunt.HuntedPlayers[0].PlayerHandle == PlayerId())
+            if(IsActive && !_hasStartedSpawningPeds && GameState?.Hunt != null && GameState.Hunt.HuntedPlayers[0].PlayerHandle == PlayerId())
             {
                 _hasStartedSpawningPeds = true;
 

@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Models.Utils;
 using SurviveTheHuntClient.Plugins.Cupid.Models;
 using static CitizenFX.Core.Native.API;
 
@@ -37,35 +38,35 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     -2077.613f, -1027.841f, 5.883708f,
                     -2041.367f, -1039.751f, 5.883331f,
                     165.7485f, 360f,
-                    4, PedModels
+                    new Range<byte>(3, 5), PedModels
                 ),
                 new CruisegoerSpawnLine
                 (
                     -2029.636f, -1028.991f, 5.882014f,
                     -2076.386f, -1013.412f, 5.882023f,
                     340f, 180f,
-                    4, PedModels
+                    new Range<byte>(3, 5), PedModels
                 ),
                 new CruisegoerSpawnLine
                 (
                     -2081.217f, -1026.638f, 8.971484f,
                     -2048.382f, -1037.368f, 8.971483f,
                     140.6088f, 90f,
-                    4, PedModels
+                    new Range<byte>(3, 5), PedModels
                 ),
                 new CruisegoerSpawnLine
                 (
                     -2054.378f, -1021.386f, 11.90755f,
                     -2071.664f, -1015.628f, 11.90736f,
                     341.6285f, 45f,
-                    4, PedModels
+                    new Range<byte>(3, 5), PedModels
                 ),
                 new CruisegoerSpawnLine
                 (
                     -2074.365f, -1028.586f, 11.90736f,
                     -2055.322f, -1034.304f, 11.90758f,
                     165.3188f, 30f,
-                    4, PedModels
+                    new Range<byte>(3, 5), PedModels
                 ),
 
                 // interior clusters
@@ -81,14 +82,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     -2091.906f, -1021.52f, 5.907803f,
                     -2100.738f, -1017.874f, 5.88418f,
                     67f, 30f,
-                    4, PedModels
+                    new Range<byte>(3, 5), PedModels
                 ),
                 new CruisegoerSpawnLine
                 (
                     -2082.918f, -1022.214f, 5.884103f,
                     -2087.266f, -1024.247f, 5.882385f,
                     200f, 360f,
-                    4, PedModels
+                    new Range<byte>(3, 5), PedModels
                 ),
 
                 // showers

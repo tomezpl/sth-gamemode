@@ -59,6 +59,7 @@
     <Compile Include="Texture.cs" />
     <Compile Include="UI\LabelledItem.cs" />
     <Compile Include="UI\TextSequenceItem.cs" />
+    <Compile Include="Utils\Range.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SurviveTheHuntShared\SurviveTheHuntShared.csproj">

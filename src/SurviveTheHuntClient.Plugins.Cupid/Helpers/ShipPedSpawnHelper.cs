@@ -8,7 +8,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
 {
     internal static class ShipPedSpawnHelper
     {
-        internal const byte MaxPeds = 24;
+        internal const byte MaxPeds = 40;
 
         /// <summary>
         /// A Tickable that spawns peds in intervals so as to not cause lag spikes

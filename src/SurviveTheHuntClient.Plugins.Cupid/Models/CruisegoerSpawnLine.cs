@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SurviveTheHuntClient.Models.Utils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,13 +20,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
 
         internal readonly float Length;
 
-        internal readonly byte DesiredPedCount;
+        internal readonly byte DesiredMinPedCount;
+        internal readonly byte DesiredMaxPedCount;
 
         internal readonly uint[] PedModels;
 
         internal readonly float MaxHeadingError;
 
-        internal CruisegoerSpawnLine(float startX, float startY, float startZ, float endX, float endY, float endZ, float heading, float maxHeadingChange, byte pedCount, uint[] pedModels)
+        internal CruisegoerSpawnLine(float startX, float startY, float startZ, float endX, float endY, float endZ, float heading, float maxHeadingChange, Range<byte> pedCountRange, uint[] pedModels)
             : base(startX + (endX - startX) * .5f, startY + (endY - startY) * .5f, startZ + (endZ - startZ) * .5f, heading)
         {
             StartX = startX;
@@ -40,7 +42,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
             DirY = (endY - startY) / Length;
             DirZ = (endZ - startZ) / Length;
 
-            DesiredPedCount = pedCount;
+            DesiredMaxPedCount = pedCountRange.Max;
+            DesiredMinPedCount = pedCountRange.Min;
             PedModels = pedModels;
 
             if(pedModels.Length == 0)
@@ -51,6 +54,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
             MaxHeadingError = maxHeadingChange;
         }
 
+        internal CruisegoerSpawnLine(float startX, float startY, float startZ, float endX, float endY, float endZ, float heading, float maxHeadingChange, byte pedCount, uint[] pedModels) : this(startX, startY, startZ, endX, endY, endZ, heading, maxHeadingChange, new Range<byte>(pedCount), pedModels)
+        {
+
+        }
+
         internal static byte GetMaxPedCount(byte desired, float length)
         {
             return Math.Min(desired, (byte)Math.Floor(length / PedSafeRadius));
@@ -58,7 +66,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
 
         internal override PedSpawnInfo[] Build()
         {
-            PedSpawnInfo[] info = new PedSpawnInfo[GetMaxPedCount(DesiredPedCount, Length)];
+            byte desiredPedCount = (byte)s_RNG.Next(DesiredMinPedCount, DesiredMaxPedCount + 1);
+
+            PedSpawnInfo[] info = new PedSpawnInfo[GetMaxPedCount(desiredPedCount, Length)];
 
             float errorHalfRange = PedDistanceError * .5f;
             float step = Length / (info.Length + 1f);
