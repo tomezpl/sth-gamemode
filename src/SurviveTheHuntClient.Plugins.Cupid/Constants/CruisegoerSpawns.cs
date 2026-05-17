@@ -23,11 +23,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             internal static readonly CruisegoerSpawnBase[] Required =
             {
                 // Brendan the Arsey
-                new CruisegoerSpawnSingle(-2085.347f, -1017.773f, 12.7819f, 69.39364f, (uint)GetHashKey("mp_m_boatstaff_01")),
+                new CruisegoerSpawnSingle(-2085.347f, -1017.773f, 12.7819f, 69.39364f, false, (uint)GetHashKey("mp_m_boatstaff_01")),
                 
                 // Bartenders
-                new CruisegoerSpawnSingle(-2095.156f, -1015.901f, 8.98045f, 211.208f, (uint)GetHashKey("mp_f_boatstaff_01"), (uint)GetHashKey("s_f_y_casino_01"), (uint)GetHashKey("u_f_m_casinocash_01")),
-                new CruisegoerSpawnSingle(-2094.295f, -1014.135f, 8.98045f, 284.7771f, (uint)GetHashKey("mp_f_boatstaff_01"), (uint)GetHashKey("s_f_y_casino_01"), (uint)GetHashKey("u_f_m_casinocash_01")),
+                new CruisegoerSpawnSingle(-2095.156f, -1015.901f, 8.98045f, 211.208f, false, (uint)GetHashKey("mp_f_boatstaff_01"), (uint)GetHashKey("s_f_y_casino_01"), (uint)GetHashKey("u_f_m_casinocash_01")),
+                new CruisegoerSpawnSingle(-2094.295f, -1014.135f, 8.98045f, 284.7771f, false, (uint)GetHashKey("mp_f_boatstaff_01"), (uint)GetHashKey("s_f_y_casino_01"), (uint)GetHashKey("u_f_m_casinocash_01")),
             };
 
             internal static readonly CruisegoerSpawnBase[] Optional =
@@ -93,9 +93,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 ),
 
                 // showers
-                new CruisegoerSpawnSingle(-2080.376f, -1020.604f, 5.875937f, 117.4093f, (uint)PedHash.Topless01AFY, (uint)PedHash.Musclbeac01AMY),
-                new CruisegoerSpawnSingle(-2092.41f, -1018.078f, 5.888787f, 119.4851f, (uint)PedHash.Topless01AFY, (uint)PedHash.Musclbeac02AMY),
-                new CruisegoerSpawnSingle(-2100.895f, -1008.169f, 5.878305f, 107.131f, (uint)PedHash.Topless01AFY, (uint)PedHash.Musclbeac01AMY),
+                new CruisegoerSpawnSingle(-2080.376f, -1020.604f, 5.875937f, 117.4093f, true, (uint)PedHash.Topless01AFY, (uint)PedHash.Musclbeac01AMY),
+                new CruisegoerSpawnSingle(-2092.41f, -1018.078f, 5.888787f, 119.4851f, true, (uint)PedHash.Topless01AFY, (uint)PedHash.Musclbeac02AMY),
+                new CruisegoerSpawnSingle(-2100.895f, -1008.169f, 5.878305f, 107.131f, true, (uint)PedHash.Topless01AFY, (uint)PedHash.Musclbeac01AMY),
             };
         }
     }

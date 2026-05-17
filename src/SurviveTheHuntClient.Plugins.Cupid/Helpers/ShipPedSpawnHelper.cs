@@ -19,24 +19,28 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
 
             internal readonly byte MaxPeds;
             internal const byte MaxSpawnPerTick = 2;
+            internal readonly byte RequiredCount;
 
             private byte _index = 0;
 
             internal bool IsDone => _index >= Math.Min(MaxPeds, Spawns.Length);
 
-            internal delegate void SpawningCompletedEvent(int[] entityHandles);
+            internal delegate void SpawningCompletedEvent(int[] entityHandles, Dictionary<int, PedSpawnInfo> optionalPedInitStates);
 
             internal event SpawningCompletedEvent SpawningCompleted;
 
             internal readonly List<int> EntityHandles;
 
+            private Dictionary<int, PedSpawnInfo> _optionalPedInitStates = new Dictionary<int, PedSpawnInfo>();
+
             private bool _hasStarted = false;
 
-            internal Spawner(PedSpawnInfo[] spawns, byte maxPeds)
+            internal Spawner(PedSpawnInfo[] spawns, byte maxPeds, byte requiredCount)
             {
                 Spawns = spawns;
                 MaxPeds = maxPeds;
                 EntityHandles = new List<int>(maxPeds);
+                RequiredCount = requiredCount;
             }
 
             private static void StartLoadingNextModels(PedSpawnInfo[] spawns, byte index, byte toLoad)
@@ -68,6 +72,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                         int pedHandle = CreatePed(0, Spawns[i].PedModel, Spawns[i].Position.X, Spawns[i].Position.Y, Spawns[i].Position.Z, Spawns[i].Position.Heading, true, false);
                         spawned++;
                         EntityHandles.Add(pedHandle);
+                        _optionalPedInitStates.Add(pedHandle, Spawns[i]);
                     }
                     else
                     {
@@ -82,7 +87,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
 
                 if(IsDone)
                 {
-                    SpawningCompleted.Invoke(EntityHandles.ToArray());
+                    SpawningCompleted.Invoke(EntityHandles.ToArray(), _optionalPedInitStates);
                 }
             }
         }
@@ -130,7 +135,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                 }
             }
 
-            return new Spawner(toSpawn.ToArray(), Math.Max(requiredPedCount, MaxPeds));
+            return new Spawner(toSpawn.ToArray(), Math.Max(requiredPedCount, MaxPeds), requiredPedCount);
         }
     }
 }

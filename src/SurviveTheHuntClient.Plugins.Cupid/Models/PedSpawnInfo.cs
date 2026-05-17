@@ -33,5 +33,7 @@
         internal AnimInfo Anim;
 
         internal uint PedModel;
+
+        internal bool NeedsWarp;
     }
 }
