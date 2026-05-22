@@ -15,7 +15,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
         /// </summary>
         internal sealed class Spawner : ITickable
         {
-            internal readonly PedSpawnInfo[] Spawns;
+            internal readonly PedNode[] Spawns;
 
             internal readonly byte MaxPeds;
             internal const byte MaxSpawnPerTick = 2;
@@ -25,17 +25,17 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
 
             internal bool IsDone => _index >= Math.Min(MaxPeds, Spawns.Length);
 
-            internal delegate void SpawningCompletedEvent(int[] entityHandles, Dictionary<int, PedSpawnInfo> optionalPedInitStates);
+            internal delegate void SpawningCompletedEvent(int[] entityHandles, Dictionary<int, PedNode> optionalPedInitStates);
 
             internal event SpawningCompletedEvent SpawningCompleted;
 
             internal readonly List<int> EntityHandles;
 
-            private Dictionary<int, PedSpawnInfo> _optionalPedInitStates = new Dictionary<int, PedSpawnInfo>();
+            private Dictionary<int, PedNode> _optionalPedInitStates = new Dictionary<int, PedNode>();
 
             private bool _hasStarted = false;
 
-            internal Spawner(PedSpawnInfo[] spawns, byte maxPeds, byte requiredCount)
+            internal Spawner(PedNode[] spawns, byte maxPeds, byte requiredCount)
             {
                 Spawns = spawns;
                 MaxPeds = maxPeds;
@@ -43,7 +43,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                 RequiredCount = requiredCount;
             }
 
-            private static void StartLoadingNextModels(PedSpawnInfo[] spawns, byte index, byte toLoad)
+            private static void StartLoadingNextModels(PedNode[] spawns, byte index, byte toLoad)
             {
                 for(byte i = index; i < Math.Min(spawns.Length, index + toLoad); i++)
                 {
@@ -72,7 +72,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                         int pedHandle = CreatePed(0, Spawns[i].PedModel, Spawns[i].Position.X, Spawns[i].Position.Y, Spawns[i].Position.Z, Spawns[i].Position.Heading, true, false);
                         spawned++;
                         EntityHandles.Add(pedHandle);
-                        _optionalPedInitStates.Add(pedHandle, Spawns[i]);
+                        
+                        if (i >= RequiredCount)
+                        {
+                            _optionalPedInitStates.Add(pedHandle, Spawns[i]);
+                        }
                     }
                     else
                     {
@@ -94,7 +98,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
 
         internal static Spawner CreateSpawner(CruisegoerSpawnBase[] required, CruisegoerSpawnBase[] optional)
         {
-            List<PedSpawnInfo> toSpawn = new List<PedSpawnInfo>(MaxPeds);
+            List<PedNode> toSpawn = new List<PedNode>(MaxPeds);
 
             byte requiredPedCount = 0;
 
@@ -110,7 +114,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                         break;
                     }
 
-                    PedSpawnInfo[] toAdd = spawn.Build();
+                    PedNode[] toAdd = spawn.Build();
                     if (isRequired || toSpawn.Count + toAdd.Length <= MaxPeds)
                     {
                         toSpawn.AddRange(toAdd);

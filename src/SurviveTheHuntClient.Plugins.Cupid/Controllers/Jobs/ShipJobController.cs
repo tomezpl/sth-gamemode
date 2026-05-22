@@ -1,7 +1,9 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 using SurviveTheHuntClient.Plugins.Cupid.Models;
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 
@@ -115,17 +117,88 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         internal bool IsLocalPlayerPedGod => GameState?.Hunt != null && GameState.Hunt.HuntedPlayers[0].PlayerHandle == PlayerId();
 
-        private PedSpawnInfo[] _pedWanderNodes = new PedSpawnInfo[0];
+        private PedNode[] _pedWanderNodes = new PedNode[0];
         private Action<float>[] _pedTicks = new Action<float>[0];
-        private Dictionary<int, PedSpawnInfo> _optionalPedInitStates = new Dictionary<int, PedSpawnInfo>();
-        private Dictionary<int, PedSpawnInfo> _optionalPedTargetStates = new Dictionary<int, PedSpawnInfo>();
-        private PedSpawnInfo[] _pedLocations = new PedSpawnInfo[0];
+        private Dictionary<int, PedNode> _optionalPedInitStates = new Dictionary<int, PedNode>();
+        private Dictionary<int, PedNode> _optionalPedTargetStates = new Dictionary<int, PedNode>();
+        private PedNode[] _pedLocations = new PedNode[0];
         private int[] _optionalPedHandles = new int[0];
+
+        private Dictionary<int, PedNode.AnimInfo> _animRequests = new Dictionary<int, PedNode.AnimInfo>();
 
         internal const float PedBrainTickIntervalSeconds = 20f;
 
         private readonly static Random s_RNG = new Random();
 
+        /// <summary>
+        /// Previous clothing components of the player ped that need to be restored when the player ends their current animation
+        /// </summary>
+        private Dictionary<PedComponents, PedVariation> _compsToRestore = new Dictionary<PedComponents, PedVariation>();
+
+        /// <summary>
+        /// Previous clothing props of the player ped that need to be restored when the player ends their current animation.
+        /// </summary>
+        private Dictionary<PedProps, PedVariation> _propsToRestore = new Dictionary<PedProps, PedVariation>();
+
+        private static readonly PedNode[] s_ShowerNodes = FindShowerNodes();
+
+        private const float WarpDistance = 0.9f;
+
+        private const float AlmostExtensionFactor = 1.75f;
+        private const float ExtendedWarpDistance = AlmostExtensionFactor * WarpDistance;
+
+        private const string ShowerHelpTextKey = "STH_CUPID_SHIP_SHOWER_HELP";
+        private const string ShowerHelpTextLabel = "Press ~INPUT_CONTEXT~ to shower.";
+
+        private static readonly bool s_HasDoneInit = Init();
+
+        private static bool Init()
+        {
+            if(!s_HasDoneInit)
+            {
+                AddTextEntry(ShowerHelpTextKey, ShowerHelpTextLabel);
+            }
+
+            return true;
+        }
+
+        private static bool IsPedAMaleModel(uint pedModel)
+        {
+            bool isMale = pedModel == (uint)PedHash.FreemodeMale01;
+            if (!isMale && pedModel != (uint)PedHash.FreemodeFemale01)
+            {
+                foreach (uint model in Constants.CruisegoerSpawns.MalePedModels)
+                {
+                    if (model == pedModel)
+                    {
+                        isMale = true;
+                        break;
+                    }
+                }
+            }
+            return isMale;
+        }
+
+        private static PedNode[] FindShowerNodes()
+        {
+            List<PedNode> showerNodes = new List<PedNode>(Constants.CruisegoerSpawns.Optional.Length);
+
+            foreach(CruisegoerSpawnBase spawn in Constants.CruisegoerSpawns.Optional)
+            {
+                // Shower spots are only single spawns
+                if(spawn is CruisegoerSpawnSingle)
+                {
+                    PedNode node = ((CruisegoerSpawnSingle)spawn).Build()[0];
+                    if(node.HasFlag(PedNode.PedNodeFlag.Shower))
+                    {
+                        showerNodes.Add(node);
+                    }
+                }
+            }
+
+            return showerNodes.ToArray();
+        }
+        
         internal ShipJobController(JobStateRpcUpdateDelegate updateJobStateRpc) : base("ship", updateJobStateRpc)
         {
             _state.PedNetIdsChanged += OnPedNetIdsChanged;
@@ -156,6 +229,143 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
 
             TickActive(deltaTime);
+        }
+
+        private PedNode? _nearestLocalPlayerShower = null;
+        private bool _isLocalPlayerInShower = false;
+        private float _timeSinceLocalPlayerShowerDistanceCheck = 0f;
+        private const float LocalPlayerShowerDistanceCheckIntervalSeconds = 0.3f;
+        private void HandlePlayerShower(float deltaTime)
+        {
+            _timeSinceLocalPlayerShowerDistanceCheck += deltaTime;
+
+            int playerPed = PlayerPedId();
+
+            if(!_isLocalPlayerInShower && _timeSinceLocalPlayerShowerDistanceCheck >= LocalPlayerShowerDistanceCheckIntervalSeconds)
+            {
+                _nearestLocalPlayerShower = null;
+                bool nearShower = false;
+
+                Vector3 playerPos = GetEntityCoords(playerPed, false);
+
+                foreach(PedNode showerNode in s_ShowerNodes)
+                {
+                    float a = playerPos.X - showerNode.Position.X;
+                    float b = playerPos.Y - showerNode.Position.Y;
+                    float c = playerPos.Z - showerNode.Position.Z;
+                    float distSq = a * a + b * b + c * c;
+
+                    if(distSq < (ExtendedWarpDistance * ExtendedWarpDistance))
+                    {
+                        _nearestLocalPlayerShower = showerNode;
+                        nearShower = true;
+                        break;
+                    }
+                }
+
+                if(nearShower)
+                {
+                    BeginTextCommandDisplayHelp(ShowerHelpTextKey);
+                    EndTextCommandDisplayHelp(0, true, true, -1);
+                }
+                else
+                {
+                    ClearAllHelpMessages();
+                }
+
+                _timeSinceLocalPlayerShowerDistanceCheck = 0f;
+            }
+
+            const uint ComponentIdCount = 12;
+            const uint PropIdCount = 10;
+            if (_isLocalPlayerInShower)
+            {
+
+                // Take player out of shower
+                if (IsControlJustPressed(0, (int)Control.Context))
+                {
+                    ClearPedTasks(playerPed);
+                    _isLocalPlayerInShower = false;
+                    if(_nearestLocalPlayerShower.HasValue)
+                    {
+                        ComputeDirVecFromHeading2D(_nearestLocalPlayerShower.Value.Position.Heading, out float backX, out float backY);
+                        float
+                            currentX = _nearestLocalPlayerShower.Value.Position.X,
+                            currentY = _nearestLocalPlayerShower.Value.Position.Y,
+                            currentZ = _nearestLocalPlayerShower.Value.Position.Z;
+
+                        SetEntityCoords(playerPed, currentX + backX * ExtendedWarpDistance, currentY + backY * ExtendedWarpDistance, currentZ, false, false, false, false);
+
+                        for(uint i = 0; i < ComponentIdCount; i++)
+                        {
+                            if (i != (uint)PedComponents.Hair && i != (uint)PedComponents.Head)
+                            {
+                                SetPedComponentVariation(playerPed, (int)i, _compsToRestore[(PedComponents)i].Drawable, _compsToRestore[(PedComponents)i].Texture, 0);
+                            }
+                        }
+                        for(uint i = 0; i < PropIdCount; i++)
+                        {
+                            SetPedPropIndex(playerPed, (int)i, _propsToRestore[(PedProps)i].Drawable, _propsToRestore[(PedProps)i].Texture, true);
+                        }
+
+                        _compsToRestore.Clear();
+                        _propsToRestore.Clear();
+                    }
+                }
+            }
+            else if(_nearestLocalPlayerShower.HasValue)
+            {
+                // Set player into shower
+                if(IsControlJustPressed(0, (int)Control.Context))
+                {
+                    uint playerModel = (uint)GetEntityModel(playerPed);
+                    bool isMale = IsPedAMaleModel(playerModel);
+                    _animRequests[playerPed] = Constants.AnimNames.Shower.Get(isMale);
+                    SetEntityCoords(playerPed, _nearestLocalPlayerShower.Value.Position.X, _nearestLocalPlayerShower.Value.Position.Y, _nearestLocalPlayerShower.Value.Position.Z, false, false, false, false);
+                    SetEntityHeading(playerPed, _nearestLocalPlayerShower.Value.Position.Heading);
+                    _isLocalPlayerInShower = true;
+
+                    // Take the player's clothes
+                    _compsToRestore.Clear();
+                    for(uint i = 0; i < ComponentIdCount; i++)
+                    {
+                        _compsToRestore.Add((PedComponents)i, new PedVariation
+                        {
+                            Texture = GetPedTextureVariation(playerPed, (int)i),
+                            Drawable = GetPedDrawableVariation(playerPed, (int)i),
+                        });
+                    }
+                    _propsToRestore.Clear();
+                    for(uint i = 0; i < PropIdCount; i++)
+                    {
+                        _propsToRestore.Add((PedProps)i, new PedVariation
+                        {
+                            Texture = GetPedPropTextureIndex(playerPed, (int)i),
+                            Drawable = GetPedPropIndex(playerPed, (int)i),
+                        });
+                    }
+
+                    ClearAllHelpMessages();
+
+                    ClearAllPedProps(playerPed);
+                    for(uint i = 0; i < ComponentIdCount; i++)
+                    {
+                        if(i != (uint)PedComponents.Hair && i != (uint)PedComponents.Head)
+                        {
+                            int drawable = -1;
+                            if(i == (uint)PedComponents.Torso || i == (uint)PedComponents.Legs)
+                            {
+                                drawable = i == (uint)PedComponents.Legs && isMale ? 14 : 15;
+                            }
+                            if(i == (uint)PedComponents.Shoes)
+                            {
+                                drawable = isMale ? 34 : 35;
+                            }
+                            SetPedComponentVariation(playerPed, (int)i, drawable, 0, 0);
+                        }
+                    }
+                }
+            }
         }
 
         private void TickAmbient(float deltaTime)
@@ -211,9 +421,32 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 _pedSpawner.Tick(deltaTime);
             }
+
+            // Only play one anim every tick
+            int? animRequestToRemove = null;
+            foreach(KeyValuePair<int, PedNode.AnimInfo> pedAnim in _animRequests)
+            {
+                if(HasAnimDictLoaded(pedAnim.Value.Dict))
+                {
+                    TaskPlayAnim(pedAnim.Key, pedAnim.Value.Dict, pedAnim.Value.Clip, 1f, 1f, -1, 1 | 4, 0f, false, false, false);
+                    animRequestToRemove = pedAnim.Key;
+                    break;
+                }
+                else
+                {
+                    RequestAnimDict(pedAnim.Value.Dict);
+                }
+            }
+
+            if(animRequestToRemove != null)
+            {
+                _animRequests.Remove(animRequestToRemove.Value);
+            }
+
+            HandlePlayerShower(deltaTime);
         }
 
-        private void OnPedsSpawned(int[] entityHandles, Dictionary<int, PedSpawnInfo> optionalPedInitStates)
+        private void OnPedsSpawned(int[] entityHandles, Dictionary<int, PedNode> optionalPedInitStates)
         {
             Debug.WriteLine($"{nameof(OnPedsSpawned)}: spawned {entityHandles.Length} peds");
 
@@ -229,7 +462,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             _pedSpawner = null;
 
             _optionalPedInitStates = optionalPedInitStates;
-            _pedLocations = new PedSpawnInfo[optionalPedInitStates.Count];
+            _pedLocations = new PedNode[optionalPedInitStates.Count];
             optionalPedInitStates.Values.CopyTo(_pedLocations, 0);
             _optionalPedHandles = new int[optionalPedInitStates.Count];
             optionalPedInitStates.Keys.CopyTo(_optionalPedHandles, 0);
@@ -251,13 +484,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         {
             if(_pedHandles != null)
             {
-                const float WarpDistance = 0.9f;
 
                 if (_timeSinceLastPedBrainTick >= PedBrainTickIntervalSeconds)
                 {
                     Debug.WriteLine($"{nameof(RunPedBrain)}: resetting peds' tasks");
 
-                    List<PedSpawnInfo> pickablePedTargets = new List<PedSpawnInfo>(_pedLocations);
+                    List<PedNode> pickablePedTargets = new List<PedNode>(_pedLocations);
 
                     for (int i = 0; i < _optionalPedHandles.Length; i++)
                     {
@@ -265,7 +497,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                         // Stop the previous task
                         ClearPedTasks(ped);
-                        PedSpawnInfo? initState = null;
+                        PedNode? initState = null;
                         if(_optionalPedInitStates.ContainsKey(ped))
                         {
                             initState = _optionalPedInitStates[ped];
@@ -273,9 +505,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                         // Check if the ped's current state requires them to be warped
                         // if so, warp back: use the heading to compute the back vector
-                        if (initState?.NeedsWarp == true)
+                        if (initState?.HasFlag(PedNode.PedNodeFlag.NeedsWarp) == true)
                         {
-                            PedSpawnInfo.PositionInfo pos = initState.Value.Position;
+                            PedNode.PositionInfo pos = initState.Value.Position;
                             ComputeDirVecFromHeading2D(pos.Heading, out float backX, out float backY);
 
                             SetEntityCoords(ped, pos.X + backX * WarpDistance, pos.Y + backY * WarpDistance, pos.Z, false, false, false, false);
@@ -283,11 +515,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                         // TODO: there's a chance we might pick the same target as current...
                         int randomNewTargetIndex = s_RNG.Next(0, pickablePedTargets.Count);
-                        PedSpawnInfo newTarget = pickablePedTargets[randomNewTargetIndex];
+                        PedNode newTarget = pickablePedTargets[randomNewTargetIndex];
 
                         float offsetX = 0f, offsetY = 0f;
                         // Don't allow other peds wander to a warpable spot
-                        if (newTarget.NeedsWarp)
+                        if (newTarget.HasFlag(PedNode.PedNodeFlag.NeedsWarp))
                         {
                             pickablePedTargets.RemoveAt(randomNewTargetIndex);
 
@@ -297,9 +529,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                             offsetY *= WarpDistance;
                         }
 
-                        // fucking CFX types define flags as a bool?
-                        //CitizenFX.Core.Native.Function.Call(CitizenFX.Core.Native.Hash.TASK_FOLLOW_NAV_MESH_TO_COORD, ped, newTarget.Position.X + offsetX, newTarget.Position.Y + offsetY, newTarget.Position.Z, 1f, 500, 0.2f, 1 | 2, newTarget.Position.Heading);
-                        //TaskFollowNavMeshToCoord(ped, newTarget.Position.X + offsetX, newTarget.Position.Y + offsetY, newTarget.Position.Z, 1f, 500, 0.2f, false, newTarget.Position.Heading);
                         TaskGoToCoordAnyMeans(ped, newTarget.Position.X + offsetX, newTarget.Position.Y + offsetY, newTarget.Position.Z, 1f, 0, false, 0, 0.01f);
 
                         _optionalPedTargetStates[ped] = newTarget;
@@ -319,26 +548,35 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         {
                             if (_optionalPedTargetStates.ContainsKey(ped))
                             {
-                                PedSpawnInfo target = _optionalPedTargetStates[ped];
+                                PedNode target = _optionalPedTargetStates[ped];
                                 Vector3 currentPos = GetEntityCoords(ped, false);
                                 float distanceToTarget = currentPos.DistanceToSquared(new Vector3(target.Position.X, target.Position.Y, target.Position.Z));
                                 bool hasAchieved = distanceToTarget < (WarpDistance * WarpDistance);
-                                const float AlmostExtensionFactor = 1.75f;
-                                const float ExtendedWarpDistance = AlmostExtensionFactor * WarpDistance;
                                 bool hasAlmostAchieved = hasAchieved || (distanceToTarget < (ExtendedWarpDistance * ExtendedWarpDistance));
 
                                 if (hasAlmostAchieved)
                                 {
-                                    if (hasAchieved || target.NeedsWarp)
+                                    if (hasAchieved || target.HasFlag(PedNode.PedNodeFlag.NeedsWarp))
                                     {
                                         Debug.WriteLine($"{nameof(RunPedBrain)}: ped {ped} has achieved their target at X = {target.Position.X}, Y = {target.Position.Y}, Z = {target.Position.Z}");
 
                                         ClearPedTasks(ped);
                                         _optionalPedTargetStates.Remove(ped);
                                         _optionalPedInitStates[ped] = target;
+
+                                        PedNode.AnimInfo anim = target.Anim;
+                                        // Need gendered anims
+                                        if (target.HasFlag(PedNode.PedNodeFlag.Shower))
+                                        {
+                                            anim = Constants.AnimNames.Shower.Get(IsPedAMaleModel((uint)GetEntityModel(ped)));
+                                        }
+                                        if (!string.IsNullOrEmpty(anim.Clip))
+                                        {
+                                            _animRequests[ped] = anim;
+                                        }
                                     }
 
-                                    if (target.NeedsWarp)
+                                    if (target.HasFlag(PedNode.PedNodeFlag.NeedsWarp))
                                     {
                                         SetEntityCoords(ped, target.Position.X, target.Position.Y, target.Position.Z, false, false, false, false);
                                         SetEntityHeading(ped, target.Position.Heading);
@@ -354,6 +592,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             _timeSinceLastPedTargetCheck += deltaTime;
         }
 
+        /// <summary>
+        /// Computes the "backward" vector from a heading angle
+        /// </summary>
+        /// <param name="heading">Z-axis angle (in degrees)</param>
+        /// <param name="dirX"></param>
+        /// <param name="dirY"></param>
         private static void ComputeDirVecFromHeading2D(float heading, out float dirX, out float dirY)
         {
             const float Deg2Rad = (float)(Math.PI / 180.0);

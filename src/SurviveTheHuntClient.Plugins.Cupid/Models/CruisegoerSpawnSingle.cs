@@ -6,23 +6,23 @@
 
         internal readonly uint PedModel;
 
-        private readonly PedSpawnInfo[] _cached;
+        private readonly PedNode[] _cached;
 
-        internal CruisegoerSpawnSingle(float x, float y, float z, float heading, bool needsWarp, params uint[] pedModels) : base(x, y, z, heading)
+        internal CruisegoerSpawnSingle(float x, float y, float z, float heading, uint pedNodeFlags, params uint[] pedModels) : base(x, y, z, heading)
         {
             PedModel = pedModels[s_RNG.Next(0, pedModels.Length)];
-            _cached = new PedSpawnInfo[]{
-                new PedSpawnInfo
+            _cached = new PedNode[]{
+                new PedNode
                 {
-                    Position = new PedSpawnInfo.PositionInfo(x, y, z, heading),
-                    Anim = new PedSpawnInfo.AnimInfo("", ""),
+                    Position = new PedNode.PositionInfo(x, y, z, heading),
+                    Anim = new PedNode.AnimInfo("", ""),
                     PedModel = PedModel,
-                    NeedsWarp = needsWarp,
+                    Flags = pedNodeFlags,
                 }
             };
         }
 
-        internal override PedSpawnInfo[] Build()
+        internal override PedNode[] Build()
         {
             return _cached;
         }

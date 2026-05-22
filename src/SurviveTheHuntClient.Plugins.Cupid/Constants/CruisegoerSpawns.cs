@@ -9,25 +9,73 @@ namespace SurviveTheHuntClient.Plugins.Cupid
     {
         internal static class CruisegoerSpawns
         {
-            internal readonly static uint[] PedModels =
+            internal readonly static uint[] MalePedModels =
             {
-                (uint)PedHash.Beach01AFM,
-                (uint)PedHash.Beach01AFY,
-                (uint)PedHash.Beachvesp01AMY,
+                (uint)GetHashKey("a_m_y_beach_01"),
+                (uint)GetHashKey("a_m_y_beach_02"),
+                (uint)GetHashKey("a_m_y_beach_03"),
+                (uint)GetHashKey("a_m_y_gencaspat_01"),
+                (uint)GetHashKey("u_m_y_caleb"),
+                (uint)GetHashKey("u_m_y_gabriel"),
+                (uint)GetHashKey("u_m_y_ushi"),
+                (uint)GetHashKey("u_m_m_vince"),
+                (uint)GetHashKey("a_m_y_clubcust_04"),
+                (uint)GetHashKey("a_m_y_beach_04"),
+                (uint)GetHashKey("a_m_y_beach_04"),
+                (uint)GetHashKey("a_m_y_carclub_01"),
+                (uint)GetHashKey("a_m_y_studioparty_01"),
+                (uint)GetHashKey("ig_moodyman_02"),
+                (uint)GetHashKey("ig_billionaire"),
+                (uint)GetHashKey("ig_party_promo"),
                 (uint)PedHash.Party01,
+            };
+
+            internal readonly static uint[] FemalePedModels =
+            {
                 (uint)PedHash.Baywatch01SFY,
                 (uint)PedHash.Vinewood01AFY,
                 (uint)PedHash.StripperLite,
+                (uint)PedHash.Beach01AFM,
+                (uint)PedHash.Beach01AFY,
+                (uint)GetHashKey("a_f_y_gencaspat_01"),
+                (uint)GetHashKey("u_f_y_lauren"),
+                (uint)GetHashKey("u_f_y_taylor"),
+                (uint)GetHashKey("u_f_y_beth"),
+                (uint)GetHashKey("a_f_y_clubcust_04"),
+                (uint)GetHashKey("a_f_y_beach_02"),
+                (uint)GetHashKey("a_f_y_beach_02"),
+                (uint)GetHashKey("s_f_m_retailstaff_01"),
+                (uint)GetHashKey("a_f_y_carclub_01"),
+                (uint)GetHashKey("a_f_y_studioparty_01"),
+                (uint)GetHashKey("a_f_y_studioparty_02"),
+                (uint)GetHashKey("ig_entourage_a"),
+                (uint)GetHashKey("ig_entourage_b"),
             };
+
+            private static uint[] _cachedPedModels = null;
+            internal static uint[] PedModels
+            {
+                get
+                {
+                    if(_cachedPedModels == null)
+                    {
+                        _cachedPedModels = new uint[FemalePedModels.Length + MalePedModels.Length];
+                        FemalePedModels.CopyTo(_cachedPedModels, 0);
+                        MalePedModels.CopyTo(_cachedPedModels, FemalePedModels.Length);
+                    }
+
+                    return _cachedPedModels;
+                }
+            }
 
             internal static readonly CruisegoerSpawnBase[] Required =
             {
                 // Brendan the Arsey
-                new CruisegoerSpawnSingle(-2085.347f, -1017.773f, 12.7819f, 69.39364f, false, (uint)GetHashKey("mp_m_boatstaff_01")),
+                new CruisegoerSpawnSingle(-2085.347f, -1017.773f, 12.7819f, 69.39364f, 0, (uint)GetHashKey("mp_m_boatstaff_01")),
                 
                 // Bartenders
-                new CruisegoerSpawnSingle(-2095.156f, -1015.901f, 8.98045f, 211.208f, false, (uint)GetHashKey("mp_f_boatstaff_01"), (uint)GetHashKey("s_f_y_casino_01"), (uint)GetHashKey("u_f_m_casinocash_01")),
-                new CruisegoerSpawnSingle(-2094.295f, -1014.135f, 8.98045f, 284.7771f, false, (uint)GetHashKey("mp_f_boatstaff_01"), (uint)GetHashKey("s_f_y_casino_01"), (uint)GetHashKey("u_f_m_casinocash_01")),
+                new CruisegoerSpawnSingle(-2095.156f, -1015.901f, 8.98045f, 211.208f, 0, (uint)GetHashKey("mp_f_boatstaff_01"), (uint)GetHashKey("s_f_y_casino_01"), (uint)GetHashKey("u_f_m_casinocash_01"), (uint)GetHashKey("s_f_y_beachbarstaff_01"), (uint)GetHashKey("s_f_y_clubbar_02")),
+                new CruisegoerSpawnSingle(-2094.295f, -1014.135f, 8.98045f, 284.7771f, 0, (uint)GetHashKey("mp_f_boatstaff_01"), (uint)GetHashKey("s_f_y_casino_01"), (uint)GetHashKey("u_f_m_casinocash_01"), (uint)GetHashKey("s_f_y_beachbarstaff_01"), (uint)GetHashKey("s_f_y_clubbar_02")),
             };
 
             internal static readonly CruisegoerSpawnBase[] Optional =
@@ -93,9 +141,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 ),
 
                 // showers
-                new CruisegoerSpawnSingle(-2080.376f, -1020.604f, 5.875937f, 117.4093f, true, (uint)PedHash.Topless01AFY, (uint)PedHash.Musclbeac01AMY),
-                new CruisegoerSpawnSingle(-2092.41f, -1018.078f, 5.888787f, 119.4851f, true, (uint)PedHash.Topless01AFY, (uint)PedHash.Musclbeac02AMY),
-                new CruisegoerSpawnSingle(-2100.895f, -1008.169f, 5.878305f, 107.131f, true, (uint)PedHash.Topless01AFY, (uint)PedHash.Musclbeac01AMY),
+                new CruisegoerSpawnSingle(-2080.376f, -1020.604f, 5.875937f, 117.4093f, PedNode.SetFlags(PedNode.PedNodeFlag.Shower, PedNode.PedNodeFlag.NeedsWarp), (uint)PedHash.Topless01AFY, (uint)PedHash.Musclbeac01AMY),
+                new CruisegoerSpawnSingle(-2092.41f, -1018.078f, 5.888787f, 119.4851f, PedNode.SetFlags(PedNode.PedNodeFlag.Shower, PedNode.PedNodeFlag.NeedsWarp), (uint)PedHash.Topless01AFY, (uint)PedHash.Musclbeac02AMY),
+                new CruisegoerSpawnSingle(-2100.895f, -1008.169f, 5.878305f, 107.131f, PedNode.SetFlags(PedNode.PedNodeFlag.Shower, PedNode.PedNodeFlag.NeedsWarp), (uint)PedHash.Topless01AFY, (uint)PedHash.Musclbeac01AMY),
             };
         }
     }

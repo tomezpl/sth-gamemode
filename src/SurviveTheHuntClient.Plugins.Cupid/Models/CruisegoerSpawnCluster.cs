@@ -9,14 +9,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
     {
         internal override SpawnShrinkStrategy ShrinkStrategy => SpawnShrinkStrategy.Sliced;
 
-        internal override PedSpawnInfo[] Build()
+        internal override PedNode[] Build()
         {
             // Random ped count in the given range
             byte pedCount = MinPedCount == MaxPedCount ? MinPedCount : (byte)s_RNG.Next(MinPedCount, MaxPedCount + 1);
 
             // create points in axis aligned square with half extents equal to radius
             // then filter out points that aren't in radius
-            List<PedSpawnInfo> spawns = new List<PedSpawnInfo>(pedCount);
+            List<PedNode> spawns = new List<PedNode>(pedCount);
 
             float halfHypot = 0.5f * (float)Math.Sqrt(2f * ((Radius * 2f) * (Radius * 2f)));
             float originX = X - Radius;
@@ -44,11 +44,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
                         float xError = (float)(s_RNG.NextDouble() * MaxError - MaxErrorHalf);
                         float yError = (float)(s_RNG.NextDouble() * MaxError - MaxErrorHalf);
 
-                        spawns.Add(new PedSpawnInfo
+                        spawns.Add(new PedNode
                         {
-                            Anim = new PedSpawnInfo.AnimInfo("", ""),
+                            Anim = new PedNode.AnimInfo("", ""),
                             PedModel = PedModels[s_RNG.Next(0, PedModels.Length)],
-                            Position = new PedSpawnInfo.PositionInfo(currentX + xError, currentY + yError, Z, (float)(s_RNG.NextDouble() * 360 - 180)),
+                            Position = new PedNode.PositionInfo(currentX + xError, currentY + yError, Z, (float)(s_RNG.NextDouble() * 360 - 180)),
                         });
                     }
                 }

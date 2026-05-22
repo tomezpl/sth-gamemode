@@ -7,7 +7,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
         internal readonly float X, Y, Z;
         internal readonly float Heading;
 
-        internal abstract PedSpawnInfo[] Build();
+        internal abstract PedNode[] Build();
 
         internal enum SpawnShrinkStrategy
         {

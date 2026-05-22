@@ -64,11 +64,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
             return Math.Min(desired, (byte)Math.Floor(length / PedSafeRadius));
         }
 
-        internal override PedSpawnInfo[] Build()
+        internal override PedNode[] Build()
         {
             byte desiredPedCount = (byte)s_RNG.Next(DesiredMinPedCount, DesiredMaxPedCount + 1);
 
-            PedSpawnInfo[] info = new PedSpawnInfo[GetMaxPedCount(desiredPedCount, Length)];
+            PedNode[] info = new PedNode[GetMaxPedCount(desiredPedCount, Length)];
 
             float errorHalfRange = PedDistanceError * .5f;
             float step = Length / (info.Length + 1f);
@@ -92,11 +92,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
                 float currentY = StartY + DirY * distanceAlongLine;
                 float currentZ = StartZ + DirZ * distanceAlongLine;
 
-                info[i] = new PedSpawnInfo
+                info[i] = new PedNode
                 {
                     PedModel = modelToUse,
-                    Anim = new PedSpawnInfo.AnimInfo("", ""),
-                    Position = new PedSpawnInfo.PositionInfo(currentX, currentY, currentZ, Heading + MaxHeadingError * (float)(s_RNG.NextDouble() - 0.5f)),
+                    Anim = new PedNode.AnimInfo("", ""),
+                    Position = new PedNode.PositionInfo(currentX, currentY, currentZ, Heading + MaxHeadingError * (float)(s_RNG.NextDouble() - 0.5f)),
                 };
             }
 

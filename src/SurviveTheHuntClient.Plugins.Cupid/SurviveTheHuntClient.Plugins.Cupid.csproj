@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Constants\AnimNames.cs" />
     <Compile Include="Constants\Clothing.cs" />
     <Compile Include="Constants\DirectedScenes.cs" />
     <Compile Include="Constants\Heat.cs" />
@@ -65,7 +66,7 @@
     <Compile Include="Models\CruisegoerSpawnCluster.cs" />
     <Compile Include="Models\CruisegoerSpawnLine.cs" />
     <Compile Include="Models\CruisegoerSpawnSingle.cs" />
-    <Compile Include="Models\PedSpawnInfo.cs" />
+    <Compile Include="Models\PedNode.cs" />
     <Compile Include="Models\JobStateBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SceneHandlers\Intro\IntroJ1Handler.cs" />
