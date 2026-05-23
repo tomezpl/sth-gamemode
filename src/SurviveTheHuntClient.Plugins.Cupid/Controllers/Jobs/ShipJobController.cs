@@ -3,7 +3,6 @@ using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 using SurviveTheHuntClient.Plugins.Cupid.Models;
 using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 
@@ -117,8 +116,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         internal bool IsLocalPlayerPedGod => GameState?.Hunt != null && GameState.Hunt.HuntedPlayers[0].PlayerHandle == PlayerId();
 
-        private PedNode[] _pedWanderNodes = new PedNode[0];
-        private Action<float>[] _pedTicks = new Action<float>[0];
         private Dictionary<int, PedNode> _optionalPedInitStates = new Dictionary<int, PedNode>();
         private Dictionary<int, PedNode> _optionalPedTargetStates = new Dictionary<int, PedNode>();
         private PedNode[] _pedLocations = new PedNode[0];
@@ -150,6 +147,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private const string ShowerHelpTextKey = "STH_CUPID_SHIP_SHOWER_HELP";
         private const string ShowerHelpTextLabel = "Press ~INPUT_CONTEXT~ to shower.";
 
+        private const string BlendInHelpTextKey = "STH_CUPID_SHIP_BLENDIN_HELP";
+        private const string BlendInHelpTextLabel = "Press ~INPUT_CONTEXT~ to blend in.";
+
+        private Dictionary<int, float> _timeTillPedBrainTick = new Dictionary<int, float>();
+
         private static readonly bool s_HasDoneInit = Init();
 
         private static bool Init()
@@ -157,6 +159,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             if(!s_HasDoneInit)
             {
                 AddTextEntry(ShowerHelpTextKey, ShowerHelpTextLabel);
+                AddTextEntry(BlendInHelpTextKey, BlendInHelpTextLabel);
             }
 
             return true;
@@ -231,6 +234,141 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             TickActive(deltaTime);
         }
 
+        private int? _blendInSourcePed = null;
+        private bool _isBlendingIn = false;
+        private float _timeSinceBlendInCheck = 0f;
+        private const float BlendInCheckIntervalSeconds = 0.65f;
+        private void HandleBlendIn(float deltaTime)
+        {
+            _timeSinceBlendInCheck += deltaTime;
+
+            bool couldStartBlendInBeforeCheck = !_isBlendingIn && _blendInSourcePed.HasValue;
+
+            if(!_isBlendingIn && _timeSinceBlendInCheck >= BlendInCheckIntervalSeconds)
+            {
+                _timeSinceBlendInCheck = 0f;
+                _blendInSourcePed = null;
+
+                const float BlendInDistance = 1.2f;
+                const float BlendInDistanceSq = BlendInDistance * BlendInDistance;
+
+                Vector3 playerPos = GetEntityCoords(PlayerPedId(), false);
+
+                float closestDist = float.MaxValue;
+                // Need to iterate over _pedHandles as only that's synced
+                foreach(int ped in _pedHandles)
+                {
+                    if (IsPedStill(ped))
+                    {
+                        Vector3 pos = GetEntityCoords(ped, false);
+                        float
+                            a = pos.X - playerPos.X,
+                            b = pos.Y - playerPos.Y,
+                            c = pos.Z - playerPos.Z;
+                        float distSq = (a * a + b * b + c * c);
+                        if (distSq <= BlendInDistanceSq && closestDist > distSq)
+                        {
+                            closestDist = distSq;
+                            _blendInSourcePed = ped;
+                        }
+                    }
+                }
+            }
+
+            if(_isBlendingIn)
+            {
+                if(IsControlJustPressed(0, (int)Control.Context))
+                {
+                    _isBlendingIn = false;
+                    ClearPedTasks(PlayerPedId());
+                }
+            }
+
+            if (_blendInSourcePed.HasValue)
+            {
+                if(IsControlJustPressed(0, (int)Control.Context))
+                {
+                    _isBlendingIn = true;
+
+                    // Find the scenario this ped is using.
+                    string scenarioToUse = null;
+                    PedNode.AnimInfo? animToUse = null;
+                    foreach (string scenario in Constants.Scenarios.All)
+                    {
+                        if(IsPedUsingScenario(_blendInSourcePed.Value, scenario))
+                        {
+                            scenarioToUse = scenario;
+                            //Debug.WriteLine($"Copying scenario \"{scenario}\" from ped {_blendInSourcePed.Value}");
+                            break;
+                        }
+                    }
+
+                    if(scenarioToUse == null)
+                    {
+                        // Alternatively, try copying the anim
+                        foreach(Constants.AnimNames.GenderedAnimBase anim in Constants.AnimNames.All)
+                        {
+                            PedNode.AnimInfo[] anims = { anim.Male, anim.Female };
+                            foreach(PedNode.AnimInfo animInfo in anims)
+                            {
+                                if (IsEntityPlayingAnim(_blendInSourcePed.Value, animInfo.Dict, animInfo.Clip, 3))
+                                {
+                                    animToUse = animInfo;
+                                    //Debug.WriteLine($"Copying anim {animInfo.Dict} {animInfo.Clip} from ped {_blendInSourcePed.Value}");
+                                    break;
+                                }
+                            }
+
+                            if(animToUse.HasValue)
+                            {
+                                break;
+                            }
+                        }
+
+                        // Finally, do a coin toss between random scenario and random anim
+                        if(!animToUse.HasValue)
+                        {
+                            bool useRandomScenario = s_RNG.NextDouble() >= 0.5;
+                            int randomIndex = s_RNG.Next(0, useRandomScenario ? Constants.Scenarios.All.Length : Constants.AnimNames.All.Length);
+                            
+                            if(useRandomScenario)
+                            {
+                                scenarioToUse = Constants.Scenarios.All[randomIndex];
+                                //Debug.WriteLine($"Picking random blend-in scenario {scenarioToUse}");
+                            }
+                            else
+                            {
+                                animToUse = Constants.AnimNames.All[randomIndex].Get(IsPedAMaleModel((uint)GetEntityModel(PlayerPedId())));
+                                //Debug.WriteLine($"Picking random blend-in anim {animToUse.Value.Dict} {animToUse.Value.Clip}");
+                            }
+                        }
+                    }
+
+                    // Copy the scenario.
+                    if (scenarioToUse != null)
+                    {
+                        TaskStartScenarioInPlace(PlayerPedId(), scenarioToUse, 0, true);
+                    }
+                    else if(animToUse.HasValue)
+                    {
+                        _animRequests[PlayerPedId()] = animToUse.Value;
+                    }
+
+                    _blendInSourcePed = null;
+                }
+            }
+
+            if (!couldStartBlendInBeforeCheck && _blendInSourcePed.HasValue)
+            {
+                BeginTextCommandDisplayHelp(BlendInHelpTextKey);
+                EndTextCommandDisplayHelp(0, true, true, -1);
+            }
+            else if (couldStartBlendInBeforeCheck && !_blendInSourcePed.HasValue)
+            {
+                ClearAllHelpMessages();
+            }
+        }
+
         private PedNode? _nearestLocalPlayerShower = null;
         private bool _isLocalPlayerInShower = false;
         private float _timeSinceLocalPlayerShowerDistanceCheck = 0f;
@@ -243,6 +381,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             if(!_isLocalPlayerInShower && _timeSinceLocalPlayerShowerDistanceCheck >= LocalPlayerShowerDistanceCheckIntervalSeconds)
             {
+                bool wasNearShower = _nearestLocalPlayerShower.HasValue;
                 _nearestLocalPlayerShower = null;
                 bool nearShower = false;
 
@@ -268,7 +407,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     BeginTextCommandDisplayHelp(ShowerHelpTextKey);
                     EndTextCommandDisplayHelp(0, true, true, -1);
                 }
-                else
+                else if(wasNearShower)
                 {
                     ClearAllHelpMessages();
                 }
@@ -444,6 +583,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
 
             HandlePlayerShower(deltaTime);
+            HandleBlendIn(deltaTime);
         }
 
         private void OnPedsSpawned(int[] entityHandles, Dictionary<int, PedNode> optionalPedInitStates)
@@ -466,6 +606,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             optionalPedInitStates.Values.CopyTo(_pedLocations, 0);
             _optionalPedHandles = new int[optionalPedInitStates.Count];
             optionalPedInitStates.Keys.CopyTo(_optionalPedHandles, 0);
+
+            foreach(int pedHandle in _optionalPedHandles)
+            {
+                _timeTillPedBrainTick[pedHandle] = s_RNG.Next(0, 45);
+            }
         }
 
         private void TickActive(float deltaTime)
@@ -476,7 +621,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
-        private float _timeSinceLastPedBrainTick = 0f;
         private float _timeSinceLastPedTargetCheck = 0f;
         private const float PedTargetCheckIntervalSeconds = 1.5f;
 
@@ -484,16 +628,27 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         {
             if(_pedHandles != null)
             {
+                bool tickedAnyBrains = false;
 
-                if (_timeSinceLastPedBrainTick >= PedBrainTickIntervalSeconds)
+                List<int> pedsToTick = new List<int>();
+                foreach(int pedHandle in _optionalPedHandles)
                 {
-                    Debug.WriteLine($"{nameof(RunPedBrain)}: resetting peds' tasks");
+                    _timeTillPedBrainTick[pedHandle] -= deltaTime;
+                    if (_timeTillPedBrainTick[pedHandle] <= 0f)
+                    {
+                        tickedAnyBrains = true;
+                        pedsToTick.Add(pedHandle);
+                    }
+                }
+
+                if (tickedAnyBrains)
+                {
 
                     List<PedNode> pickablePedTargets = new List<PedNode>(_pedLocations);
 
-                    for (int i = 0; i < _optionalPedHandles.Length; i++)
+                    foreach(int ped in pedsToTick)
                     {
-                        int ped = _optionalPedHandles[i];
+                        //Debug.WriteLine($"{nameof(RunPedBrain)}: updating ped {ped}'s task");
 
                         // Stop the previous task
                         ClearPedTasks(ped);
@@ -535,7 +690,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                         _optionalPedInitStates.Remove(ped);
 
-                        _timeSinceLastPedBrainTick = 0f;
+                        // Randomise the time between ped brain ticks so people don't just start walking all at the same time
+                        _timeTillPedBrainTick[ped] = PedBrainTickIntervalSeconds + (float)s_RNG.Next(0, 45);
                     }
                 }
                 else
@@ -558,7 +714,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                                 {
                                     if (hasAchieved || target.HasFlag(PedNode.PedNodeFlag.NeedsWarp))
                                     {
-                                        Debug.WriteLine($"{nameof(RunPedBrain)}: ped {ped} has achieved their target at X = {target.Position.X}, Y = {target.Position.Y}, Z = {target.Position.Z}");
+                                        //Debug.WriteLine($"{nameof(RunPedBrain)}: ped {ped} has achieved their target at X = {target.Position.X}, Y = {target.Position.Y}, Z = {target.Position.Z}");
 
                                         ClearPedTasks(ped);
                                         _optionalPedTargetStates.Remove(ped);
@@ -570,8 +726,46 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                                         {
                                             anim = Constants.AnimNames.Shower.Get(IsPedAMaleModel((uint)GetEntityModel(ped)));
                                         }
+
+                                        if (string.IsNullOrEmpty(anim.Clip))
+                                        {
+                                            bool wantsRandomScenario = target.HasFlag(PedNode.PedNodeFlag.RandomScenario);
+                                            bool wantsRandomAnim = target.HasFlag(PedNode.PedNodeFlag.RandomAnim);
+
+                                            //Debug.WriteLine($"{nameof(target)}.{nameof(target.Flags)} = {target.Flags}, {nameof(wantsRandomScenario)} = {wantsRandomScenario}, {nameof(wantsRandomAnim)} = {wantsRandomAnim}");
+
+                                            if (wantsRandomAnim && wantsRandomScenario)
+                                            {
+                                                if (s_RNG.NextDouble() >= 0.5)
+                                                {
+                                                    wantsRandomScenario = true;
+                                                    wantsRandomAnim = false;
+                                                }
+                                                else
+                                                {
+                                                    wantsRandomAnim = true;
+                                                    wantsRandomScenario = false;
+                                                }
+
+                                                //Debug.WriteLine($"Both were true. After a coin toss, {nameof(wantsRandomAnim)} = {wantsRandomAnim}, {nameof(wantsRandomScenario)} = {wantsRandomScenario}");
+                                            }
+
+                                            if (wantsRandomScenario)
+                                            {
+                                                int randomScenarioIndex = s_RNG.Next(0, Constants.Scenarios.All.Length);
+                                                //Debug.WriteLine($"Starting scenario {Constants.Scenarios.All[randomScenarioIndex]} for ped {ped}");
+                                                TaskStartScenarioInPlace(ped, Constants.Scenarios.All[randomScenarioIndex], 0, true);
+                                            }
+
+                                            if (wantsRandomAnim)
+                                            {
+                                                anim = Constants.AnimNames.All[s_RNG.Next(0, Constants.AnimNames.All.Length)].Get(IsPedAMaleModel((uint)GetEntityModel(ped)));
+                                            }
+                                        }
+
                                         if (!string.IsNullOrEmpty(anim.Clip))
                                         {
+                                            //Debug.WriteLine($"Requesting anim {anim.Dict} {anim.Clip} for ped {ped}");
                                             _animRequests[ped] = anim;
                                         }
                                     }
@@ -588,7 +782,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 }
             }
 
-            _timeSinceLastPedBrainTick += deltaTime;
             _timeSinceLastPedTargetCheck += deltaTime;
         }
 

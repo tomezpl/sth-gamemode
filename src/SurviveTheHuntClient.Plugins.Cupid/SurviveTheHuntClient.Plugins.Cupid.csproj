@@ -49,6 +49,7 @@
     <Compile Include="Constants\DirectedScenes.cs" />
     <Compile Include="Constants\Heat.cs" />
     <Compile Include="Constants\Locations.cs" />
+    <Compile Include="Constants\Scenarios.cs" />
     <Compile Include="Constants\Settings.cs" />
     <Compile Include="Constants\CruisegoerSpawns.cs" />
     <Compile Include="Controllers\BleedoutController.cs" />

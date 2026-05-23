@@ -80,6 +80,8 @@
         {
             Shower,
             NeedsWarp,
+            RandomScenario,
+            RandomAnim,
         }
     }
 }

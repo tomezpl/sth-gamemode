@@ -1,6 +1,7 @@
 ﻿using SurviveTheHuntClient.Models.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,7 +28,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
 
         internal readonly float MaxHeadingError;
 
-        internal CruisegoerSpawnLine(float startX, float startY, float startZ, float endX, float endY, float endZ, float heading, float maxHeadingChange, Range<byte> pedCountRange, uint[] pedModels)
+        internal readonly uint PedNodeFlags = 0;
+
+        internal CruisegoerSpawnLine(float startX, float startY, float startZ, float endX, float endY, float endZ, float heading, float maxHeadingChange, uint pedNodeFlags, Range<byte> pedCountRange, uint[] pedModels)
             : base(startX + (endX - startX) * .5f, startY + (endY - startY) * .5f, startZ + (endZ - startZ) * .5f, heading)
         {
             StartX = startX;
@@ -52,9 +55,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
             }
 
             MaxHeadingError = maxHeadingChange;
+
+            PedNodeFlags = pedNodeFlags;
+
+            Debug.WriteLine($"new {nameof(CruisegoerSpawnLine)}: {nameof(pedNodeFlags)} = {pedNodeFlags}");
         }
 
-        internal CruisegoerSpawnLine(float startX, float startY, float startZ, float endX, float endY, float endZ, float heading, float maxHeadingChange, byte pedCount, uint[] pedModels) : this(startX, startY, startZ, endX, endY, endZ, heading, maxHeadingChange, new Range<byte>(pedCount), pedModels)
+        internal CruisegoerSpawnLine(float startX, float startY, float startZ, float endX, float endY, float endZ, float heading, float maxHeadingChange, byte pedCount, uint[] pedModels) : this(startX, startY, startZ, endX, endY, endZ, heading, maxHeadingChange, 0, new Range<byte>(pedCount), pedModels)
         {
 
         }
@@ -97,6 +104,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
                     PedModel = modelToUse,
                     Anim = new PedNode.AnimInfo("", ""),
                     Position = new PedNode.PositionInfo(currentX, currentY, currentZ, Heading + MaxHeadingError * (float)(s_RNG.NextDouble() - 0.5f)),
+                    Flags = PedNodeFlags,
                 };
             }
 

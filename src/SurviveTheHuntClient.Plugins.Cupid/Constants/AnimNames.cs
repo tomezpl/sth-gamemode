@@ -17,6 +17,22 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             internal static readonly ShowerAnim Shower = new ShowerAnim();
 
+            internal sealed class DanceAnim : GenderedAnimBase
+            {
+                private static readonly PedNode.AnimInfo s_Female = new PedNode.AnimInfo("anim@amb@nightclub@dancers@podium_dancers@", "hi_dance_facedj_17_v2_female^2");
+                internal override PedNode.AnimInfo Female => s_Female;
+
+                private static readonly PedNode.AnimInfo s_Male = new PedNode.AnimInfo("anim@amb@nightclub@dancers@podium_dancers@", "hi_dance_facedj_17_v2_male^5");
+                internal override PedNode.AnimInfo Male => s_Male;
+            }
+
+            internal static readonly DanceAnim Dance = new DanceAnim();
+
+            internal static readonly GenderedAnimBase[] All =
+            {
+                Dance,
+            };
+
             internal abstract class GenderedAnimBase
             {
                 internal abstract PedNode.AnimInfo Female { get; }

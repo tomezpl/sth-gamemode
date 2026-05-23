@@ -49,6 +49,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
                             Anim = new PedNode.AnimInfo("", ""),
                             PedModel = PedModels[s_RNG.Next(0, PedModels.Length)],
                             Position = new PedNode.PositionInfo(currentX + xError, currentY + yError, Z, (float)(s_RNG.NextDouble() * 360 - 180)),
+                            Flags = PedNodeFlags,
                         });
                     }
                 }
@@ -106,12 +107,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
 
         internal readonly uint[] PedModels;
 
-        internal CruisegoerSpawnCluster(float x, float y, float z, byte maxPedCount, float clusterRadius, uint[] pedModels, bool copyModels = true) : this(x, y, z, new Range<byte>(maxPedCount), clusterRadius, pedModels, copyModels)
+        internal readonly uint PedNodeFlags;
+
+        internal CruisegoerSpawnCluster(float x, float y, float z, byte maxPedCount, uint pedNodeFlags, float clusterRadius, uint[] pedModels, bool copyModels = true) : this(x, y, z, new Range<byte>(maxPedCount), pedNodeFlags, clusterRadius, pedModels, copyModels)
         {
             
         }
 
-        internal CruisegoerSpawnCluster(float x, float y, float z, Range<byte> pedCountRange, float clusterRadius, uint[] pedModels, bool copyModels = true) : base(x, y, z, 0f)
+        internal CruisegoerSpawnCluster(float x, float y, float z, Range<byte> pedCountRange, uint pedNodeFlags, float clusterRadius, uint[] pedModels, bool copyModels = true) : base(x, y, z, 0f)
         {
             Radius = clusterRadius;
             MaxPedCount = Math.Min(pedCountRange.Max, Math.Max((byte)1, CalculateMaxPedsInRadius(clusterRadius)));
@@ -126,14 +129,17 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
             {
                 PedModels = pedModels;
             }
+
+            PedNodeFlags = pedNodeFlags;
+            Debug.WriteLine($"new {nameof(CruisegoerSpawnCluster)}: {nameof(pedNodeFlags)} = {pedNodeFlags}");
         }
 
-        internal CruisegoerSpawnCluster(float x, float y, float z, byte maxPedCount, float clusterRadius) : this(x, y, z, maxPedCount, clusterRadius, Constants.CruisegoerSpawns.PedModels, false)
+        internal CruisegoerSpawnCluster(float x, float y, float z, byte maxPedCount, uint pedNodeFlags, float clusterRadius) : this(x, y, z, maxPedCount, pedNodeFlags, clusterRadius, Constants.CruisegoerSpawns.PedModels, false)
         {
 
         }
 
-        internal CruisegoerSpawnCluster(float x, float y, float z, Range<byte> pedCountRange, float clusterRadius) : this(x, y, z, pedCountRange, clusterRadius, Constants.CruisegoerSpawns.PedModels, false)
+        internal CruisegoerSpawnCluster(float x, float y, float z, Range<byte> pedCountRange, uint pedNodeFlags, float clusterRadius) : this(x, y, z, pedCountRange, pedNodeFlags, clusterRadius, Constants.CruisegoerSpawns.PedModels, false)
         {
 
         }

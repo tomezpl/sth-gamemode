@@ -78,6 +78,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 new CruisegoerSpawnSingle(-2094.295f, -1014.135f, 8.98045f, 284.7771f, 0, (uint)GetHashKey("mp_f_boatstaff_01"), (uint)GetHashKey("s_f_y_casino_01"), (uint)GetHashKey("u_f_m_casinocash_01"), (uint)GetHashKey("s_f_y_beachbarstaff_01"), (uint)GetHashKey("s_f_y_clubbar_02")),
             };
 
+            internal static uint GenericPedNodeFlags => PedNode.SetFlags(PedNode.PedNodeFlag.RandomScenario, PedNode.PedNodeFlag.RandomAnim);
+
             internal static readonly CruisegoerSpawnBase[] Optional =
             {
                 // looking overboard
@@ -86,6 +88,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     -2077.613f, -1027.841f, 5.883708f,
                     -2041.367f, -1039.751f, 5.883331f,
                     165.7485f, 360f,
+                    GenericPedNodeFlags,
                     new Range<byte>(3, 5), PedModels
                 ),
                 new CruisegoerSpawnLine
@@ -93,6 +96,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     -2029.636f, -1028.991f, 5.882014f,
                     -2076.386f, -1013.412f, 5.882023f,
                     340f, 180f,
+                    GenericPedNodeFlags,
                     new Range<byte>(3, 5), PedModels
                 ),
                 new CruisegoerSpawnLine
@@ -100,6 +104,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     -2081.217f, -1026.638f, 8.971484f,
                     -2048.382f, -1037.368f, 8.971483f,
                     140.6088f, 90f,
+                    GenericPedNodeFlags,
                     new Range<byte>(3, 5), PedModels
                 ),
                 new CruisegoerSpawnLine
@@ -107,6 +112,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     -2054.378f, -1021.386f, 11.90755f,
                     -2071.664f, -1015.628f, 11.90736f,
                     341.6285f, 45f,
+                    GenericPedNodeFlags,
                     new Range<byte>(3, 5), PedModels
                 ),
                 new CruisegoerSpawnLine
@@ -114,22 +120,24 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     -2074.365f, -1028.586f, 11.90736f,
                     -2055.322f, -1034.304f, 11.90758f,
                     165.3188f, 30f,
+                    GenericPedNodeFlags,
                     new Range<byte>(3, 5), PedModels
                 ),
 
                 // interior clusters
-                new CruisegoerSpawnCluster(-2079.552f, -1019.935f, 8.971482f, 5, 2.75f),
-                new CruisegoerSpawnCluster(-2068.606f, -1023.439f, 11.90994f, 4, 4f),
-                new CruisegoerSpawnCluster(-2043.808f, -1026.549f, 8.971483f, 3, 3f),
-                new CruisegoerSpawnCluster(-2052.182f, -1029.052f, 8.971498f, 4, 4.5f),
-                new CruisegoerSpawnCluster(-2053.477f, -1028.463f, 11.90758f, 3, 2f),
-                new CruisegoerSpawnCluster(-2038.406f, -1032.982f, 8.971497f, 3, 2.5f),
-                new CruisegoerSpawnCluster(-2089.762f, -1016.639f, 8.971189f, 5, 3.2f),
+                new CruisegoerSpawnCluster(-2079.552f, -1019.935f, 8.971482f, 5, GenericPedNodeFlags, 2.75f),
+                new CruisegoerSpawnCluster(-2068.606f, -1023.439f, 11.90994f, 4, GenericPedNodeFlags, 4f),
+                new CruisegoerSpawnCluster(-2043.808f, -1026.549f, 8.971483f, 3, GenericPedNodeFlags, 3f),
+                new CruisegoerSpawnCluster(-2052.182f, -1029.052f, 8.971498f, 4, GenericPedNodeFlags, 4.5f),
+                new CruisegoerSpawnCluster(-2053.477f, -1028.463f, 11.90758f, 3, GenericPedNodeFlags, 2f),
+                new CruisegoerSpawnCluster(-2038.406f, -1032.982f, 8.971497f, 3, GenericPedNodeFlags, 2.5f),
+                new CruisegoerSpawnCluster(-2089.762f, -1016.639f, 8.971189f, 5, GenericPedNodeFlags, 3.2f),
                 new CruisegoerSpawnLine
                 (
                     -2091.906f, -1021.52f, 5.907803f,
                     -2100.738f, -1017.874f, 5.88418f,
                     67f, 30f,
+                    GenericPedNodeFlags,
                     new Range<byte>(3, 5), PedModels
                 ),
                 new CruisegoerSpawnLine
@@ -137,6 +145,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     -2082.918f, -1022.214f, 5.884103f,
                     -2087.266f, -1024.247f, 5.882385f,
                     200f, 360f,
+                    GenericPedNodeFlags,
                     new Range<byte>(3, 5), PedModels
                 ),
 
