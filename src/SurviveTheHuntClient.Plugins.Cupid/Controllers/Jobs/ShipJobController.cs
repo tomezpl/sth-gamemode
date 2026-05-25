@@ -1,5 +1,7 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
+using SurviveTheHuntClient.Models.UI;
 using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 using SurviveTheHuntClient.Plugins.Cupid.Models;
 using System;
@@ -26,7 +28,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     bool isDifferent = _pedNetIds.Count != value.Count;
                     if (isDifferent)
                     {
-                        Debug.WriteLine($"{logPrefix}{nameof(isDifferent)} = true because {nameof(value)} has {value.Count} elements, {nameof(_pedNetIds)} has {_pedNetIds.Count}");
+                        Debug.WriteLine($"{logPrefix}{nameof(isDifferent)} = {isDifferent} because {nameof(value)} has {value.Count} elements, {nameof(_pedNetIds)} has {_pedNetIds.Count}");
                     }
                     int commonSize = Math.Min(value.Count, _pedNetIds.Count);
                     for(int i = 0; !isDifferent && i < commonSize; i++)
@@ -34,7 +36,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         isDifferent = (int)_pedNetIds[i] != (int)value[i];
                         if(isDifferent)
                         {
-                            Debug.WriteLine($"{logPrefix}{nameof(isDifferent)} = true because {nameof(value)}[{i}] == {(int)value[i]} and {nameof(_pedNetIds)}[{i}] == {(int)_pedNetIds[i]}");
+                            Debug.WriteLine($"{logPrefix}{nameof(isDifferent)} = {isDifferent} because {nameof(value)}[{i}] == {(int)value[i]} and {nameof(_pedNetIds)}[{i}] == {(int)_pedNetIds[i]}");
                         }
                     }
 
@@ -52,16 +54,99 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 }
             }
 
+            internal enum JobStage
+            {
+                WaitingToStart,
+                FindDevice,
+                StartHack,
+                SurviveHack,
+                RepairSignal,
+                LeaveArea,
+                Completed,
+            }
+
+            private JobStage _stage = JobStage.WaitingToStart;
+            internal event GenericStateChangedEvent<JobStage> StageChanged;
+            internal JobStage Stage
+            {
+                get => _stage;
+                set
+                {
+                    JobStage prev = _stage;
+                    if(prev != value)
+                    {
+                        _stage = value;
+                        StageChanged.Invoke(prev, value, CanSync);
+                    }
+                }
+            }
+
+            private sbyte _pyreTwigSpawnLocationIndex = -1;
+            internal event GenericStateChangedEvent<sbyte> PyreTwigSpawnLocationIndexChanged;
+            internal sbyte PyreTwigSpawnLocationIndex
+            {
+                get => _pyreTwigSpawnLocationIndex;
+                set
+                {
+                    sbyte prev = _pyreTwigSpawnLocationIndex;
+                    _pyreTwigSpawnLocationIndex = value;
+                    if(prev != value)
+                    {
+                        PyreTwigSpawnLocationIndexChanged.Invoke(prev, value, CanSync);
+                    }
+                }
+            }
+
+            private bool _huntersDiscoveredDevice = false;
+            internal event GenericStateChangedEvent<bool> HuntersDiscoveredDeviceChanged;
+            internal bool HuntersDiscoveredDevice
+            {
+                get => _huntersDiscoveredDevice;
+                set
+                {
+                    bool prev = _huntersDiscoveredDevice;
+                    _huntersDiscoveredDevice = value;
+                    if(prev != value)
+                    {
+                        HuntersDiscoveredDeviceChanged.Invoke(prev, value, CanSync);
+                    }
+                }
+            }
+
+            private bool _huntedDiscoveredDevice = false;
+            internal event GenericStateChangedEvent<bool> HuntedDiscoveredDeviceChanged;
+            internal bool HuntedDiscoveredDevice
+            {
+                get => _huntedDiscoveredDevice;
+                set
+                {
+                    bool prev = _huntedDiscoveredDevice;
+                    _huntedDiscoveredDevice = value;
+                    if (prev != value)
+                    {
+                        HuntedDiscoveredDeviceChanged.Invoke(prev, value, CanSync);
+                    }
+                }
+            }
+
             internal enum StateProp
             {
-                PedNetIds
+                PedNetIds,
+                Stage,
+                PyreTwigSpawnLocationIndex,
+                HuntedDiscoveredDevice,
+                HuntersDiscoveredDevice,
             }
 
             internal override Dictionary<int, object> Get()
             {
                 return new Dictionary<int, object>
                 {
-                    {(int)StateProp.PedNetIds, Get((int)StateProp.PedNetIds) }
+                    {(int)StateProp.PedNetIds, Get((int)StateProp.PedNetIds) },
+                    {(int)StateProp.Stage, Get((int)StateProp.Stage) },
+                    {(int)StateProp.PyreTwigSpawnLocationIndex, Get((int)StateProp.PyreTwigSpawnLocationIndex) },
+                    {(int)StateProp.HuntedDiscoveredDevice, Get((int)StateProp.HuntedDiscoveredDevice) },
+                    {(int)StateProp.HuntersDiscoveredDevice, Get((int)StateProp.HuntersDiscoveredDevice) },
                 };
             }
 
@@ -71,6 +156,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 {
                     case StateProp.PedNetIds:
                         return PedNetIds;
+                    case StateProp.Stage:
+                        return Stage;
+                    case StateProp.PyreTwigSpawnLocationIndex:
+                        return PyreTwigSpawnLocationIndex;
+                    case StateProp.HuntedDiscoveredDevice:
+                        return HuntedDiscoveredDevice;
+                    case StateProp.HuntersDiscoveredDevice:
+                        return HuntersDiscoveredDevice;
                     default:
                         throw new ArgumentException($"Needs to be a valid {nameof(StateProp)}", nameof(statePropId));
                 }
@@ -82,6 +175,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 {
                     case StateProp.PedNetIds:
                         PedNetIds = (List<object>)statePropValue;
+                        break;
+                    case StateProp.Stage:
+                        Stage = (JobStage)statePropValue;
+                        break;
+                    case StateProp.PyreTwigSpawnLocationIndex:
+                        PyreTwigSpawnLocationIndex = (sbyte)statePropValue;
+                        break;
+                    case StateProp.HuntedDiscoveredDevice:
+                        HuntedDiscoveredDevice = (bool)statePropValue;
+                        break;
+                    case StateProp.HuntersDiscoveredDevice:
+                        HuntersDiscoveredDevice = (bool)statePropValue;
                         break;
                 }
             }
@@ -99,7 +204,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         internal Vector3 Origin => _origin;
 
-        internal const float ActiveRadius = 55f;
+        internal const float ActiveRadius = 85f;
 
         internal const float RangeCheckIntervalSeconds = 0.45f;
 
@@ -150,6 +255,51 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private const string BlendInHelpTextKey = "STH_CUPID_SHIP_BLENDIN_HELP";
         private const string BlendInHelpTextLabel = "Press ~INPUT_CONTEXT~ to blend in.";
 
+        private const string StartHackHelpTextKey = "STH_CUPID_SHIP_HACKSTART_HELP";
+        private const string StartHackHelpTextLabel = "Press ~INPUT_CONTEXT~ to launch the Pyre Twig hack.";
+
+        private const string ResumeHackHelpTextKey = "STH_CUPID_SHIP_HACKRESUME_HELP";
+        private const string ResumeHackHelpTextLabel = "Press ~INPUT_CONTEXT~ to resume the Pyre Twig hack.";
+
+        private const string SurviveHackObjectiveTextKey = "STH_CUPID_SHIP_HACKSURVIVE_OBJ";
+        private const string SurviveHackObjectiveTextLabel = "Survive until the ~g~Pyre Twig~w~ completes the hack. Blend in with partygoers.";
+
+        private const string ResumeHackObjectiveTextKey = "STH_CUPID_HELP_HACKRESUME_OBJ";
+        private const string ResumeHackObjectiveTextLabel = "Return to the ~g~Pyre Twig~w~ and resume the hack.";
+
+        private const string StartHackObjectiveTextKey = "STH_CUPID_HELP_HACKSTART_OBJ";
+        private const string StartHackObjectiveTextLabel = "Start the hack using the ~g~Pyre Twig~w~.";
+        
+        private const string FindDeviceObjectiveTextKey = "STH_CUPID_HELP_FINDDEV_OBJ";
+        private const string FindDeviceObjectiveTextLabel = "Find the Pyre Twig. Blend in to avoid being spotted by hunters.";
+
+        private const string LeaveObjectiveTextKey = "STH_CUPID_HELP_LEAVE_OBJ";
+        private const string LeaveObjectiveTextLabel = "Leave the yacht.";
+
+        private const string PyreTwigBlipNameKey = "STH_CUPID_DEVICE_BLIP";
+        private const string PyreTwigBlipNameLabel = "Sahara Pyre Twig 4K Ultra";
+
+        private static readonly Dictionary<JobState.JobStage, KeyValuePair<string, string>> s_ObjectiveText = new Dictionary<JobState.JobStage, KeyValuePair<string, string>>
+        {
+            {JobState.JobStage.FindDevice, new KeyValuePair<string, string>(FindDeviceObjectiveTextKey, FindDeviceObjectiveTextLabel) },
+            {JobState.JobStage.StartHack, new KeyValuePair<string, string>(StartHackObjectiveTextKey, StartHackObjectiveTextLabel) },
+            {JobState.JobStage.RepairSignal, new KeyValuePair<string, string>(ResumeHackObjectiveTextKey, ResumeHackObjectiveTextLabel) },
+            {JobState.JobStage.SurviveHack, new KeyValuePair<string, string>(SurviveHackObjectiveTextKey, SurviveHackObjectiveTextLabel) },
+            {JobState.JobStage.LeaveArea, new KeyValuePair<string, string>(LeaveObjectiveTextKey, LeaveObjectiveTextLabel) },
+        };
+
+        private static readonly int PyreTwigModel = GetHashKey("reh_prop_reh_harddisk_01a");
+
+        private int? _pyreTwigProp = null;
+        private int? _pyreTwigBlip = null;
+        private Vector3 _pyreTwigPos = Vector3.Zero;
+
+        internal const float HackDurationSeconds = 100f;
+
+        private LabelledItem[] _currentUI = new LabelledItem[0];
+
+        private LabelledItem _hackUI = new LabelledItem("HACK", 0f);
+
         private Dictionary<int, float> _timeTillPedBrainTick = new Dictionary<int, float>();
 
         private static readonly bool s_HasDoneInit = Init();
@@ -160,9 +310,32 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 AddTextEntry(ShowerHelpTextKey, ShowerHelpTextLabel);
                 AddTextEntry(BlendInHelpTextKey, BlendInHelpTextLabel);
+                AddTextEntry(ResumeHackHelpTextKey, ResumeHackHelpTextLabel);
+                AddTextEntry(StartHackHelpTextKey, StartHackHelpTextLabel);
+                AddTextEntry(PyreTwigBlipNameKey, PyreTwigBlipNameLabel);
+
+                foreach(KeyValuePair<string, string> label in s_ObjectiveText.Values)
+                {
+                    AddTextEntry(label.Key, label.Value);
+                }
             }
 
             return true;
+        }
+
+        private void DisplayTextForObjective(JobState.JobStage stage)
+        {
+            if (GameState?.Hunt != null)
+            {
+                string textKey = "STRING";
+                if (s_ObjectiveText.TryGetValue(stage, out KeyValuePair<string, string> text))
+                {
+                    textKey = text.Key;
+                }
+
+                BeginTextCommandPrint(textKey);
+                EndTextCommandPrint((int)(GameState.Hunt.InitialEndTime - DateTime.UtcNow).TotalMilliseconds, true);
+            }
         }
 
         private static bool IsPedAMaleModel(uint pedModel)
@@ -205,6 +378,121 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         internal ShipJobController(JobStateRpcUpdateDelegate updateJobStateRpc) : base("ship", updateJobStateRpc)
         {
             _state.PedNetIdsChanged += OnPedNetIdsChanged;
+            _state.PyreTwigSpawnLocationIndexChanged += OnPyreTwigSpawnLocationChanged;
+            _state.StageChanged += OnJobStageChanged;
+            _state.HuntedDiscoveredDeviceChanged += OnDiscoveredDeviceChanged;
+            _state.HuntersDiscoveredDeviceChanged += OnDiscoveredDeviceChanged;
+            _state.HuntedDiscoveredDeviceChanged += new JobStateBase.GenericStateChangedEvent<bool>(new Action<bool, bool, bool>((prev, current, canSync) =>
+            {
+                if(canSync)
+                {
+                    SyncState((int)JobState.StateProp.HuntedDiscoveredDevice);
+                }
+            }));
+            _state.HuntersDiscoveredDeviceChanged += new JobStateBase.GenericStateChangedEvent<bool>(new Action<bool, bool, bool>((prev, current, canSync) =>
+            {
+                if(canSync)
+                {
+                    SyncState((int)JobState.StateProp.HuntersDiscoveredDevice);
+                }
+            }));
+        }
+
+        private void OnDiscoveredDeviceChanged(bool prev, bool current, bool canSync)
+        {
+            if(_pyreTwigBlip.HasValue)
+            {
+                SetBlipDisplay(_pyreTwigBlip.Value, current ? 6 : 0);
+                if(current)
+                {
+                    SetBlipNameFromTextFile(_pyreTwigBlip.Value, PyreTwigBlipNameKey);
+                    BeepPyreTwig("Crates_Blipped", "GTAO_Magnate_Boss_Modes_Soundset");
+                }
+            }
+        }
+
+        private void BeepPyreTwig()
+        {
+            BeepPyreTwig("Deliver_Item", "GTAO_Biker_Modes_Soundset");
+        }
+
+        private void BeepPyreTwig(string soundName, string soundSetName)
+        {
+
+            if (_pyreTwigBlip.HasValue)
+            {
+                SetBlipFlashTimer(_pyreTwigBlip.Value, 5000);
+            }
+
+            FlashMinimapDisplay();
+            PlaySoundFrontend(-1, soundName, soundSetName, false);
+        }
+
+        protected override void OnJobFinished()
+        {
+            base.OnJobFinished();
+
+            if(_pyreTwigBlip.HasValue)
+            {
+                SetBlipDisplay(_pyreTwigBlip.Value, 0);
+            }
+        }
+
+        private void OnJobStageChanged(JobState.JobStage prev, JobState.JobStage current, bool canSync)
+        {
+            if(canSync)
+            {
+                SyncState((int)JobState.StateProp.Stage);
+            }
+
+            if(current == JobState.JobStage.SurviveHack && _canInteractWithDevice)
+            {
+                _canInteractWithDevice = false;
+                ClearAllHelpMessages();
+            }
+
+            if((current == JobState.JobStage.SurviveHack || current == JobState.JobStage.LeaveArea) && PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
+            {
+                PlaySoundFrontend(-1, current == JobState.JobStage.LeaveArea ? "Hack_Complete" : "Hack_Start", "DLC_IE_SVM_Voltic2_Hacking_Sounds", true);
+            }
+
+            _isCurrentHacker = false;
+
+            // canSync being true typically means the local player caused the state change, so we can assume they're the ones who started/resumed the hack
+            if(canSync && current == JobState.JobStage.SurviveHack)
+            {
+                const float MinHackDurationFract = 0.35f;
+                // Schedule a hack disruption.
+                // The hack disruption should happen no sooner than 35% progress since starting/resuming. Should mean you'd get the disruption anywhere between 1-3 times.
+                _timeTillHackDisrupted = (float)(MinHackDurationFract * HackDurationSeconds + Math.Max(0, s_RNG.NextDouble() * (HackDurationSeconds * (1f - MinHackDurationFract))));
+                _isCurrentHacker = true;
+                Debug.WriteLine($"Scheduled hack disruption in {_timeTillHackDisrupted} seconds");
+            }
+
+            if(current == JobState.JobStage.Completed)
+            {
+                _currentUI = new LabelledItem[0];
+                OnJobFinished();
+            }
+            else if(current == JobState.JobStage.SurviveHack)
+            {
+                _currentUI = new LabelledItem[1] { _hackUI };
+            }
+            // Don't remove the hack progress from hunters' POV.
+            else if (prev != JobState.JobStage.SurviveHack || PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
+            {
+                _currentUI = new LabelledItem[0];
+            }
+
+            DisplayTextForObjective(current);
+        }
+
+        private void OnPyreTwigSpawnLocationChanged(sbyte prev, sbyte current, bool canSync)
+        {
+            if(canSync)
+            {
+                SyncState((int)JobState.StateProp.PyreTwigSpawnLocationIndex);
+            }
         }
 
         private void OnPedNetIdsChanged(int[] netIds, bool canSync)
@@ -261,11 +549,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     if (IsPedStill(ped))
                     {
                         Vector3 pos = GetEntityCoords(ped, false);
-                        float
-                            a = pos.X - playerPos.X,
-                            b = pos.Y - playerPos.Y,
-                            c = pos.Z - playerPos.Z;
-                        float distSq = (a * a + b * b + c * c);
+                        float distSq = pos.DistanceToSquared(playerPos);
                         if (distSq <= BlendInDistanceSq && closestDist > distSq)
                         {
                             closestDist = distSq;
@@ -507,6 +791,37 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        protected override void OnActiveChanged(bool isActive)
+        {
+            base.OnActiveChanged(isActive);
+
+            if(isActive)
+            {
+                if(_state.Stage == JobState.JobStage.WaitingToStart)
+                {
+                    _state.Stage++;
+                }
+            }
+        }
+
+        internal override LabelledItem[] CurrentUI => _currentUI;
+
+        private void OnPyreTwigPropSpawned(int handle, Vector3 pos)
+        {
+            _pyreTwigProp = handle;
+            _pyreTwigPos = pos;
+            Debug.WriteLine($"Pyre twig spawned at {pos}");
+            _pyreTwigBlip = AddBlipForEntity(handle);
+            // radar_laptop
+            SetBlipSprite(_pyreTwigBlip.Value, 521);
+            SetBlipColour(_pyreTwigBlip.Value, (int)BlipColor.Green);
+            SetBlipDisplay(_pyreTwigBlip.Value, 0);
+
+            SetEntityHasGravity(handle, false);
+            SetEntityCompletelyDisableCollision(handle, false, false);
+            SetEntityAsMissionEntity(handle, false, true);
+        }
+
         private void TickAmbient(float deltaTime)
         {
             _timeSinceLastRangeCheck += deltaTime;
@@ -539,7 +854,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
 
             // Only the first player should spawn
-            if(IsActive && !_hasStartedSpawningPeds && IsLocalPlayerPedGod)
+            if(_state.Stage > JobState.JobStage.WaitingToStart && !_hasStartedSpawningPeds && IsLocalPlayerPedGod)
             {
                 _hasStartedSpawningPeds = true;
 
@@ -582,8 +897,35 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 _animRequests.Remove(animRequestToRemove.Value);
             }
 
+            if(_state.PyreTwigSpawnLocationIndex == -1 && IsLocalPlayerPedGod)
+            {
+                _state.PyreTwigSpawnLocationIndex = (sbyte)s_RNG.Next(0, Constants.ShipDeviceLocations.All.Length);
+            }
+
+            if (!_pyreTwigProp.HasValue && _state.PyreTwigSpawnLocationIndex != -1)
+            {
+                if(!HasModelLoaded((uint)PyreTwigModel))
+                {
+                    RequestModel((uint)PyreTwigModel);
+                }
+                else
+                {
+
+                    Vector3 randomSpawn = Constants.ShipDeviceLocations.All[_state.PyreTwigSpawnLocationIndex];
+                    _pyreTwigProp = CreateObject(PyreTwigModel, randomSpawn.X, randomSpawn.Y, randomSpawn.Z, false, false, false);
+                    OnPyreTwigPropSpawned(_pyreTwigProp.Value, randomSpawn);
+                    _pyreTwigPos = randomSpawn;
+                    Debug.WriteLine($"Spawning pyre twig in location {_state.PyreTwigSpawnLocationIndex}");
+                }
+            }
+
             HandlePlayerShower(deltaTime);
             HandleBlendIn(deltaTime);
+
+            if (_state.Stage > JobState.JobStage.WaitingToStart && _state.Stage < JobState.JobStage.Completed && IsLocalPlayerPedGod)
+            {
+                RunPedBrain(deltaTime);
+            }
         }
 
         private void OnPedsSpawned(int[] entityHandles, Dictionary<int, PedNode> optionalPedInitStates)
@@ -613,12 +955,132 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        private float _timeSinceObjectiveDistanceCheck = 0f;
+        private const float ObjectiveDistanceCheckIntervalSeconds = 0.35f;
+        private bool _canInteractWithDevice = false;
+        private float _timeTillHackDisrupted = float.MaxValue;
+        private float _hackSecondsElapsed = 0f;
+        private bool _isCurrentHacker = false;
+        private void HandleHuntedObjective(float deltaTime)
+        {
+            if (_state.Stage == JobState.JobStage.FindDevice || _state.Stage == JobState.JobStage.StartHack || _state.Stage == JobState.JobStage.RepairSignal)
+            {
+                _timeSinceObjectiveDistanceCheck += deltaTime;
+
+                bool couldInteract = _canInteractWithDevice;
+
+                if (_pyreTwigProp.HasValue)
+                {
+                    if (_timeSinceObjectiveDistanceCheck >= ObjectiveDistanceCheckIntervalSeconds)
+                    {
+                        _timeSinceObjectiveDistanceCheck = 0f;
+
+                        const float InteractableDistance = 1.15f;
+                        const float InteractableDistanceSq = InteractableDistance * InteractableDistance;
+
+                        const float DiscoverDistance = 3.5f;
+                        const float DiscoverDistanceSq = DiscoverDistance * DiscoverDistance;
+
+                        float distSq = GetEntityCoords(PlayerPedId(), false).DistanceToSquared(_pyreTwigPos);
+                        _canInteractWithDevice = distSq <= InteractableDistanceSq;
+
+                        if (_canInteractWithDevice)
+                        {
+                            if (_state.Stage == JobState.JobStage.FindDevice)
+                            {
+                                _state.Stage = JobState.JobStage.StartHack;
+                            }
+                        }
+
+                        if (distSq < DiscoverDistanceSq)
+                        {
+                            if (PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
+                            {
+                                _state.HuntedDiscoveredDevice = true;
+                            }
+                            else
+                            {
+                                _state.HuntersDiscoveredDevice = true;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    _canInteractWithDevice = false;
+                }
+
+                if (_canInteractWithDevice)
+                {
+                    if (IsControlJustPressed(0, (int)Control.Context))
+                    {
+                        _state.Stage = JobState.JobStage.SurviveHack;
+                        _canInteractWithDevice = false;
+                    }
+                }
+
+                if (_canInteractWithDevice != couldInteract)
+                {
+                    if (_canInteractWithDevice)
+                    {
+                        BeginTextCommandDisplayHelp(_state.Stage == JobState.JobStage.RepairSignal ? ResumeHackHelpTextKey : StartHackHelpTextKey);
+                        EndTextCommandDisplayHelp(0, true, true, -1);
+                    }
+                    else
+                    {
+                        ClearAllHelpMessages();
+                    }
+                }
+            }
+
+            if(_state.Stage == JobState.JobStage.SurviveHack)
+            {
+                _hackSecondsElapsed += deltaTime;
+                if (_isCurrentHacker)
+                {
+                    _timeTillHackDisrupted -= deltaTime;
+                }
+
+                _hackUI.Value = SurviveTheHuntShared.Utils.EncodingHelper.Utf16FromNormalFloat(Math.Min(1, _hackSecondsElapsed / HackDurationSeconds));
+            }
+
+            if(_hackSecondsElapsed > HackDurationSeconds && _isCurrentHacker)
+            {
+                _isCurrentHacker = false;
+                _state.Stage = JobState.JobStage.LeaveArea;
+            }
+
+            if(_state.Stage == JobState.JobStage.SurviveHack && _isCurrentHacker && _timeTillHackDisrupted <= 0f)
+            {
+                _state.Stage = JobState.JobStage.RepairSignal;
+                BeepPyreTwig("Hack_Stop", "DLC_IE_SVM_Voltic2_Hacking_Sounds");
+            }
+
+            if(_state.Stage == JobState.JobStage.LeaveArea)
+            {
+                bool allOutside = true;
+                foreach(HuntPlayer player in GameState.Hunt.HuntedPlayers)
+                {
+                    int ped = GetPlayerPed(player.PlayerHandle);
+
+                    Vector3 pos = GetEntityCoords(ped, false);
+                    if(pos.DistanceToSquared(Origin) <= (ActiveRadius * ActiveRadius))
+                    {
+                        allOutside = false;
+                        break;
+                    }
+                }
+
+                if(allOutside)
+                {
+                    _state.Stage = JobState.JobStage.Completed;
+                }
+            }
+        }
+
         private void TickActive(float deltaTime)
         {
-            if(IsLocalPlayerPedGod)
-            {
-                RunPedBrain(deltaTime);
-            }
+            HandleHuntedObjective(deltaTime);
         }
 
         private float _timeSinceLastPedTargetCheck = 0f;
@@ -805,6 +1267,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 SetEntityAsMissionEntity(_pedHandles[i], true, true);
                 DeletePed(ref _pedHandles[i]);
+            }
+
+            if(_pyreTwigProp.HasValue)
+            {
+                int prop = _pyreTwigProp.Value;
+                DeleteObject(ref prop);
+            }
+
+            if(_pyreTwigBlip.HasValue)
+            {
+                int blip = _pyreTwigBlip.Value;
+                RemoveBlip(ref blip);
             }
         }
     }

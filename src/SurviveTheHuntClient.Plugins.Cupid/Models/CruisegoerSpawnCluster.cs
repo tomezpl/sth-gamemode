@@ -29,6 +29,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
 
             float gap = (Radius * 2f) / (float)pedCount;
 
+            List<uint> uniquePedModels = new List<uint>(PedModels);
+
             for(float currentX = originX; spawns.Count < pedCount && currentX <= endX + float.Epsilon; currentX += gap)
             {
                 for(float currentY = originY; spawns.Count < pedCount && currentY <= endY + float.Epsilon; currentY += gap)
@@ -44,13 +46,20 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
                         float xError = (float)(s_RNG.NextDouble() * MaxError - MaxErrorHalf);
                         float yError = (float)(s_RNG.NextDouble() * MaxError - MaxErrorHalf);
 
+                        int randomPedModelIndex = s_RNG.Next(0, uniquePedModels.Count);
                         spawns.Add(new PedNode
                         {
                             Anim = new PedNode.AnimInfo("", ""),
-                            PedModel = PedModels[s_RNG.Next(0, PedModels.Length)],
+                            PedModel = uniquePedModels[randomPedModelIndex],
                             Position = new PedNode.PositionInfo(currentX + xError, currentY + yError, Z, (float)(s_RNG.NextDouble() * 360 - 180)),
                             Flags = PedNodeFlags,
                         });
+
+                        uniquePedModels.RemoveAt(randomPedModelIndex);
+                        if(uniquePedModels.Count == 0)
+                        {
+                            uniquePedModels.AddRange(PedModels);
+                        }
                     }
                 }
             }
