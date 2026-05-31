@@ -14,7 +14,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
 
         private JobControllerBase[] _jobs = new JobControllerBase[0];
 
-        internal static JobControllerBase[] GetDefaultJobs(JobControllerBase.JobStateRpcUpdateDelegate syncState)
+        internal static JobControllerBase[] GetDefaultJobs(TriggerEventProxyDelegate triggerEventProxy, JobControllerBase.JobStateRpcUpdateDelegate syncState)
         {
             return new JobControllerBase[]
             {
@@ -25,7 +25,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
                 new CarRobberyJobController("car_elysian", syncState, Constants.Location.CarRobberyJob.Elysian, Constants.Location.CarRobberyJob.ElysianHeading),
                 new CarRobberyJobController("car_delperro", syncState, Constants.Location.CarRobberyJob.DelPerro, Constants.Location.CarRobberyJob.DelPerroHeading),
 
-                new ShipJobController(syncState),
+                new ShipJobController(triggerEventProxy, syncState),
             };
         }
 
@@ -33,30 +33,32 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
         private readonly IGameState _gameState;
 
         private readonly TriggerServerEventProxyDelegate TriggerServerEvent;
+        private readonly TriggerEventProxyDelegate TriggerEvent;
         internal event JobControllerBase.JobCompletedHandler JobCompleted;
 
-        internal JobManager(TriggerServerEventProxyDelegate triggerServerEventProxy, IPlayerState playerState, IGameState gameState, IList<JobControllerBase> jobs) : this(triggerServerEventProxy, playerState, gameState)
+        internal JobManager(TriggerEventProxyDelegate triggerEvent, TriggerServerEventProxyDelegate triggerServerEventProxy, IPlayerState playerState, IGameState gameState, IList<JobControllerBase> jobs) : this(triggerEvent, triggerServerEventProxy, playerState, gameState)
         {
             _jobs = new JobControllerBase[jobs.Count];
             jobs.CopyTo(_jobs, 0);
         }
 
-        internal JobManager(TriggerServerEventProxyDelegate triggerServerEventProxy, IPlayerState playerState, IGameState gameState, JobControllerBase[] jobs = null) : this(triggerServerEventProxy, playerState, gameState)
+        internal JobManager(TriggerEventProxyDelegate triggerEvent, TriggerServerEventProxyDelegate triggerServerEventProxy, IPlayerState playerState, IGameState gameState, JobControllerBase[] jobs = null) : this(triggerEvent, triggerServerEventProxy, playerState, gameState)
         {
             if(jobs == null)
             {
-                jobs = GetDefaultJobs(SyncState);
+                jobs = GetDefaultJobs(triggerEvent, SyncState);
             }
 
             _jobs = new JobControllerBase[jobs.Length];
             jobs.CopyTo(_jobs, 0);
         }
 
-        private JobManager(TriggerServerEventProxyDelegate triggerServerEventProxy, IPlayerState playerState, IGameState gameState)
+        private JobManager(TriggerEventProxyDelegate triggerEvent, TriggerServerEventProxyDelegate triggerServerEventProxy, IPlayerState playerState, IGameState gameState)
         {
             _playerState = playerState;
             _gameState = gameState;
             TriggerServerEvent = triggerServerEventProxy;
+            TriggerEvent = triggerEvent;
         }
 
         private void ConfigureJobs()

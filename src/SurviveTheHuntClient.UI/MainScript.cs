@@ -99,8 +99,28 @@ namespace SurviveTheHuntClient.UI
             {
                 BusTexture,
                 AppearanceTexture,
-                BoundsTexture
+                BoundsTexture,
+                Texture.Create("files/cpd_contact.png", "cupid_contact_esther"),
             };
+
+            private static Dictionary<string, Texture> CreateTextureMap(Texture[] textures = null)
+            {
+                if(textures == null)
+                {
+                    textures = AllTextures;
+                }
+
+                Dictionary<string, Texture> map = new Dictionary<string, Texture>();
+
+                foreach (Texture texture in textures)
+                {
+                    map.Add(texture.Txn, texture);
+                }
+
+                return map;
+            }
+
+            internal static readonly Dictionary<string, Texture> TextureMap = CreateTextureMap(AllTextures);
         }
 
         public MainScript()
@@ -118,6 +138,29 @@ namespace SurviveTheHuntClient.UI
 
                 Tick += Update;
             }
+        }
+
+        [EventHandler(SurviveTheHuntShared.Events.Client.UISendText)]
+        public void OnGamemodeSentText(string sender, string subject, string message, float duration, string textureName)
+        {
+            string txd = null, txn = null;
+
+            if(Textures.TextureMap.TryGetValue(textureName, out Textures.Texture texture))
+            {
+                txd = MenuTxdName;
+                txn = texture.Txn;
+
+                Debug.WriteLine($"Found texture {texture.Filename} for {textureName}");
+            }
+            else
+            {
+                Debug.WriteLine($"Could not find texture {textureName} in any of the {Textures.TextureMap.Count} textuers");
+            }
+
+            BeginTextCommandThefeedPost("STRING");
+            AddTextComponentSubstringPlayerName(message);
+            EndTextCommandThefeedPostMessagetextTu(txd, txn, true, 0, sender, subject, duration / 15f);
+            PlaySoundFrontend(-1, "Phone_Text_Arrive", "DLC_H4_MM_Sounds", true);
         }
 
         private void UpdateSelectablePlayers()

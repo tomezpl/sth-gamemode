@@ -353,6 +353,14 @@ namespace SurviveTheHuntClient
                     TaskPlayAnim(PlayerPedId(), (string)args[0], (string)args[1], 8f, -1f, -1, 0, 0f, false, false, false);
                 }), false);
 
+                ExecutePlugins(plugin =>
+                {
+                    plugin.HunterRelationshipGroup = hunterGroupHash;
+                    plugin.HuntedRelationshipGroup = huntedGroupHash;
+                }, true);
+
+                Debug.WriteLine($"Initialised relationship groups on {Plugins.Length} plugins.");
+
                 ExecutePlugins(plugin => plugin.OnResourceStarted(), true);
             }
 

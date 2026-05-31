@@ -145,6 +145,45 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 }
             }
 
+            private SpookedType _spookedState = SpookedType.NotSpooked;
+            internal event GenericStateChangedEvent<SpookedType> SpookedStateChanged;
+            internal SpookedType SpookedState
+            {
+                get => _spookedState;
+                set
+                {
+                    SpookedType prev = _spookedState;
+                    if(prev != value)
+                    {
+                        _spookedState = value;
+                        SpookedStateChanged.Invoke(prev, value, CanSync);
+                    }
+                }
+            }
+
+            private float _hackProgress = 0f;
+            internal event GenericStateChangedEvent<float> HackProgressChanged;
+            internal float HackProgress
+            {
+                get => _hackProgress;
+                set
+                {
+                    float prev = _hackProgress;
+                    if(prev != value)
+                    {
+                        _hackProgress = value;
+                        HackProgressChanged.Invoke(prev, value, CanSync);
+                    }
+                }
+            }
+
+            internal enum SpookedType
+            {
+                NotSpooked,
+                SpookedByGunfire,
+                SpookedByCops,
+            }
+
             internal enum StateProp
             {
                 PedNetIds,
@@ -153,6 +192,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 HuntedDiscoveredDevice,
                 HuntersDiscoveredDevice,
                 CurrentHackerPlayer,
+                SpookedState,
+                HackProgress,
             }
 
             internal override Dictionary<int, object> Get()
@@ -165,6 +206,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     {(int)StateProp.HuntedDiscoveredDevice, Get((int)StateProp.HuntedDiscoveredDevice) },
                     {(int)StateProp.HuntersDiscoveredDevice, Get((int)StateProp.HuntersDiscoveredDevice) },
                     {(int)StateProp.CurrentHackerPlayer, Get((int)StateProp.CurrentHackerPlayer) },
+                    {(int)StateProp.SpookedState, Get((int)StateProp.SpookedState) },
+                    {(int)StateProp.HackProgress, Get((int)StateProp.HackProgress) },
                 };
             }
 
@@ -184,6 +227,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         return HuntersDiscoveredDevice;
                     case StateProp.CurrentHackerPlayer:
                         return CurrentHackerPlayer;
+                    case StateProp.SpookedState:
+                        return SpookedState;
+                    case StateProp.HackProgress:
+                        return HackProgress;
                     default:
                         throw new ArgumentException($"Needs to be a valid {nameof(StateProp)}", nameof(statePropId));
                 }
@@ -210,6 +257,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         break;
                     case StateProp.CurrentHackerPlayer:
                         CurrentHackerPlayer = (int)statePropValue;
+                        break;
+                    case StateProp.SpookedState:
+                        SpookedState = (SpookedType)statePropValue;
+                        break;
+                    case StateProp.HackProgress:
+                        HackProgress = (float)statePropValue;
                         break;
                 }
             }
@@ -307,6 +360,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private const string TrackerPickUpHelpTextKey = "STH_CUPID_TRACKER_PICKUP_HELP";
         private const string TrackerPickUpHelpTextLabel = "Press ~INPUT_THROW_GRENADE~ to pick up the tracker.";
 
+        private const string CopsSpookedNotifTextKey = "STH_CUPID_COPS_SPOOKED_NOTIF";
+        private const string CopsSpookedNotifTextLabel = "Your police gear has spooked the cruisegoers.";
+
+        private const string BlipNameTextKey = "STH_CUPID_YACHT_JOB_BLIP";
+        private const string BlipNameTextLabel = "Yacht Party";
+
+        private List<PendingText> _pendingTexts = new List<PendingText>();
+
         private static readonly Dictionary<JobState.JobStage, KeyValuePair<string, string>> s_ObjectiveText = new Dictionary<JobState.JobStage, KeyValuePair<string, string>>
         {
             {JobState.JobStage.FindDevice, new KeyValuePair<string, string>(FindDeviceObjectiveTextKey, FindDeviceObjectiveTextLabel) },
@@ -336,6 +397,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private static readonly bool s_HasDoneInit = Init();
 
+        private int? _jobBlip;
+
         private static bool Init()
         {
             if(!s_HasDoneInit)
@@ -347,6 +410,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 AddTextEntry(PyreTwigBlipNameKey, PyreTwigBlipNameLabel);
                 AddTextEntry(TrackerPutDownHelpTextKey, TrackerPutDownHelpTextLabel);
                 AddTextEntry(TrackerPickUpHelpTextKey, TrackerPickUpHelpTextLabel);
+                AddTextEntry(CopsSpookedNotifTextKey, CopsSpookedNotifTextLabel);
+                AddTextEntry(BlipNameTextKey, BlipNameTextLabel);
 
                 foreach (KeyValuePair<string, string> label in s_ObjectiveText.Values)
                 {
@@ -408,9 +473,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             return showerNodes.ToArray();
         }
-        
-        internal ShipJobController(JobStateRpcUpdateDelegate updateJobStateRpc) : base("ship", updateJobStateRpc)
+
+        private readonly TriggerEventProxyDelegate TriggerEvent;
+        private readonly PhoneTextHelper PhoneTextHelper;
+
+        internal ShipJobController(TriggerEventProxyDelegate triggerEventProxy, JobStateRpcUpdateDelegate updateJobStateRpc) : base("ship", updateJobStateRpc)
         {
+            TriggerEvent = triggerEventProxy;
+            PhoneTextHelper = new PhoneTextHelper(triggerEventProxy);
+
             _state.PedNetIdsChanged += OnPedNetIdsChanged;
             _state.PyreTwigSpawnLocationIndexChanged += OnPyreTwigSpawnLocationChanged;
             _state.StageChanged += OnJobStageChanged;
@@ -432,6 +503,63 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }));
 
             _state.CurrentHackerPlayerChanged += OnCurrentHackerPlayerServerIdChanged;
+
+            _state.SpookedStateChanged += OnSpookedStateChanged;
+
+            _state.HackProgressChanged += OnHackProgressChanged;
+        }
+
+        private void OnHackProgressChanged(float prev, float current, bool canSync)
+        {
+            if(canSync)
+            {
+                SyncState((int)JobState.StateProp.HackProgress);
+            }
+
+            _hackSecondsElapsed = Math.Max(_hackSecondsElapsed, current);
+        }
+
+        private int? _gunfireEvent = null;
+        private void OnSpookedStateChanged(JobState.SpookedType prev, JobState.SpookedType current, bool canSync)
+        {
+            if(canSync)
+            {
+                SyncState((int)JobState.StateProp.SpookedState);
+            }
+
+            Debug.WriteLine($"Spooked state changed from {prev} to {current}");
+
+            if(IsLocalPlayerPedGod)
+            {
+                switch(current)
+                {
+                    case JobState.SpookedType.SpookedByGunfire:
+
+                        _gunfireEvent = AddShockingEventAtPosition(90, Origin.X, Origin.Y, Origin.Z, (float)(GameState.Hunt.ActualEndTime - DateTime.UtcNow).TotalSeconds);
+                        foreach (int ped in _pedHandles)
+                        {
+                            SetBlockingOfNonTemporaryEvents(ped, false);
+                            TaskShockingEventReact(ped, _gunfireEvent.Value);
+                        }
+                        break;
+                }
+            }
+
+            if(current == JobState.SpookedType.SpookedByCops)
+            {
+                // TODO
+                bool isCop = false;
+
+                if (isCop)
+                {
+                    BeginTextCommandThefeedPost(CopsSpookedNotifTextKey);
+                    EndTextCommandThefeedPostTicker(true, true);
+                }
+                else
+                {
+                    _pendingTexts.Add(new PendingText((float)s_RNG.NextDouble() * 5f, Constants.PhoneContacts.Esther, "watch out", "Something's up. Seeing folk panicking on cams. You might have company."));
+                }
+            }
         }
 
         private int? _currentHackerPlayerHandle = null;
@@ -461,6 +589,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 {
                     SetBlipNameFromTextFile(_pyreTwigBlip.Value, PyreTwigBlipNameKey);
                     BeepPyreTwig("Crates_Blipped", "GTAO_Magnate_Boss_Modes_Soundset");
+
+                    if(PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
+                    {
+                        _pendingTexts.Add(new PendingText(2f, Constants.PhoneContacts.Esther, "hack device", "Bingo, that's the one. You know how to jack in, right? I'll handle the rest."));
+                    }
                 }
             }
         }
@@ -494,13 +627,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private LabelledItem[] BuildCurrentUI()
         {
-            LabelledItem[] items = new LabelledItem[1 + _trackersPlaced.Count];
-            items[0] = _hackUI;
-            for(int i = 0; i < _trackersPlaced.Count; i++)
+            if (_state.Stage == JobState.JobStage.SurviveHack || _state.Stage == JobState.JobStage.RepairSignal)
             {
-                items[i + 1] = _trackersPlaced[i].UI;
+                LabelledItem[] items = new LabelledItem[1 + _trackersPlaced.Count];
+                items[0] = _hackUI;
+                for (int i = 0; i < _trackersPlaced.Count; i++)
+                {
+                    items[i + 1] = _trackersPlaced[i].UI;
+                }
+                return items;
             }
-            return items;
+
+            return LabelledItem.Empty;
         }
 
         private void OnJobStageChanged(JobState.JobStage prev, JobState.JobStage current, bool canSync)
@@ -519,6 +657,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             if((current == JobState.JobStage.SurviveHack || current == JobState.JobStage.LeaveArea) && PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
             {
                 PlaySoundFrontend(-1, current == JobState.JobStage.LeaveArea ? "Hack_Complete" : "Hack_Start", "DLC_IE_SVM_Voltic2_Hacking_Sounds", true);
+                if (current == JobState.JobStage.LeaveArea)
+                {
+                    _pendingTexts.Add(new PendingText(1.5f, Constants.PhoneContacts.Esther, "hack done", "done. I'll send it over to SlaughterHouse forums. You'll get your cut. Now get out.", 10f));
+                }
             }
 
             _isCurrentHacker = false;
@@ -534,6 +676,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 Debug.WriteLine($"Scheduled hack disruption in {_timeTillHackDisrupted} seconds");
             }
 
+            if(current == JobState.JobStage.RepairSignal)
+            {
+                if(PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
+                {
+                    _pendingTexts.Add(new PendingText(1f, Constants.PhoneContacts.Esther, "FIX THE SIGNAL!!!", "ugh fucking thing dropped, need one of yous to check on the device", 10f));
+                }
+            }
+
             if(current == JobState.JobStage.Completed)
             {
                 _currentUI = new LabelledItem[0];
@@ -542,11 +692,30 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             else if(current == JobState.JobStage.SurviveHack)
             {
                 _currentUI = BuildCurrentUI(); 
+
+                if(PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
+                {
+                    if(prev != JobState.JobStage.RepairSignal)
+                    {
+                        _pendingTexts.Add(new PendingText(7.5f + (float)s_RNG.NextDouble() * 20f, Constants.PhoneContacts.Esther, "jammers", "oh btw. LSPD probs headed your way. watch out for signal trackers"));
+                    }
+                }
             }
             // Don't remove the hack progress from hunters' POV.
             else if (prev != JobState.JobStage.SurviveHack || PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
             {
                 _currentUI = new LabelledItem[0];
+            }
+
+            if(current == JobState.JobStage.FindDevice)
+            {
+                if(PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
+                {
+                    _pendingTexts.Add(new PendingText((float)s_RNG.NextDouble() * 5.5f, Constants.PhoneContacts.Esther, "the job", "find a Pyre Twig - the TV plug in thingy. looks kinda like a hard drive tho?"));
+                    _pendingTexts.Add(new PendingText(5.5f, Constants.PhoneContacts.Esther, "the job", "it's remoted into a Righteous Slaughter dev's box. i'll RDP into the TV stick and then onto the box", 15f));
+                    _pendingTexts.Add(new PendingText(20.5f, Constants.PhoneContacts.Esther, "the job", "look i get game leaks don't interest you. just find the hard drive looking TV stick okay? tyty x", 17.5f));
+                    _pendingTexts.Add(new PendingText(45f, Constants.PhoneContacts.Esther, "act normal", "Also like, try to blend in? Grab a drink or dance or smth"));
+                }
             }
 
             DisplayTextForObjective(current);
@@ -573,6 +742,22 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private void OnPedsSynced()
         {
+            foreach(int pedHandle in _pedHandles)
+            {
+                // treat as friendly
+                SetPedConfigFlag(pedHandle, 423, true);
+
+                if (_state.SpookedState == JobState.SpookedType.NotSpooked)
+                {
+                    // suppress agitation
+                    foreach (int ped in _pedHandles)
+                    {
+                        SetBlockingOfNonTemporaryEvents(ped, true);
+                    }
+                }
+            }
+
+            Debug.WriteLine($"Marked {_pedHandles.Length} as friendly");
         }
 
         public override void Tick(float deltaTime)
@@ -724,6 +909,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private bool _isLocalPlayerInShower = false;
         private float _timeSinceLocalPlayerShowerDistanceCheck = 0f;
         private const float LocalPlayerShowerDistanceCheckIntervalSeconds = 0.3f;
+        private bool _hasContactReactedToShowerYet = false;
         private void HandlePlayerShower(float deltaTime)
         {
             _timeSinceLocalPlayerShowerDistanceCheck += deltaTime;
@@ -852,6 +1038,33 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                                 drawable = isMale ? 34 : 35;
                             }
                             SetPedComponentVariation(playerPed, (int)i, drawable, 0, 0);
+                        }
+                    }
+
+                    if (!_hasContactReactedToShowerYet && PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
+                    {
+                        const double ContactCommentChance = 0.15;
+                        bool shouldContactComment = s_RNG.NextDouble() > (1 - ContactCommentChance);
+                        if (shouldContactComment)
+                        {
+                            float lineRng = (float)s_RNG.NextDouble();
+                            lineRng = 0.76f;
+                            string line = "wait did you just go into the sh- ah ok that's fine sure";
+                            if (lineRng >= 0.95f)
+                            {
+                                line = "stinky";
+                            }
+                            else if (lineRng >= 0.75f)
+                            {
+                                line = "hah check this there's cams in bathrooms. WOAH ever thought of doing... \"content\"? just sayin";
+                            }
+                            else if (lineRng >= 0.5f)
+                            {
+                                line = "is this really the time?";
+                            }
+
+                            _hasContactReactedToShowerYet = true;
+                            _pendingTexts.Add(new PendingText(0.75f, Constants.PhoneContacts.Esther, "shower?", line, 8.5f));
                         }
                     }
                 }
@@ -993,6 +1206,32 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 RunPedBrain(deltaTime);
             }
+
+            if(!_jobBlip.HasValue)
+            {
+                _jobBlip = AddBlipForCoord(Origin.X, Origin.Y, Origin.Z);
+                SetBlipSprite(_jobBlip.Value, 455);
+                SetBlipDisplay(_jobBlip.Value, 6);
+                SetBlipColour(_jobBlip.Value, (int)BlipColor.Yellow);
+                SetBlipNameFromTextFile(_jobBlip.Value, BlipNameTextKey);
+            }
+
+            int pendingTextToProcess = -1;
+            for(int i = 0; i < _pendingTexts.Count; i++)
+            {
+                _pendingTexts[i].RemainingTime -= deltaTime;
+                if(pendingTextToProcess == -1 && _pendingTexts[i].RemainingTime <= 0f)
+                {
+                    pendingTextToProcess = i;
+                }
+            }
+
+            if (pendingTextToProcess != -1)
+            {
+                PendingText pendingText = _pendingTexts[pendingTextToProcess];
+                _pendingTexts.RemoveAt(pendingTextToProcess);
+                PhoneTextHelper.SendText(pendingText.Sender, pendingText.Subject, pendingText.Message, pendingText.Duration);
+            }
         }
 
         private void OnPedsSpawned(int[] entityHandles, Dictionary<int, PedNode> optionalPedInitStates)
@@ -1003,6 +1242,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             foreach(int pedHandle in entityHandles)
             {
+                SetEntityMaxHealth(pedHandle, 500);
                 netIds.Add(PedToNet(pedHandle));
             }
 
@@ -1028,6 +1268,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private float _timeTillHackDisrupted = float.MaxValue;
         private float _hackSecondsElapsed = 0f;
         private bool _isCurrentHacker = false;
+        private const float HackProgressSyncIntervalSeconds = 3.5f;
+        private float _timeSinceHackProgressSync = 0f;
         private void HandleHuntedObjective(float deltaTime)
         {
             if (_state.Stage == JobState.JobStage.FindDevice || _state.Stage == JobState.JobStage.StartHack || _state.Stage == JobState.JobStage.RepairSignal)
@@ -1147,6 +1389,17 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     _state.Stage = JobState.JobStage.Completed;
                 }
             }
+
+            // Periodically sync the hack progress to other players
+            if(_state.Stage == JobState.JobStage.SurviveHack)
+            {
+                _timeSinceHackProgressSync += deltaTime;
+                if(_timeSinceHackProgressSync >= HackProgressSyncIntervalSeconds)
+                {
+                    _timeSinceHackProgressSync = 0f;
+                    _state.HackProgress = _hackSecondsElapsed;
+                }
+            }
         }
 
         private const float TrackerPlaceableCheckIntervalSeconds = 0.4f;
@@ -1170,10 +1423,44 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             return index;
         }
         internal byte PlacedTrackerCount => (byte)Math.Max(_trackersPlaced.Count, _trackerSpawnRequests.Count);
+        private const float CruisegoerSpookCheckIntervalSeconds = 5f;
+        private float _timeSinceCopSpookCheck = 0f;
         private void HandleHuntersObjective(float deltaTime)
         {
             bool isHunter = true;
             bool hasUndercoverGear = true;
+
+            _timeSinceCopSpookCheck += deltaTime;
+            if (_timeSinceCopSpookCheck > CruisegoerSpookCheckIntervalSeconds)
+            {
+                _timeSinceCopSpookCheck = 0f;
+                if (isHunter && !hasUndercoverGear)
+                {
+                    if (_state.SpookedState == JobState.SpookedType.NotSpooked)
+                    {
+                        Debug.WriteLine($"Spooking {_pedHandles?.Length} peds because the fuzz showed up");
+                        _state.SpookedState = JobState.SpookedType.SpookedByCops;
+                    }
+
+                    if (_state.SpookedState == JobState.SpookedType.SpookedByCops)
+                    {
+                        if (_pedHandles?.Length > 0)
+                        {
+                            int playerPed = PlayerPedId();
+                            foreach (int ped in _pedHandles)
+                            {
+                                uint pedGroup = (uint)GetPedRelationshipGroupHash(ped);
+                                SetPedCombatMovement(ped, 3);
+                                SetPedCombatAbility(ped, 2);
+                                SetBlockingOfNonTemporaryEvents(ped, false);
+                                //TaskAgitatedAction(ped, playerPed);
+                                TaskCombatPed(ped, playerPed, 0, 16);
+                                //TaskCombatHatedTargetsAroundPed(ped, ActiveRadius, 0);
+                            }
+                        }
+                    }
+                }
+            }
 
             const float HalfPlayerHeight = 0.975f;
 
@@ -1350,10 +1637,36 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        private bool _hasShotLastTick = false;
+        private const float PlayerShootingCheckIntervalSeconds = 1f;
+        private float _timeSincePlayerShootingCheck = 0f;
         private void TickActive(float deltaTime)
         {
             HandleHuntedObjective(deltaTime);
             HandleHuntersObjective(deltaTime);
+
+            if(_pedHandles?.Length > 0)
+            {
+                if (IsPedShooting(PlayerPedId()))
+                {
+                    _hasShotLastTick = true;
+                }
+            }
+
+            if (_state.SpookedState == JobState.SpookedType.NotSpooked)
+            {
+                _timeSincePlayerShootingCheck += deltaTime;
+                if (_timeSincePlayerShootingCheck >= PlayerShootingCheckIntervalSeconds)
+                {
+                    const float HeardShotsRadius = ActiveRadius * 0.825f;
+                    if (_hasShotLastTick && GetEntityCoords(PlayerPedId(), false).DistanceToSquared(Origin) <= (HeardShotsRadius * HeardShotsRadius))
+                    {
+                        _state.SpookedState = JobState.SpookedType.SpookedByGunfire;
+                    }
+
+                    _hasShotLastTick = false;
+                }
+            }
         }
 
         private float _timeSinceLastPedTargetCheck = 0f;
@@ -1361,6 +1674,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private void RunPedBrain(float deltaTime)
         {
+            // let peds panic
+            if(_state.SpookedState != JobState.SpookedType.NotSpooked)
+            {
+                return;
+            }
+
             if(_pedHandles != null)
             {
                 bool tickedAnyBrains = false;
@@ -1565,6 +1884,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
 
             _trackersPlaced.Clear();
+
+            if(_gunfireEvent.HasValue)
+            {
+                RemoveShockingEvent(_gunfireEvent.Value);
+                _gunfireEvent = null;
+            }
         }
     }
 }

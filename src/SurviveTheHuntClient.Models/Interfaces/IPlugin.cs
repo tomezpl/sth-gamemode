@@ -50,5 +50,8 @@ namespace SurviveTheHuntClient.Interfaces
         bool CanShowHud { get; }
         float? YLimitOverride { get; }
         bool PreventDeathDetection { get; }
+
+        uint HunterRelationshipGroup { get; set; }
+        uint HuntedRelationshipGroup { get; set; }
     }
 }

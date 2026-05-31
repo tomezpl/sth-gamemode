@@ -213,7 +213,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 JobManager.Cleanup();
             }
 
-            JobManager = new JobManager(TriggerServerEventProxy, playerState, gameState);
+            JobManager = new JobManager(TriggerEventProxy, TriggerServerEventProxy, playerState, gameState);
             JobManager.JobCompleted += OnJobCompleted;
 
             if(HeatController != null)

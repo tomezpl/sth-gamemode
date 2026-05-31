@@ -252,5 +252,53 @@ namespace SurviveTheHuntClient.Models
         public virtual float? YLimitOverride => null;
 
         public virtual bool PreventDeathDetection => false;
+
+        private uint? _hunterRelationshipGroup = null;
+        public uint HunterRelationshipGroup
+        {
+            get
+            {
+                if(!_hunterRelationshipGroup.HasValue)
+                {
+                    throw new InvalidOperationException($"{nameof(HunterRelationshipGroup)} has not been assigned yet.");
+                }
+
+                return _hunterRelationshipGroup.Value;
+            }
+
+            set
+            {
+                if(_hunterRelationshipGroup.HasValue)
+                {
+                    throw new InvalidOperationException($"{nameof(HunterRelationshipGroup)} cannot be changed after it's been initialised.");
+                }
+
+                _hunterRelationshipGroup = value;
+            }
+        }
+
+        private uint? _huntedRelationshipGroup = null;
+        public uint HuntedRelationshipGroup
+        {
+            get
+            {
+                if (!_huntedRelationshipGroup.HasValue)
+                {
+                    throw new InvalidOperationException($"{nameof(HuntedRelationshipGroup)} has not been assigned yet.");
+                }
+
+                return _huntedRelationshipGroup.Value;
+            }
+
+            set
+            {
+                if (_huntedRelationshipGroup.HasValue)
+                {
+                    throw new InvalidOperationException($"{nameof(HuntedRelationshipGroup)} cannot be changed after it's been initialised.");
+                }
+
+                _huntedRelationshipGroup = value;
+            }
+        }
     }
 }
