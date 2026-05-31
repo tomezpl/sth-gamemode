@@ -60,7 +60,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         protected void SyncState(int propId, object propValue)
         {
-            Debug.WriteLine($"{nameof(JobControllerBase)}.{nameof(SyncState)}({nameof(propId)}, {nameof(propValue)}): sending prop {propId} with value {propValue} to server...");
+            Debug.WriteLine($"{nameof(JobControllerBase)}.{nameof(SyncState)}({nameof(propId)}, {nameof(propValue)}): [Id: {Id}] sending prop {propId} with value {propValue} to server...");
             _updateJobState(Id, propId, propValue);
         }
 

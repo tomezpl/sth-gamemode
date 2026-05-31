@@ -68,6 +68,7 @@
     <Compile Include="Models\CruisegoerSpawnCluster.cs" />
     <Compile Include="Models\CruisegoerSpawnLine.cs" />
     <Compile Include="Models\CruisegoerSpawnSingle.cs" />
+    <Compile Include="Models\DeviceTracker.cs" />
     <Compile Include="Models\PedNode.cs" />
     <Compile Include="Models\JobStateBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

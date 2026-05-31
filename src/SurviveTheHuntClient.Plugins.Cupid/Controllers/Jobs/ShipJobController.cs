@@ -129,6 +129,22 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 }
             }
 
+            private int _currentHackerPlayer = 0;
+            internal event GenericStateChangedEvent<int> CurrentHackerPlayerChanged;
+            internal int CurrentHackerPlayer
+            {
+                get => _currentHackerPlayer;
+                set
+                {
+                    int prev = _currentHackerPlayer;
+                    _currentHackerPlayer = value;
+                    if(prev != value)
+                    {
+                        CurrentHackerPlayerChanged.Invoke(prev, value, CanSync);
+                    }
+                }
+            }
+
             internal enum StateProp
             {
                 PedNetIds,
@@ -136,6 +152,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 PyreTwigSpawnLocationIndex,
                 HuntedDiscoveredDevice,
                 HuntersDiscoveredDevice,
+                CurrentHackerPlayer,
             }
 
             internal override Dictionary<int, object> Get()
@@ -147,6 +164,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     {(int)StateProp.PyreTwigSpawnLocationIndex, Get((int)StateProp.PyreTwigSpawnLocationIndex) },
                     {(int)StateProp.HuntedDiscoveredDevice, Get((int)StateProp.HuntedDiscoveredDevice) },
                     {(int)StateProp.HuntersDiscoveredDevice, Get((int)StateProp.HuntersDiscoveredDevice) },
+                    {(int)StateProp.CurrentHackerPlayer, Get((int)StateProp.CurrentHackerPlayer) },
                 };
             }
 
@@ -164,6 +182,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         return HuntedDiscoveredDevice;
                     case StateProp.HuntersDiscoveredDevice:
                         return HuntersDiscoveredDevice;
+                    case StateProp.CurrentHackerPlayer:
+                        return CurrentHackerPlayer;
                     default:
                         throw new ArgumentException($"Needs to be a valid {nameof(StateProp)}", nameof(statePropId));
                 }
@@ -187,6 +207,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         break;
                     case StateProp.HuntersDiscoveredDevice:
                         HuntersDiscoveredDevice = (bool)statePropValue;
+                        break;
+                    case StateProp.CurrentHackerPlayer:
+                        CurrentHackerPlayer = (int)statePropValue;
                         break;
                 }
             }
@@ -279,6 +302,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private const string PyreTwigBlipNameKey = "STH_CUPID_DEVICE_BLIP";
         private const string PyreTwigBlipNameLabel = "Sahara Pyre Twig 4K Ultra";
 
+        private const string TrackerPutDownHelpTextKey = "STH_CUPID_TRACKER_PLACE_HELP";
+        private const string TrackerPutDownHelpTextLabel = "Press ~INPUT_THROW_GRENADE~ to place down a tracker.";
+        private const string TrackerPickUpHelpTextKey = "STH_CUPID_TRACKER_PICKUP_HELP";
+        private const string TrackerPickUpHelpTextLabel = "Press ~INPUT_THROW_GRENADE~ to pick up the tracker.";
+
         private static readonly Dictionary<JobState.JobStage, KeyValuePair<string, string>> s_ObjectiveText = new Dictionary<JobState.JobStage, KeyValuePair<string, string>>
         {
             {JobState.JobStage.FindDevice, new KeyValuePair<string, string>(FindDeviceObjectiveTextKey, FindDeviceObjectiveTextLabel) },
@@ -300,6 +328,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private LabelledItem _hackUI = new LabelledItem("HACK", 0f);
 
+        private List<LabelledItem> _trackerUI = new List<LabelledItem>(TrackerBudget);
+
+        private static readonly int s_TrackerModel = GetHashKey("reh_prop_reh_gadget_01a");
+
         private Dictionary<int, float> _timeTillPedBrainTick = new Dictionary<int, float>();
 
         private static readonly bool s_HasDoneInit = Init();
@@ -313,8 +345,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 AddTextEntry(ResumeHackHelpTextKey, ResumeHackHelpTextLabel);
                 AddTextEntry(StartHackHelpTextKey, StartHackHelpTextLabel);
                 AddTextEntry(PyreTwigBlipNameKey, PyreTwigBlipNameLabel);
+                AddTextEntry(TrackerPutDownHelpTextKey, TrackerPutDownHelpTextLabel);
+                AddTextEntry(TrackerPickUpHelpTextKey, TrackerPickUpHelpTextLabel);
 
-                foreach(KeyValuePair<string, string> label in s_ObjectiveText.Values)
+                foreach (KeyValuePair<string, string> label in s_ObjectiveText.Values)
                 {
                     AddTextEntry(label.Key, label.Value);
                 }
@@ -396,6 +430,26 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     SyncState((int)JobState.StateProp.HuntersDiscoveredDevice);
                 }
             }));
+
+            _state.CurrentHackerPlayerChanged += OnCurrentHackerPlayerServerIdChanged;
+        }
+
+        private int? _currentHackerPlayerHandle = null;
+        private void OnCurrentHackerPlayerServerIdChanged(int prev, int current, bool canSync)
+        {
+            if(canSync)
+            {
+                SyncState((int)JobState.StateProp.CurrentHackerPlayer);
+            }
+
+            if(current == null)
+            {
+                _currentHackerPlayerHandle = null;
+            }
+            else
+            {
+                _currentHackerPlayerHandle = GetPlayerFromServerId(current);
+            }
         }
 
         private void OnDiscoveredDeviceChanged(bool prev, bool current, bool canSync)
@@ -438,6 +492,17 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        private LabelledItem[] BuildCurrentUI()
+        {
+            LabelledItem[] items = new LabelledItem[1 + _trackersPlaced.Count];
+            items[0] = _hackUI;
+            for(int i = 0; i < _trackersPlaced.Count; i++)
+            {
+                items[i + 1] = _trackersPlaced[i].UI;
+            }
+            return items;
+        }
+
         private void OnJobStageChanged(JobState.JobStage prev, JobState.JobStage current, bool canSync)
         {
             if(canSync)
@@ -476,7 +541,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
             else if(current == JobState.JobStage.SurviveHack)
             {
-                _currentUI = new LabelledItem[1] { _hackUI };
+                _currentUI = BuildCurrentUI(); 
             }
             // Don't remove the hack progress from hunters' POV.
             else if (prev != JobState.JobStage.SurviveHack || PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
@@ -632,10 +697,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     if (scenarioToUse != null)
                     {
                         TaskStartScenarioInPlace(PlayerPedId(), scenarioToUse, 0, true);
+                        Debug.WriteLine($"Blending in with scenario {scenarioToUse}");
                     }
                     else if(animToUse.HasValue)
                     {
                         _animRequests[PlayerPedId()] = animToUse.Value;
+                        Debug.WriteLine($"Blending in with anim {animToUse.Value.Dict} {animToUse.Value.Clip}");
                     }
 
                     _blendInSourcePed = null;
@@ -981,7 +1048,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         const float DiscoverDistance = 3.5f;
                         const float DiscoverDistanceSq = DiscoverDistance * DiscoverDistance;
 
-                        float distSq = GetEntityCoords(PlayerPedId(), false).DistanceToSquared(_pyreTwigPos);
+                        Vector3 playerPos = GetEntityCoords(PlayerPedId(), false);
+                        float distSq = playerPos.DistanceToSquared(_pyreTwigPos);
                         _canInteractWithDevice = distSq <= InteractableDistanceSq;
 
                         if (_canInteractWithDevice)
@@ -992,7 +1060,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                             }
                         }
 
-                        if (distSq < DiscoverDistanceSq)
+                        const float MaxHeightDiff = 0.95f;
+
+                        if (distSq < DiscoverDistanceSq && Math.Abs(playerPos.Z - _pyreTwigPos.Z) < MaxHeightDiff)
                         {
                             if (PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
                             {
@@ -1015,6 +1085,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     if (IsControlJustPressed(0, (int)Control.Context))
                     {
                         _state.Stage = JobState.JobStage.SurviveHack;
+                        _state.CurrentHackerPlayer = GetPlayerServerId(PlayerId());
                         _canInteractWithDevice = false;
                     }
                 }
@@ -1056,7 +1127,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 BeepPyreTwig("Hack_Stop", "DLC_IE_SVM_Voltic2_Hacking_Sounds");
             }
 
-            if(_state.Stage == JobState.JobStage.LeaveArea)
+            if(_state.Stage == JobState.JobStage.LeaveArea && PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
             {
                 bool allOutside = true;
                 foreach(HuntPlayer player in GameState.Hunt.HuntedPlayers)
@@ -1078,9 +1149,211 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        private const float TrackerPlaceableCheckIntervalSeconds = 0.4f;
+        private float _timeSinceTrackerPlaceableCheck = 0f;
+        private const float TrackerProximityScanIntervalSeconds = 0.2f;
+        private float _timeSinceTrackerProxCheck = 0f;
+        private const byte TrackerBudget = 2;
+        private bool _canPlaceTracker = false;
+        private int? _trackerToPickup = null;
+        private bool _isPlacingTracker = false;
+        private List<DeviceTracker> _trackersPlaced = new List<DeviceTracker>(TrackerBudget);
+        private List<Vector3> _trackerSpawnRequests = new List<Vector3>(1);
+        private bool[] _trackerIndex = CreateTrackerIndex();
+        private static bool[] CreateTrackerIndex()
+        {
+            bool[] index = new bool[TrackerBudget];
+            for(int i = 0; i < index.Length; i++)
+            {
+                index[i] = true;
+            }
+            return index;
+        }
+        internal byte PlacedTrackerCount => (byte)Math.Max(_trackersPlaced.Count, _trackerSpawnRequests.Count);
+        private void HandleHuntersObjective(float deltaTime)
+        {
+            bool isHunter = true;
+            bool hasUndercoverGear = true;
+
+            const float HalfPlayerHeight = 0.975f;
+
+            int? spawnToRemoveIndex = null;
+            for(int i = 0; i < _trackerSpawnRequests.Count; i++)
+            {
+                if(HasModelLoaded((uint)s_TrackerModel))
+                {
+                    Vector3 spawnPos = _trackerSpawnRequests[i];
+                    spawnToRemoveIndex = i;
+
+                    // Get first available tracker name
+                    int trackerIndex = 0;
+                    for(trackerIndex = 0; !_trackerIndex[trackerIndex] && trackerIndex < _trackerIndex.Length; trackerIndex++) { }
+
+                    _trackerIndex[trackerIndex] = false;
+
+                    const int SpriteA = 535;
+                    const int SpriteH = 542;
+                    const int SpriteStart = (SpriteH > SpriteA ? SpriteA : SpriteH);
+                    const int SpriteRange = ((SpriteH > SpriteA ? SpriteH : SpriteA) - SpriteStart) + 1;
+
+                    const string TrackerNames = "ABCDEFGH";
+
+                    char trackerName = TrackerNames[trackerIndex % SpriteRange];
+                    Debug.WriteLine($"Spawning tracker {trackerName}");
+
+                    int entity = CreateObject(s_TrackerModel, spawnPos.X, spawnPos.Y, spawnPos.Z - HalfPlayerHeight, true, true, false);
+                    SetEntityHasGravity(entity, false);
+                    SetEntityCompletelyDisableCollision(entity, false, false);
+                    int blip = AddBlipForEntity(entity);
+                    SetBlipDisplay(blip, 6);
+                    SetBlipSprite(blip, SpriteStart + (trackerIndex % SpriteRange));
+                    _trackersPlaced.Add(new DeviceTracker
+                    {
+                        Blip = blip,
+                        Entity = entity,
+                        Index = trackerIndex,
+                        Pos = spawnPos,
+                        Name = trackerName,
+                        UI = new LabelledItem($"TRACKER {trackerName}", 0f),
+                    });
+                    _currentUI = BuildCurrentUI();
+                    PlaySoundFrontend(-1, "Deliver_Pick_Up", "HUD_FRONTEND_MP_COLLECTABLE_SOUNDS", true);
+                    break;
+                }
+                else
+                {
+                    RequestModel((uint)s_TrackerModel);
+                }
+            }
+            if(spawnToRemoveIndex.HasValue)
+            {
+                _trackerSpawnRequests.RemoveAt(spawnToRemoveIndex.Value);
+            }
+            if(_trackerSpawnRequests.Count == 0)
+            {
+                _isPlacingTracker = false;
+            }
+
+            bool couldPutDownTracker = _canPlaceTracker;
+            bool couldPickUpTracker = !couldPutDownTracker && _trackerToPickup.HasValue;
+
+            if(isHunter && hasUndercoverGear)
+            {
+                _timeSinceTrackerPlaceableCheck += deltaTime;
+
+                if(!_isPlacingTracker && _timeSinceTrackerPlaceableCheck >= TrackerPlaceableCheckIntervalSeconds)
+                {
+                    _timeSinceTrackerPlaceableCheck = 0f;
+                    _trackerToPickup = null;
+
+                    int playerPed = PlayerPedId();
+
+                    const float MaxVelocity = 0.3f;
+                    bool anyTrackersRemaining = PlacedTrackerCount < TrackerBudget;
+                    bool isStill = GetEntityVelocity(playerPed).LengthSquared() <= (MaxVelocity * MaxVelocity);
+                    const float PickupRadius = 1.05f;
+                    int? nearestTracker = null;
+                    if (isStill)
+                    {
+                        Vector3 playerPos = GetEntityCoords(playerPed, false);
+                        int index = -1;
+                        foreach (DeviceTracker placedTracker in _trackersPlaced)
+                        {
+                            index++;
+                            if (placedTracker.Pos.DistanceToSquared(playerPos) < (PickupRadius * PickupRadius))
+                            {
+                                nearestTracker = index;
+                                break;
+                            }
+                        }
+                    }
+                    _canPlaceTracker = !nearestTracker.HasValue && isStill && PlacedTrackerCount < TrackerBudget; 
+                    if(isStill && nearestTracker.HasValue)
+                    {
+                        _trackerToPickup = nearestTracker.Value;
+                    }
+                }
+            }
+
+            if(couldPutDownTracker != _canPlaceTracker || (!_canPlaceTracker && _trackerToPickup.HasValue) != couldPickUpTracker)
+            {
+                ClearAllHelpMessages();
+                bool showPutDownText = _canPlaceTracker && !_trackerToPickup.HasValue;
+                bool showPickUpText = !_canPlaceTracker && _trackerToPickup.HasValue;
+                if(showPutDownText || showPickUpText)
+                {
+                    BeginTextCommandDisplayHelp(showPutDownText ? TrackerPutDownHelpTextKey : TrackerPickUpHelpTextKey);
+                    EndTextCommandDisplayHelp(0, true, true, -1);
+                }
+            }
+
+            const int PlaceTrackerControl = (int)Control.ThrowGrenade;
+            if((_canPlaceTracker && !_isPlacingTracker && !_trackerToPickup.HasValue) || (_trackerToPickup.HasValue && !_isPlacingTracker))
+            {
+                if(IsControlJustPressed(0, PlaceTrackerControl))
+                {
+                    // Place new tracker
+                    if (!_trackerToPickup.HasValue)
+                    {
+                        _isPlacingTracker = true;
+                        _trackerSpawnRequests.Add(GetEntityCoords(PlayerPedId(), false));
+                        Debug.WriteLine($"Trying to spawn tracker number {_trackersPlaced.Count + 1}");
+                    }
+                    // Pick up near tracker
+                    else
+                    {
+                        int index = _trackerToPickup.Value;
+                        DeviceTracker tracker = _trackersPlaced[index];
+                        Debug.WriteLine($"Picking up tracker {tracker.Name}");
+                        NetworkRequestControlOfEntity(tracker.Entity);
+                        SetEntityAsMissionEntity(tracker.Entity, false, true);
+                        DeleteEntity(ref tracker.Entity);
+                        _trackersPlaced.RemoveAt(index);
+                        RemoveBlip(ref tracker.Blip);
+                        _trackerIndex[tracker.Index] = true;
+                        _trackerToPickup = null;
+                        _currentUI = BuildCurrentUI();
+                        DisableControlAction(0, PlaceTrackerControl, true);
+                        PlaySoundFrontend(-1, "PICK_UP", "HUD_FRONTEND_DEFAULT_SOUNDSET", true);
+                    }
+                    ClearAllHelpMessages();
+                }
+            }
+
+            if(_isPlacingTracker)
+            {
+                DisableControlAction(0, PlaceTrackerControl, true);
+            }
+
+            _timeSinceTrackerProxCheck += deltaTime;
+            if(_timeSinceTrackerProxCheck >= TrackerProximityScanIntervalSeconds)
+            {
+                _timeSinceTrackerProxCheck = 0f;
+
+                if (_currentHackerPlayerHandle.HasValue)
+                {
+                    int hackerPed = GetPlayerPed(_currentHackerPlayerHandle.Value);
+                    Vector3 hackerPos = GetEntityCoords(hackerPed, false);
+                    foreach (DeviceTracker tracker in _trackersPlaced)
+                    {
+                        const float TrackableRadius = ActiveRadius * 1.25f;
+                        if(hackerPos.X != tracker.Pos.X && hackerPos.Y != tracker.Pos.Y && hackerPos.Z != tracker.Pos.Z)
+                        {
+                            float t = _state.Stage == JobState.JobStage.SurviveHack 
+                                ? Math.Min(1f, Math.Max(0f, (1f - Math.Min(1f, (float)Math.Sqrt(tracker.Pos.DistanceToSquared(hackerPos)) / TrackableRadius))))
+                                : 0f;
+
+                            tracker.UI.Value = SurviveTheHuntShared.Utils.EncodingHelper.Utf16FromNormalFloat(t);
+                        }
+                    }
+                }
+            }
+        }
+
         private void TickActive(float deltaTime)
         {
             HandleHuntedObjective(deltaTime);
+            HandleHuntersObjective(deltaTime);
         }
 
         private float _timeSinceLastPedTargetCheck = 0f;
@@ -1280,6 +1553,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 int blip = _pyreTwigBlip.Value;
                 RemoveBlip(ref blip);
             }
+
+            foreach(DeviceTracker tracker in _trackersPlaced)
+            {
+                SetEntityAsMissionEntity(tracker.Entity, false, true);
+                NetworkRequestControlOfEntity(tracker.Entity);
+                int handle = tracker.Entity;
+                DeleteEntity(ref handle);
+                int blip = tracker.Blip;
+                RemoveBlip(ref blip);
+            }
+
+            _trackersPlaced.Clear();
         }
     }
 }
