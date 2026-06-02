@@ -84,6 +84,7 @@ namespace SurviveTheHuntShared
 
             public const string UIRecvGameModes = "sth:ui:recvGameModes";
             public const string UISendText = "sth:ui:sendText";
+            public const string UISetItemBlocked = "sth:ui:setBlockItem";
 
             public const string RecvNetEntity = "sth:recvNetId";
 

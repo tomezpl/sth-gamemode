@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using LemonUI.Elements;
 using LemonUI.Tools;
 using SurviveTheHuntClient.Models;
+using SurviveTheHuntShared.Models.UI;
 
 namespace SurviveTheHuntClient.UI
 {
@@ -123,6 +124,8 @@ namespace SurviveTheHuntClient.UI
             internal static readonly Dictionary<string, Texture> TextureMap = CreateTextureMap(AllTextures);
         }
 
+        private List<BlockedItem> BlockedItems = new List<BlockedItem>();
+
         public MainScript()
         {
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientGameTypeStart);
@@ -137,7 +140,20 @@ namespace SurviveTheHuntClient.UI
                 InitUI();
 
                 Tick += Update;
+                BlockableItemStateChanged += OnBlockableItemStateChanged;
             }
+        }
+
+
+        private Dictionary<NativeItem, bool> WasItemVisibleBeforeBlock = new Dictionary<NativeItem, bool>();
+        private void OnBlockableItemStateChanged(NativeItem item, bool isBlocked)
+        {
+            if(isBlocked)
+            {
+                WasItemVisibleBeforeBlock[item] = item.Enabled;
+            }
+
+            item.Enabled = !isBlocked;
         }
 
         [EventHandler(SurviveTheHuntShared.Events.Client.UISendText)]
@@ -161,6 +177,53 @@ namespace SurviveTheHuntClient.UI
             AddTextComponentSubstringPlayerName(message);
             EndTextCommandThefeedPostMessagetextTu(txd, txn, true, 0, sender, subject, duration / 15f);
             PlaySoundFrontend(-1, "Phone_Text_Arrive", "DLC_H4_MM_Sounds", true);
+        }
+
+        private delegate void BlockableItemStateChangedEvent(NativeItem item, bool isBlocked);
+
+        private event BlockableItemStateChangedEvent BlockableItemStateChanged;
+
+        [EventHandler(SurviveTheHuntShared.Events.Client.UISetItemBlocked)]
+        public void HandleSetItemBlocked(BlockedItem item, bool blocked)
+        {
+            bool changed = false;
+            if(!blocked)
+            {
+                int index = BlockedItems.IndexOf(item);
+                if(index != -1)
+                {
+                    changed = true;
+                    BlockedItems.RemoveAt(index);
+                }
+            }
+            else
+            {
+                if (!BlockedItems.Contains(item))
+                {
+                    changed = true;
+                    BlockedItems.Add(item);
+                }
+            }
+
+            if(changed)
+            {
+                NativeItem uiItem = GetBlockableItem(item);
+                if (uiItem != null)
+                {
+                    BlockableItemStateChanged.Invoke(uiItem, blocked);
+                }
+            }
+        }
+
+        private NativeItem GetBlockableItem(BlockedItem item)
+        {
+            switch(item)
+            {
+                case BlockedItem.Appearance:
+                    return CharacterButton;
+                default:
+                    return null;
+            }
         }
 
         private void UpdateSelectablePlayers()
@@ -295,6 +358,8 @@ namespace SurviveTheHuntClient.UI
             HelpMenu.Closed += HelpMenu_Closed;
 
             MainMenu.SelectedIndexChanged += MainMenu_SelectedIndexChanged;
+
+            BlockedItems = new List<BlockedItem>(MainMenu.Items.Count);
         }
 
         private void SelectedModeChanged(object sender, ItemChangedEventArgs<string> e)

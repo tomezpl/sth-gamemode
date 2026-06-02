@@ -4,6 +4,7 @@ using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Models.UI;
 using SurviveTheHuntClient.Plugins.Cupid.Controllers;
+using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
 using SurviveTheHuntClient.Plugins.Cupid.Managers;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
@@ -28,6 +29,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         private readonly BleedoutController BleedoutController;
         private JobManager JobManager = null;
         private HeatController HeatController = new HeatController();
+
+        private readonly UIMenuHelper UIMenuHelper;
 
         internal class PluginState
         {
@@ -101,6 +104,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             BleedoutController = new BleedoutController(context.ChangeGameModeSetting, context.TriggerServerEventProxy);
             BleedoutController.StartedDying += OnStartedDying;
             BleedoutController.FinishedDying += OnFinishedDying;
+
+            UIMenuHelper = new UIMenuHelper(context.TriggerEventProxy);
         }
 
         private void OnFinishedDying(int playerPed)
@@ -222,6 +227,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
 
             HeatController = new HeatController();
+
+            UIMenuHelper.SetItemBlocked(SurviveTheHuntShared.Models.UI.BlockedItem.Appearance);
         }
 
         private void OnJobCompleted(ushort heatValue)
@@ -270,6 +277,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 JobManager.Cleanup();
                 JobManager = null;
             }
+
+            UIMenuHelper.SetItemBlocked(SurviveTheHuntShared.Models.UI.BlockedItem.Appearance, false);
         }
 
         public override void OnPlayerSpawned()

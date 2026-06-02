@@ -51,6 +51,7 @@
     <Compile Include="Core\Teams.cs" />
     <Compile Include="Events.cs" />
     <Compile Include="KillFeed.cs" />
+    <Compile Include="Models\UI\BlockedItem.cs" />
     <Compile Include="Plugins\Cupid\Constants.cs" />
     <Compile Include="Plugins\PluginIndex.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
