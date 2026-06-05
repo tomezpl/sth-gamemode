@@ -71,9 +71,52 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 }
             };
 
+            private static SceneOutfits CopOutfits = new SceneOutfits()
+            {
+                {
+                    DirectedScene.JasonDrivingHood,
+                    new OutfitPair
+                    {
+                        Female = new PedOutfit
+                        {
+                            ComponentsToApply = new Dictionary<PedComponents, PedVariation>
+                            {
+                                {PedComponents.Torso2, new PedVariation { Drawable = 48, Texture = 0 } },
+                                {PedComponents.Special2, new PedVariation { Drawable = 2, Texture = 0 } },
+                                {PedComponents.Shoes, new PedVariation {Drawable = 25, Texture = 0} },
+                                {PedComponents.Legs, new PedVariation { Drawable = 34, Texture = 0} },
+                                {PedComponents.Torso, new PedVariation { Drawable = 14, Texture = 0 } },
+                            },
+                            PropsToApply = new Dictionary<PedProps, PedVariation>
+                            {
+                                {PedProps.Hats, new PedVariation { Drawable = 45, Texture = 0} },
+                                {PedProps.Glasses, new PedVariation { Drawable = 11, Texture = 3} },
+                            }
+                        },
+                        Male = new PedOutfit
+                        {
+                            ComponentsToApply = new Dictionary<PedComponents, PedVariation>
+                            {
+                                {PedComponents.Torso2, new PedVariation { Drawable = 55, Texture = 0 } },
+                                {PedComponents.Special2, new PedVariation { Drawable = 15, Texture = 0 } },
+                                {PedComponents.Shoes, new PedVariation {Drawable = 25, Texture = 0} },
+                                {PedComponents.Legs, new PedVariation { Drawable = 35, Texture = 0} },
+                                {PedComponents.Torso, new PedVariation { Drawable = 0, Texture = 0 } },
+                            },
+                            PropsToApply = new Dictionary<PedProps, PedVariation>
+                            {
+                                {PedProps.Hats, new PedVariation { Drawable = 46, Texture = 0} },
+                                {PedProps.Glasses, new PedVariation { Drawable = 5, Texture = 5} },
+                            }
+                        }
+                    }
+                }
+            };
+
             internal static Dictionary<PlayerType, SceneOutfits> Outfits = new Dictionary<PlayerType, SceneOutfits>()
             {
-                { PlayerType.HuntedJ, JasonOutfits }
+                { PlayerType.HuntedJ, JasonOutfits },
+                { PlayerType.Cop, CopOutfits },
             };
         }
     }
