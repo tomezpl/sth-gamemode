@@ -99,13 +99,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             switch(propId)
             {
                 case PropId.JobStage:
-                    JobStage = (Stage)statePropValue;
+                    JobStage = (Stage)Convert.ToSByte(statePropValue);
                     break;
                 case PropId.GrabProgress:
-                    GrabProgress = (float)statePropValue;
+                    GrabProgress = Convert.ToSingle(statePropValue);
                     break;
                 case PropId.IsOver:
-                    IsOver = (bool)statePropValue;
+                    IsOver = Convert.ToBoolean(statePropValue);
                     break;
             }
         }
@@ -116,6 +116,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 { (int)PropId.JobStage, Get((int)PropId.JobStage) },
                 { (int)PropId.GrabProgress, Get((int)PropId.GrabProgress) },
+                {(int)PropId.IsOver, Get((int)PropId.IsOver) },
             };
         }
 

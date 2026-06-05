@@ -43,8 +43,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     if(_carNetId != value)
                     {
                         int old = _carNetId;
-                        _carNetId = value;
-                        OnCarNetIdChanged.Invoke(old, value, CanSync);
+                        _carNetId = Convert.ToInt32(value);
+                        OnCarNetIdChanged.Invoke(old, _carNetId, CanSync);
                     }
                 }
             }
@@ -59,8 +59,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     if (_truckNetId != value)
                     {
                         int old = _truckNetId;
-                        _truckNetId = value;
-                        OnTruckNetIdChanged.Invoke(old, value, CanSync);
+                        _truckNetId = Convert.ToInt32(value);
+                        OnTruckNetIdChanged.Invoke(old, _truckNetId, CanSync);
                     }
                 }
             }
@@ -133,16 +133,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 switch((StateProp)statePropId)
                 {
                     case StateProp.HasCompletedBonus:
-                        HasCompletedBonus = (bool)statePropValue;
+                        HasCompletedBonus = Convert.ToBoolean(statePropValue);
                         break;
                     case StateProp.CarNetId:
-                        CarNetId = (int)statePropValue;
+                        CarNetId = Convert.ToInt32(statePropValue);
                         break;
                     case StateProp.TruckNetId:
-                        TruckNetId = (int)statePropValue;
+                        TruckNetId = Convert.ToInt32(statePropValue);
                         break;
                     case StateProp.Stage:
-                        Stage = (JobStage)statePropValue;
+                        Stage = (JobStage)Convert.ToSByte(statePropValue);
                         break;
                 }
             }

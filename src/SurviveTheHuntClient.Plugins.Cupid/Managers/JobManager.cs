@@ -79,6 +79,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
             TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidJobSyncState, jobId, propId, propValue);
         }
 
+        internal void OnStateReceived(string jobId ,int propId, object propValue)
+        {
+            foreach(JobControllerBase job in _jobs)
+            {
+                if(job != null && job.Id == jobId)
+                {
+                    job.UpdateState(propId, propValue);
+                    break;
+                }
+            }
+        }
+
         private void OnCurrentJobChanged(JobControllerBase prev, JobControllerBase current)
         {
             Debug.WriteLine($"{nameof(JobManager)}: current job changed from {prev?.Id} to {current?.Id}");

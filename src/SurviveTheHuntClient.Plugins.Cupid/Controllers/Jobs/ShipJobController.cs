@@ -33,7 +33,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     int commonSize = Math.Min(value.Count, _pedNetIds.Count);
                     for(int i = 0; !isDifferent && i < commonSize; i++)
                     {
-                        isDifferent = (int)_pedNetIds[i] != (int)value[i];
+                        isDifferent = (int)_pedNetIds[i] != Convert.ToInt32(value[i]);
                         if(isDifferent)
                         {
                             Debug.WriteLine($"{logPrefix}{nameof(isDifferent)} = {isDifferent} because {nameof(value)}[{i}] == {(int)value[i]} and {nameof(_pedNetIds)}[{i}] == {(int)_pedNetIds[i]}");
@@ -46,7 +46,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         int[] netIds = new int[value.Count];
                         for(int i = 0; i < netIds.Length; i++)
                         {
-                            netIds[i] = (int)value[i];
+                            netIds[i] = Convert.ToInt32(value[i]);
                         }
 
                         PedNetIdsChanged.Invoke(netIds, CanSync);
@@ -81,14 +81,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 }
             }
 
-            private sbyte _pyreTwigSpawnLocationIndex = -1;
-            internal event GenericStateChangedEvent<sbyte> PyreTwigSpawnLocationIndexChanged;
-            internal sbyte PyreTwigSpawnLocationIndex
+            private int _pyreTwigSpawnLocationIndex = -1;
+            internal event GenericStateChangedEvent<int> PyreTwigSpawnLocationIndexChanged;
+            internal int PyreTwigSpawnLocationIndex
             {
                 get => _pyreTwigSpawnLocationIndex;
                 set
                 {
-                    sbyte prev = _pyreTwigSpawnLocationIndex;
+                    int prev = _pyreTwigSpawnLocationIndex;
                     _pyreTwigSpawnLocationIndex = value;
                     if(prev != value)
                     {
@@ -244,25 +244,25 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         PedNetIds = (List<object>)statePropValue;
                         break;
                     case StateProp.Stage:
-                        Stage = (JobStage)statePropValue;
+                        Stage = (JobStage)Convert.ToSByte(statePropValue);
                         break;
                     case StateProp.PyreTwigSpawnLocationIndex:
-                        PyreTwigSpawnLocationIndex = (sbyte)statePropValue;
+                        PyreTwigSpawnLocationIndex = Convert.ToInt32(statePropValue);
                         break;
                     case StateProp.HuntedDiscoveredDevice:
-                        HuntedDiscoveredDevice = (bool)statePropValue;
+                        HuntedDiscoveredDevice = Convert.ToBoolean(statePropValue);
                         break;
                     case StateProp.HuntersDiscoveredDevice:
-                        HuntersDiscoveredDevice = (bool)statePropValue;
+                        HuntersDiscoveredDevice = Convert.ToBoolean(statePropValue);
                         break;
                     case StateProp.CurrentHackerPlayer:
-                        CurrentHackerPlayer = (int)statePropValue;
+                        CurrentHackerPlayer = Convert.ToInt32(statePropValue);
                         break;
                     case StateProp.SpookedState:
-                        SpookedState = (SpookedType)statePropValue;
+                        SpookedState = (SpookedType)Convert.ToSByte(statePropValue);
                         break;
                     case StateProp.HackProgress:
-                        HackProgress = (float)statePropValue;
+                        HackProgress = Convert.ToSingle(statePropValue);
                         break;
                 }
             }
@@ -721,7 +721,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             DisplayTextForObjective(current);
         }
 
-        private void OnPyreTwigSpawnLocationChanged(sbyte prev, sbyte current, bool canSync)
+        private void OnPyreTwigSpawnLocationChanged(int prev, int current, bool canSync)
         {
             if(canSync)
             {

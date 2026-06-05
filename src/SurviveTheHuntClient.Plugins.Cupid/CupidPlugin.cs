@@ -180,6 +180,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 _plugin.HeatController.CurrentHeat = heatScoreFinal;
                 _plugin.State.HuntedHeatScore = heatScoreFinal;
             }
+
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.CupidReceiveSyncState)]
+            public void ReceiveSyncJobState(string jobId, int statePropId, object statePropValue)
+            {
+                _plugin.JobManager.OnStateReceived(jobId, statePropId, statePropValue);
+            }
         }
 
         public override void OnResourceStopping()
