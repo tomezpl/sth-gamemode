@@ -1,4 +1,5 @@
-﻿using SurviveTheHuntClient.Interfaces;
+﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Plugins.Cupid.Models;
 using System;
 using System.Collections.Generic;
@@ -51,47 +52,63 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                 }
             }
 
+            private const float DelayBeforeInvokingEventSeconds = 5f;
+            private float _timeUntilInvokeEvent = float.MaxValue;
+
             public void Tick(float deltaTime)
             {
-                if(IsDone)
+                if(_timeUntilInvokeEvent <= 0f)
                 {
                     return;
                 }
 
-                if(!_hasStarted)
+                if (!IsDone)
                 {
-                    _hasStarted = true;
-                    StartLoadingNextModels(Spawns, _index, MaxSpawnPerTick);
-                }
-
-                byte spawned = 0;
-                for(byte i = _index; i < Math.Min(_index + MaxSpawnPerTick, Spawns.Length); i++)
-                {
-                    if (HasModelLoaded(Spawns[i].PedModel))
+                    if (!_hasStarted)
                     {
-                        int pedHandle = CreatePed(0, Spawns[i].PedModel, Spawns[i].Position.X, Spawns[i].Position.Y, Spawns[i].Position.Z, Spawns[i].Position.Heading, true, false);
-                        spawned++;
-                        EntityHandles.Add(pedHandle);
-                        
-                        if (i >= RequiredCount)
+                        _hasStarted = true;
+                        StartLoadingNextModels(Spawns, _index, MaxSpawnPerTick);
+                    }
+
+                    byte spawned = 0;
+                    for (byte i = _index; i < Math.Min(_index + MaxSpawnPerTick, Spawns.Length); i++)
+                    {
+                        if (HasModelLoaded(Spawns[i].PedModel))
                         {
-                            _optionalPedInitStates.Add(pedHandle, Spawns[i]);
+                            int pedHandle = CreatePed(0, Spawns[i].PedModel, Spawns[i].Position.X, Spawns[i].Position.Y, Spawns[i].Position.Z, Spawns[i].Position.Heading, true, false);
+                            spawned++;
+                            EntityHandles.Add(pedHandle);
+
+                            if (i >= RequiredCount)
+                            {
+                                _optionalPedInitStates.Add(pedHandle, Spawns[i]);
+                            }
+                        }
+                        else
+                        {
+                            // model hasn't loaded so wait till next tick
+                            break;
                         }
                     }
-                    else
+
+                    _index += spawned;
+
+                    StartLoadingNextModels(Spawns, _index, MaxSpawnPerTick);
+
+                    if(IsDone)
                     {
-                        // model hasn't loaded so wait till next tick
-                        break;
+                        _timeUntilInvokeEvent = DelayBeforeInvokingEventSeconds;
+                        Debug.WriteLine($"Spawning done; waiting {DelayBeforeInvokingEventSeconds}s before invoking {nameof(SpawningCompleted)}");
                     }
                 }
-
-                _index += spawned;
-
-                StartLoadingNextModels(Spawns, _index, MaxSpawnPerTick);
 
                 if(IsDone)
                 {
-                    SpawningCompleted.Invoke(EntityHandles.ToArray(), _optionalPedInitStates);
+                    _timeUntilInvokeEvent -= deltaTime;
+                    if (_timeUntilInvokeEvent <= 0f)
+                    {
+                        SpawningCompleted.Invoke(EntityHandles.ToArray(), _optionalPedInitStates);
+                    }
                 }
             }
         }
