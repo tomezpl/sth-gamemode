@@ -74,7 +74,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             private static SceneOutfits CopOutfits = new SceneOutfits()
             {
                 {
-                    DirectedScene.JasonDrivingHood,
+                    DirectedScene.IntroJason,
                     new OutfitPair
                     {
                         Female = new PedOutfit
