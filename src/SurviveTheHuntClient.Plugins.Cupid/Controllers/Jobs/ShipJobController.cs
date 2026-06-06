@@ -1890,7 +1890,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             for(int i = 0; i < _pedHandles.Length; i++)
             {
                 Debug.WriteLine($"Trying to delete ped {_pedHandles[i]}");
-                if (_pedHandles[i].HasValue && NetworkHasControlOfEntity(_pedHandles[i].Value))
+                if (_pedHandles[i].HasValue)
                 {
                     int ped = _pedHandles[i].Value;
                     SetEntityAsMissionEntity(ped, true, true);
