@@ -238,6 +238,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             internal override void SetImpl(int statePropId, object statePropValue)
             {
+                Debug.WriteLine($"{nameof(ShipJobController)} Setting state prop {(StateProp)statePropId} from remote event with value {statePropValue}");
+                Debug.WriteLine($"Prop value type {statePropValue.GetType().FullName}");
                 switch((StateProp)statePropId)
                 {
                     case StateProp.PedNetIds:
@@ -289,7 +291,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private bool _wasPlayerInRangeLastTick = false;
 
         private int[] _pedNetIds = new int[0];
-        private int[] _pedHandles = new int[0];
+        private int?[] _pedHandles = new int?[0];
         private bool _pedsNeedSyncing = false;
 
         private ShipPedSpawnHelper.Spawner _pedSpawner = null;
@@ -536,10 +538,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     case JobState.SpookedType.SpookedByGunfire:
 
                         _gunfireEvent = AddShockingEventAtPosition(90, Origin.X, Origin.Y, Origin.Z, (float)(GameState.Hunt.ActualEndTime - DateTime.UtcNow).TotalSeconds);
-                        foreach (int ped in _pedHandles)
+                        foreach (int? ped in _pedHandles)
                         {
-                            SetBlockingOfNonTemporaryEvents(ped, false);
-                            TaskShockingEventReact(ped, _gunfireEvent.Value);
+                            if (ped.HasValue)
+                            {
+                                SetBlockingOfNonTemporaryEvents(ped.Value, false);
+                                TaskShockingEventReact(ped.Value, _gunfireEvent.Value);
+                            }
                         }
                         break;
                 }
@@ -623,6 +628,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 SetBlipDisplay(_pyreTwigBlip.Value, 0);
             }
+
+            IsActive = false;
         }
 
         private LabelledItem[] BuildCurrentUI()
@@ -740,24 +747,20 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        private void SetPedAsFriendly(int ped)
+        {
+            // treat as friendly
+            SetPedConfigFlag(ped, 423, true);
+            if (_state.SpookedState == JobState.SpookedType.NotSpooked)
+            {
+                // suppress agitation
+                SetBlockingOfNonTemporaryEvents(ped, true);
+            }
+        }
+
         private void OnPedsSynced()
         {
-            foreach(int pedHandle in _pedHandles)
-            {
-                // treat as friendly
-                SetPedConfigFlag(pedHandle, 423, true);
-
-                if (_state.SpookedState == JobState.SpookedType.NotSpooked)
-                {
-                    // suppress agitation
-                    foreach (int ped in _pedHandles)
-                    {
-                        SetBlockingOfNonTemporaryEvents(ped, true);
-                    }
-                }
-            }
-
-            Debug.WriteLine($"Marked {_pedHandles.Length} as friendly");
+            Debug.WriteLine($"{nameof(ShipJobController)}.{nameof(OnPedsSynced)}: {_pedHandles.Length} peds synced");
         }
 
         public override void Tick(float deltaTime)
@@ -794,11 +797,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                 float closestDist = float.MaxValue;
                 // Need to iterate over _pedHandles as only that's synced
-                foreach(int ped in _pedHandles)
+                foreach(int? ped in _pedHandles)
                 {
-                    if (IsPedStill(ped))
+                    if (ped.HasValue && IsPedStill(ped.Value))
                     {
-                        Vector3 pos = GetEntityCoords(ped, false);
+                        Vector3 pos = GetEntityCoords(ped.Value, false);
                         float distSq = pos.DistanceToSquared(playerPos);
                         if (distSq <= BlendInDistanceSq && closestDist > distSq)
                         {
@@ -888,6 +891,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     {
                         _animRequests[PlayerPedId()] = animToUse.Value;
                         Debug.WriteLine($"Blending in with anim {animToUse.Value.Dict} {animToUse.Value.Clip}");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"Both {nameof(scenarioToUse)} and {nameof(animToUse)} are null for ped {_blendInSourcePed}!");
                     }
 
                     _blendInSourcePed = null;
@@ -1081,6 +1088,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 {
                     _state.Stage++;
                 }
+
+                if(_state.Stage == JobState.JobStage.LeaveArea)
+                {
+                    _state.Stage = JobState.JobStage.Completed;
+                }
             }
         }
 
@@ -1106,29 +1118,42 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         {
             _timeSinceLastRangeCheck += deltaTime;
 
+            bool wasInRangeBeforeCheck = _wasPlayerInRangeLastTick;
             if(_timeSinceLastRangeCheck >= RangeCheckIntervalSeconds)
             {
                 _wasPlayerInRangeLastTick = GetEntityCoords(PlayerPedId(), false).DistanceToSquared(Origin) <= (ActiveRadius * ActiveRadius);
                 _timeSinceLastRangeCheck = 0f;
             }
 
+            // Deactivate the job when out of bounds
+            if(wasInRangeBeforeCheck && !_wasPlayerInRangeLastTick)
+            {
+                IsActive = false;
+            }
+
             if (_pedsNeedSyncing)
             {
-                int[] pedHandles = new int[_pedNetIds.Length];
-                bool allSynced = true;
-                for (int i = 0; allSynced && i < _pedNetIds.Length; i++)
+                if (_pedHandles.Length != _pedNetIds.Length)
                 {
-                    allSynced = NetworkDoesEntityExistWithNetworkId(_pedNetIds[i]);
-                    if(allSynced)
+                    _pedHandles = new int?[_pedNetIds.Length];
+                }
+
+                bool allSynced = true;
+                for (int i = 0; i < _pedNetIds.Length; i++)
+                {
+                    bool wasAlreadySynced = _pedHandles[i].HasValue;
+                    bool exists = wasAlreadySynced || NetworkDoesNetworkIdExist(_pedNetIds[i]);
+                    allSynced = allSynced && exists;
+                    if(exists && !wasAlreadySynced)
                     {
-                        pedHandles[i] = NetToPed(_pedNetIds[i]);
+                        _pedHandles[i] = NetToPed(_pedNetIds[i]);
+                        SetPedAsFriendly(_pedHandles[i].Value);
                     }
                 }
 
                 if(allSynced)
                 {
                     _pedsNeedSyncing = false;
-                    _pedHandles = pedHandles;
                     OnPedsSynced();
                 }
             }
@@ -1243,7 +1268,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             foreach(int pedHandle in entityHandles)
             {
                 SetEntityMaxHealth(pedHandle, 500);
-                netIds.Add(PedToNet(pedHandle));
+                int netId = PedToNet(pedHandle);
+                netIds.Add(netId);
+                Debug.WriteLine($"Sending net ID {netId} for ped handle {pedHandle}");
             }
 
             _state.PedNetIds = netIds;
@@ -1447,15 +1474,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         if (_pedHandles?.Length > 0)
                         {
                             int playerPed = PlayerPedId();
-                            foreach (int ped in _pedHandles)
+                            foreach (int? ped in _pedHandles)
                             {
-                                uint pedGroup = (uint)GetPedRelationshipGroupHash(ped);
-                                SetPedCombatMovement(ped, 3);
-                                SetPedCombatAbility(ped, 2);
-                                SetBlockingOfNonTemporaryEvents(ped, false);
-                                //TaskAgitatedAction(ped, playerPed);
-                                TaskCombatPed(ped, playerPed, 0, 16);
-                                //TaskCombatHatedTargetsAroundPed(ped, ActiveRadius, 0);
+                                if (ped.HasValue)
+                                {
+                                    //uint pedGroup = (uint)GetPedRelationshipGroupHash(ped.Value);
+                                    SetPedCombatMovement(ped.Value, 3);
+                                    SetPedCombatAbility(ped.Value, 2);
+                                    SetBlockingOfNonTemporaryEvents(ped.Value, false);
+                                    //TaskAgitatedAction(ped, playerPed);
+                                    TaskCombatPed(ped.Value, playerPed, 0, 16);
+                                    //TaskCombatHatedTargetsAroundPed(ped, ActiveRadius, 0);
+                                }
                             }
                         }
                     }
@@ -1855,10 +1885,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         internal override void Cleanup(bool force = false)
         {
+            Debug.WriteLine($"{nameof(ShipJobController)}.{nameof(Cleanup)}({nameof(force)}: {force})");
+            Debug.WriteLine($"Cleaning up {_pedHandles.Length} peds");
             for(int i = 0; i < _pedHandles.Length; i++)
             {
-                SetEntityAsMissionEntity(_pedHandles[i], true, true);
-                DeletePed(ref _pedHandles[i]);
+                Debug.WriteLine($"Trying to delete ped {_pedHandles[i]}");
+                if (_pedHandles[i].HasValue && NetworkHasControlOfEntity(_pedHandles[i].Value))
+                {
+                    int ped = _pedHandles[i].Value;
+                    SetEntityAsMissionEntity(ped, true, true);
+                    DeletePed(ref ped);
+                    Debug.WriteLine("Deleted");
+                }
             }
 
             if(_pyreTwigProp.HasValue)
