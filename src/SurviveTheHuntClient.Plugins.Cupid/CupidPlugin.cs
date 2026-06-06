@@ -1,4 +1,5 @@
 ﻿using CitizenFX.Core;
+using CitizenFX.Core.UI;
 using SurviveTheHuntClient.Attributes;
 using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
@@ -13,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 using static SurviveTheHuntClient.Plugins.Cupid.Constants;
+using static SurviveTheHuntShared.Plugins.Cupid.Constants;
 using PlayerType = SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType;
 
 namespace SurviveTheHuntClient.Plugins.Cupid
@@ -54,6 +56,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             /// The "heat" score awarded to hunted players for doing jobs. They need to reach <see cref="Constants.HeatValues.Target"/> to win.
             /// </summary>
             internal ushort HuntedHeatScore = 0;
+
+            internal Constants.Clothing.OutfitPair? LastWornOutfit = null;
         }
 
         private int ScriptCamera;
@@ -337,27 +341,19 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
         }
 
-        internal void SetPlayerClothing(PlayerType playerType, DirectedScene scene)
+        internal void SetPlayerClothing(Constants.Clothing.OutfitPair currentSceneOutfit, PlayerType? playerType = null, DirectedScene? scene = null)
         {
+            if(!playerType.HasValue)
+            {
+                playerType = State.LocalRole;
+            }
+
+            if(!scene.HasValue)
+            {
+                scene = State.CurrentScene;
+            }
+
             int pedId = PlayerPedId();
-
-            Debug.WriteLine($"Changing clothing to {playerType}");
-
-            bool failed = false;
-
-            State.RequestClothesChange(false);
-
-            if (!Constants.Clothing.Outfits.TryGetValue(playerType, out Constants.Clothing.SceneOutfits sceneOutfits))
-            {
-                Debug.WriteLine($"Player type {playerType} doesn't have any scene outfits");
-                return;
-            }
-
-            if(!sceneOutfits.TryGetValue(scene, out Constants.Clothing.OutfitPair currentSceneOutfit))
-            {
-                Debug.WriteLine($"Player type {playerType} does not have an outfit for scene {scene}");
-                return;
-            }
 
             bool isFemale = !IsPedMale(pedId) || (PedHash)GetEntityModel(pedId) == PedHash.FreemodeFemale01;
 
@@ -392,6 +388,42 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
 
             State.RequestClothesChange(false);
+
+            State.LastWornOutfit = currentSceneOutfit;
+        }
+
+        internal void SetPlayerClothing(PlayerType playerType, DirectedScene scene, bool strict = false)
+        {
+            int pedId = PlayerPedId();
+
+            Debug.WriteLine($"Changing clothing to {playerType}");
+
+            bool failed = false;
+
+            State.RequestClothesChange(false);
+
+            if (!Constants.Clothing.Outfits.TryGetValue(playerType, out Constants.Clothing.SceneOutfits sceneOutfits))
+            {
+                Debug.WriteLine($"Player type {playerType} doesn't have any scene outfits");
+                if (strict || !State.LastWornOutfit.HasValue)
+                {
+                    return;
+                }
+                Debug.WriteLine("Continuing with last worn outfit");
+            }
+
+            if(!sceneOutfits.TryGetValue(scene, out Constants.Clothing.OutfitPair currentSceneOutfit))
+            {
+                Debug.WriteLine($"Player type {playerType} does not have an outfit for scene {scene}");
+                if (strict || !State.LastWornOutfit.HasValue)
+                {
+                    return;
+                }
+                Debug.WriteLine("Continuing with last worn outfit");
+                currentSceneOutfit = State.LastWornOutfit.Value;
+            }
+
+            SetPlayerClothing(currentSceneOutfit, playerType, scene);
         }
 
         public override void OnClockReceived(int hours, int minutes, int seconds)
