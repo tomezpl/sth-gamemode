@@ -487,8 +487,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             _state.PedNetIdsChanged += OnPedNetIdsChanged;
             _state.PyreTwigSpawnLocationIndexChanged += OnPyreTwigSpawnLocationChanged;
             _state.StageChanged += OnJobStageChanged;
-            _state.HuntedDiscoveredDeviceChanged += OnDiscoveredDeviceChanged;
-            _state.HuntersDiscoveredDeviceChanged += OnDiscoveredDeviceChanged;
+            _state.HuntedDiscoveredDeviceChanged += OnHuntedDiscoveredDeviceChanged;
+            _state.HuntersDiscoveredDeviceChanged += OnHuntersDiscoveredDeviceChanged;
             _state.HuntedDiscoveredDeviceChanged += new JobStateBase.GenericStateChangedEvent<bool>(new Action<bool, bool, bool>((prev, current, canSync) =>
             {
                 if(canSync)
@@ -509,6 +509,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             _state.SpookedStateChanged += OnSpookedStateChanged;
 
             _state.HackProgressChanged += OnHackProgressChanged;
+        }
+
+        private void OnHuntersDiscoveredDeviceChanged(bool prev, bool current, bool canSync)
+        {
+            OnDiscoveredDeviceChanged(SurviveTheHuntShared.Core.Teams.Team.Hunters, prev, current, canSync);
+        }
+
+        private void OnHuntedDiscoveredDeviceChanged(bool prev, bool current, bool canSync)
+        {
+            OnDiscoveredDeviceChanged(SurviveTheHuntShared.Core.Teams.Team.Hunted, prev, current, canSync);
         }
 
         private void OnHackProgressChanged(float prev, float current, bool canSync)
@@ -585,15 +595,23 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
-        private void OnDiscoveredDeviceChanged(bool prev, bool current, bool canSync)
+        private void OnDiscoveredDeviceChanged(SurviveTheHuntShared.Core.Teams.Team team, bool prev, bool current, bool canSync)
         {
             if(_pyreTwigBlip.HasValue)
             {
-                SetBlipDisplay(_pyreTwigBlip.Value, current ? 6 : 0);
+                bool isLocalTeam = PlayerState?.Team == team;
+                if (isLocalTeam)
+                {
+                    SetBlipDisplay(_pyreTwigBlip.Value, current ? 6 : 0);
+                }
+
                 if(current)
                 {
-                    SetBlipNameFromTextFile(_pyreTwigBlip.Value, PyreTwigBlipNameKey);
-                    BeepPyreTwig("Crates_Blipped", "GTAO_Magnate_Boss_Modes_Soundset");
+                    if (isLocalTeam)
+                    {
+                        SetBlipNameFromTextFile(_pyreTwigBlip.Value, PyreTwigBlipNameKey);
+                        BeepPyreTwig("Crates_Blipped", "GTAO_Magnate_Boss_Modes_Soundset");
+                    }
 
                     if(PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
                     {
