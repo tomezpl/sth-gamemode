@@ -131,6 +131,7 @@ namespace SurviveTheHuntShared
             public const string CupidNotifyReviveStart = "sth:cupid:notifyReviveStart";
             public const string CupidJobSyncState = "sth:cupid:jobSyncState";
             public const string CupidNotifyNewHeatScore = "sth:cupid:notifyHeatScore";
+            public const string SetServerState = "sth:setServerState";
         }
     }
 }

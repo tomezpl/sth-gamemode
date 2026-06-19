@@ -49,6 +49,7 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="Events.cs" />
+    <Compile Include="Extensions\Cupid\CupidPluginState.cs" />
     <Compile Include="Extensions\Cupid\EventHandlers.cs" />
     <Compile Include="Extensions\XmasModifier.cs" />
     <Compile Include="GameState.cs" />
@@ -56,9 +57,11 @@
     <Compile Include="Helpers\HuntedQueue.cs" />
     <Compile Include="Extensions\TeamPlugins.cs" />
     <Compile Include="Helpers\KillFeedDispatcher.cs" />
+    <Compile Include="Helpers\PluginStateFactory.cs" />
     <Compile Include="Helpers\WeaponLoadout.cs" />
     <Compile Include="Hunt.cs" />
     <Compile Include="MainScript.cs" />
+    <Compile Include="Models\PluginEventContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utils\Config.cs" />
     <Compile Include="Utils\Mode.cs" />

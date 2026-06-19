@@ -129,6 +129,8 @@ namespace SurviveTheHuntClient.Helpers
 
         internal static void DrawProgress(in string label, float progress, in uint colour, in Rect rect, in byte dividers = 0, in float contentXOffset = 0f, in float spritePadding = DefaultAlphaBarSpritePadding)
         {
+            progress = Math.Min(1f, Math.Max(0f, progress));
+
             float adjustedWidth = GetWidthAdjustedForProgressBar(in rect.Width, in label);
 
             float x = GetSafeX(in rect.X, in adjustedWidth);

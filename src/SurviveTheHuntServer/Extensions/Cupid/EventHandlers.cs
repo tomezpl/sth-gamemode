@@ -51,7 +51,7 @@ namespace SurviveTheHuntServer
         [EventHandler(SurviveTheHuntShared.Events.Server.CupidJobSyncState)]
         public void CupidJobSyncState([FromSource] Player sender, string jobId, int propId, object propValue)
         {
-            Debug.WriteLine($"{nameof(CupidJobSyncState)}: {sender.Name} is syncing prop {propId} with value of {propValue}");
+            Debug.WriteLine($"{nameof(CupidJobSyncState)}: {sender.Name} ({sender.Handle}) is syncing prop {propId} with value of {propValue}");
 
             foreach(Player player in Players)
             {

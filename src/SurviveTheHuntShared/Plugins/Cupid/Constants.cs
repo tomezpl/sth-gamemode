@@ -8,5 +8,10 @@
             HuntedL,
             Cop
         }
+
+        public enum ServerStateKey
+        {
+            ShipOwner,
+        }
     }
 }

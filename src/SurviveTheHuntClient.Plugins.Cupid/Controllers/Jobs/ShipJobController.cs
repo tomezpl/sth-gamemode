@@ -177,6 +177,22 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 }
             }
 
+            private int? _shipOwnerServerId = null;
+            internal event GenericStateChangedEvent<int?> ShipOwnerServerIdChanged;
+            internal int? ShipOwnerServerId
+            {
+                get => _shipOwnerServerId;
+                set
+                {
+                    int? prev = _shipOwnerServerId;
+                    if (!prev.HasValue)
+                    {
+                        _shipOwnerServerId = value;
+                        ShipOwnerServerIdChanged.Invoke(prev, value, CanSync);
+                    }
+                }
+            }
+
             internal enum SpookedType
             {
                 NotSpooked,
@@ -194,6 +210,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 CurrentHackerPlayer,
                 SpookedState,
                 HackProgress,
+                ShipOwner,
             }
 
             internal override Dictionary<int, object> Get()
@@ -208,6 +225,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     {(int)StateProp.CurrentHackerPlayer, Get((int)StateProp.CurrentHackerPlayer) },
                     {(int)StateProp.SpookedState, Get((int)StateProp.SpookedState) },
                     {(int)StateProp.HackProgress, Get((int)StateProp.HackProgress) },
+                    {(int)StateProp.ShipOwner, Get((int)StateProp.ShipOwner) },
                 };
             }
 
@@ -231,6 +249,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         return SpookedState;
                     case StateProp.HackProgress:
                         return HackProgress;
+                    case StateProp.ShipOwner:
+                        return ShipOwnerServerId;
                     default:
                         throw new ArgumentException($"Needs to be a valid {nameof(StateProp)}", nameof(statePropId));
                 }
@@ -266,6 +286,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     case StateProp.HackProgress:
                         HackProgress = Convert.ToSingle(statePropValue);
                         break;
+                    case StateProp.ShipOwner:
+                        ShipOwnerServerId = Convert.ToInt32(statePropValue);
+                        break;
                 }
             }
         }
@@ -297,12 +320,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private ShipPedSpawnHelper.Spawner _pedSpawner = null;
         private bool _hasStartedSpawningPeds = false;
 
-        internal bool IsLocalPlayerPedGod => GameState?.Hunt != null && GameState.Hunt.HuntedPlayers[0].PlayerHandle == PlayerId();
+        private int? _shipOwnerPlayerId = null;
+        internal bool IsLocalPlayerPedGod => _shipOwnerPlayerId.HasValue && PlayerId() == _shipOwnerPlayerId.Value;
 
         private Dictionary<int, PedNode> _optionalPedInitStates = new Dictionary<int, PedNode>();
         private Dictionary<int, PedNode> _optionalPedTargetStates = new Dictionary<int, PedNode>();
         private PedNode[] _pedLocations = new PedNode[0];
         private int[] _optionalPedHandles = new int[0];
+        private int[] _optionalPedNetIds = new int[0];
 
         private Dictionary<int, PedNode.AnimInfo> _animRequests = new Dictionary<int, PedNode.AnimInfo>();
 
@@ -391,7 +416,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private LabelledItem _hackUI = new LabelledItem("HACK", 0f);
 
-        private List<LabelledItem> _trackerUI = new List<LabelledItem>(TrackerBudget);
+        private readonly List<LabelledItem> _trackerUI = new List<LabelledItem>(TrackerBudget);
 
         private static readonly int s_TrackerModel = GetHashKey("reh_prop_reh_gadget_01a");
 
@@ -476,12 +501,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             return showerNodes.ToArray();
         }
 
+        private readonly TriggerServerEventProxyDelegate TriggerServerEvent;
         private readonly TriggerEventProxyDelegate TriggerEvent;
         private readonly PhoneTextHelper PhoneTextHelper;
 
-        internal ShipJobController(TriggerEventProxyDelegate triggerEventProxy, JobStateRpcUpdateDelegate updateJobStateRpc) : base("ship", updateJobStateRpc)
+        internal ShipJobController(TriggerEventProxyDelegate triggerEventProxy, TriggerServerEventProxyDelegate triggerServerEventProxy, JobStateRpcUpdateDelegate updateJobStateRpc) : base("ship", updateJobStateRpc)
         {
             TriggerEvent = triggerEventProxy;
+            TriggerServerEvent = triggerServerEventProxy;
             PhoneTextHelper = new PhoneTextHelper(triggerEventProxy);
 
             _state.PedNetIdsChanged += OnPedNetIdsChanged;
@@ -509,6 +536,28 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             _state.SpookedStateChanged += OnSpookedStateChanged;
 
             _state.HackProgressChanged += OnHackProgressChanged;
+
+            _state.ShipOwnerServerIdChanged += OnShipOwnerServerIdChanged;
+        }
+
+        private bool _shipNeedsOwner = true;
+        private void OnShipOwnerServerIdChanged(int? prev, int? current, bool canSync)
+        {
+            if (canSync)
+            {
+                SyncState((int)JobState.StateProp.ShipOwner);
+            }
+
+            if (current.HasValue)
+            {
+                _shipNeedsOwner = false;
+                _shipOwnerPlayerId = GetPlayerFromServerId(current.Value);
+            }
+        }
+
+        private void TryClaimShipOwnership()
+        {
+            TriggerServerEvent(SurviveTheHuntShared.Events.Server.SetServerState, Convert.ToByte(SurviveTheHuntShared.Plugins.PluginIndex.Cupid), Convert.ToByte(SurviveTheHuntShared.Plugins.Cupid.Constants.ServerStateKey.ShipOwner), Convert.ToInt32(GetPlayerServerId(PlayerId())));
         }
 
         private void OnHuntersDiscoveredDeviceChanged(bool prev, bool current, bool canSync)
@@ -779,6 +828,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private void OnPedsSynced()
         {
             Debug.WriteLine($"{nameof(ShipJobController)}.{nameof(OnPedsSynced)}: {_pedHandles.Length} peds synced");
+            AddNavmeshRequiredRegion(Origin.X, Origin.Y, ActiveRadius);
         }
 
         public override void Tick(float deltaTime)
@@ -1111,6 +1161,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 {
                     _state.Stage = JobState.JobStage.Completed;
                 }
+
+                if(_shipNeedsOwner)
+                {
+                    _shipNeedsOwner = false;
+                    TryClaimShipOwnership();
+                }
             }
         }
 
@@ -1149,6 +1205,43 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 IsActive = false;
             }
 
+            if(IsLocalPlayerPedGod)
+            {
+                if(_optionalPedNetIds != null)
+                {
+                    foreach(int netId in _optionalPedNetIds)
+                    {
+                        SetNetworkIdAlwaysExistsForPlayer(netId, PlayerId(), true);
+                        NetworkDisableProximityMigration(netId);
+                        SetNetworkIdCanMigrate(netId, false);
+                        NetworkRequestControlOfNetworkId(netId);
+
+                        if (NetworkDoesNetworkIdExist(netId) && NetworkDoesEntityExistWithNetworkId(netId))
+                        {
+                            int ped = NetToPed(netId);
+                            Vector3 pos = GetEntityCoords(ped, false);
+                            RequestCollisionAtCoord(pos.X, pos.Y, pos.Z);
+                            RequestAdditionalCollisionAtCoord(pos.X, pos.Y, pos.Z);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if(_optionalPedNetIds != null)
+                {
+                    foreach(int netId in _optionalPedNetIds)
+                    {
+                        if (NetworkDoesNetworkIdExist(netId) && NetworkHasControlOfNetworkId(netId))
+                        {
+                            Debug.WriteLine($"We have control of net {netId} but we're not ped god. Relinquishing...");
+                            SetNetworkIdCanMigrate(netId, true);
+                            NetworkSetNetworkIdDynamic(netId, false);
+                        }
+                    }
+                }
+            }
+
             if (_pedsNeedSyncing)
             {
                 if (_pedHandles.Length != _pedNetIds.Length)
@@ -1162,14 +1255,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     bool wasAlreadySynced = _pedHandles[i].HasValue;
                     bool exists = wasAlreadySynced || NetworkDoesNetworkIdExist(_pedNetIds[i]);
                     allSynced = allSynced && exists;
-                    if(exists && !wasAlreadySynced)
+                    if (exists && !wasAlreadySynced)
                     {
                         _pedHandles[i] = NetToPed(_pedNetIds[i]);
                         SetPedAsFriendly(_pedHandles[i].Value);
                     }
                 }
 
-                if(allSynced)
+                if (allSynced)
                 {
                     _pedsNeedSyncing = false;
                     OnPedsSynced();
@@ -1289,6 +1382,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 int netId = PedToNet(pedHandle);
                 netIds.Add(netId);
                 Debug.WriteLine($"Sending net ID {netId} for ped handle {pedHandle}");
+                _timeTillPedBrainTick[netId] = s_RNG.Next(0, 45);
+                NetworkSetNetworkIdDynamic(netId, false);
             }
 
             _state.PedNetIds = netIds;
@@ -1301,10 +1396,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             _optionalPedHandles = new int[optionalPedInitStates.Count];
             optionalPedInitStates.Keys.CopyTo(_optionalPedHandles, 0);
 
+            int counter = 0;
+            _optionalPedNetIds = new int[_optionalPedHandles.Length];
             foreach(int pedHandle in _optionalPedHandles)
             {
-                _timeTillPedBrainTick[pedHandle] = s_RNG.Next(0, 45);
+                SetEntityLoadCollisionFlag(pedHandle, true);
+                SetEntityAsMissionEntity(pedHandle, true, true);
+                _optionalPedNetIds[counter++] = PedToNet(pedHandle);
             }
+
+            AddNavmeshRequiredRegion(Origin.X, Origin.Y, ActiveRadius);
         }
 
         private float _timeSinceObjectiveDistanceCheck = 0f;
@@ -1733,13 +1834,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 bool tickedAnyBrains = false;
 
                 List<int> pedsToTick = new List<int>();
-                foreach(int pedHandle in _optionalPedHandles)
+                foreach(int pedNetId in _optionalPedNetIds)
                 {
-                    _timeTillPedBrainTick[pedHandle] -= deltaTime;
-                    if (_timeTillPedBrainTick[pedHandle] <= 0f)
+                    _timeTillPedBrainTick[pedNetId] -= deltaTime;
+                    if (_timeTillPedBrainTick[pedNetId] <= 0f)
                     {
                         tickedAnyBrains = true;
-                        pedsToTick.Add(pedHandle);
+                        pedsToTick.Add(pedNetId);
                     }
                 }
 
@@ -1748,16 +1849,29 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                     List<PedNode> pickablePedTargets = new List<PedNode>(_pedLocations);
 
-                    foreach(int ped in pedsToTick)
+                    foreach(int pedNetId in pedsToTick)
                     {
+                        NetworkRequestControlOfNetworkId(pedNetId);
+                        int ped = NetToPed(pedNetId);
+                        NetworkRequestControlOfEntity(ped);
                         //Debug.WriteLine($"{nameof(RunPedBrain)}: updating ped {ped}'s task");
+
+
+                        if (HasCollisionLoadedAroundEntity(ped))
+                        {
+                            Debug.WriteLine($"We've got collision for ped {ped} (net: {pedNetId}), tasking...");
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"Cannot task ped {ped} (net: {pedNetId}) as collision not loaded");
+                        }
 
                         // Stop the previous task
                         ClearPedTasks(ped);
                         PedNode? initState = null;
-                        if(_optionalPedInitStates.ContainsKey(ped))
+                        if(_optionalPedInitStates.ContainsKey(pedNetId))
                         {
-                            initState = _optionalPedInitStates[ped];
+                            initState = _optionalPedInitStates[pedNetId];
                         }
 
                         // Check if the ped's current state requires them to be warped
@@ -1788,12 +1902,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                         TaskGoToCoordAnyMeans(ped, newTarget.Position.X + offsetX, newTarget.Position.Y + offsetY, newTarget.Position.Z, 1f, 0, false, 0, 0.01f);
 
-                        _optionalPedTargetStates[ped] = newTarget;
+                        _optionalPedTargetStates[pedNetId] = newTarget;
 
-                        _optionalPedInitStates.Remove(ped);
+                        _optionalPedInitStates.Remove(pedNetId);
 
                         // Randomise the time between ped brain ticks so people don't just start walking all at the same time
-                        _timeTillPedBrainTick[ped] = PedBrainTickIntervalSeconds + (float)s_RNG.Next(0, 45);
+                        _timeTillPedBrainTick[pedNetId] = PedBrainTickIntervalSeconds + (float)s_RNG.Next(0, 45);
                     }
                 }
                 else
@@ -1802,11 +1916,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     {
                         _timeSinceLastPedTargetCheck = 0f;
 
-                        foreach (int ped in _optionalPedHandles)
+                        foreach (int pedNetId in _optionalPedNetIds)
                         {
-                            if (_optionalPedTargetStates.ContainsKey(ped))
+                            if (_optionalPedTargetStates.ContainsKey(pedNetId))
                             {
-                                PedNode target = _optionalPedTargetStates[ped];
+                                PedNode target = _optionalPedTargetStates[pedNetId];
+                                int ped = NetToPed(pedNetId);
                                 Vector3 currentPos = GetEntityCoords(ped, false);
                                 float distanceToTarget = currentPos.DistanceToSquared(new Vector3(target.Position.X, target.Position.Y, target.Position.Z));
                                 bool hasAchieved = distanceToTarget < (WarpDistance * WarpDistance);
@@ -1819,8 +1934,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                                         //Debug.WriteLine($"{nameof(RunPedBrain)}: ped {ped} has achieved their target at X = {target.Position.X}, Y = {target.Position.Y}, Z = {target.Position.Z}");
 
                                         ClearPedTasks(ped);
-                                        _optionalPedTargetStates.Remove(ped);
-                                        _optionalPedInitStates[ped] = target;
+                                        _optionalPedTargetStates.Remove(pedNetId);
+                                        _optionalPedInitStates[pedNetId] = target;
 
                                         PedNode.AnimInfo anim = target.Anim;
                                         // Need gendered anims
@@ -1868,7 +1983,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                                         if (!string.IsNullOrEmpty(anim.Clip))
                                         {
                                             //Debug.WriteLine($"Requesting anim {anim.Dict} {anim.Clip} for ped {ped}");
-                                            _animRequests[ped] = anim;
+                                            _animRequests[pedNetId] = anim;
                                         }
                                     }
 
@@ -1903,6 +2018,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         internal override void Cleanup(bool force = false)
         {
+            RemoveNavmeshRequiredRegions();
+
             Debug.WriteLine($"{nameof(ShipJobController)}.{nameof(Cleanup)}({nameof(force)}: {force})");
             Debug.WriteLine($"Cleaning up {_pedHandles.Length} peds");
             for(int i = 0; i < _pedHandles.Length; i++)

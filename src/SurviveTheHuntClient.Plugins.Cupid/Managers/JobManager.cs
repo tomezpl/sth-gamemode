@@ -14,7 +14,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
 
         private JobControllerBase[] _jobs = new JobControllerBase[0];
 
-        internal static JobControllerBase[] GetDefaultJobs(TriggerEventProxyDelegate triggerEventProxy, JobControllerBase.JobStateRpcUpdateDelegate syncState)
+        internal static JobControllerBase[] GetDefaultJobs(TriggerEventProxyDelegate triggerEventProxy, TriggerServerEventProxyDelegate triggerServerEventProxy, JobControllerBase.JobStateRpcUpdateDelegate syncState)
         {
             return new JobControllerBase[]
             {
@@ -25,7 +25,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
                 new CarRobberyJobController("car_elysian", syncState, Constants.Location.CarRobberyJob.Elysian, Constants.Location.CarRobberyJob.ElysianHeading),
                 new CarRobberyJobController("car_delperro", syncState, Constants.Location.CarRobberyJob.DelPerro, Constants.Location.CarRobberyJob.DelPerroHeading),
 
-                new ShipJobController(triggerEventProxy, syncState),
+                new ShipJobController(triggerEventProxy, triggerServerEventProxy, syncState),
             };
         }
 
@@ -46,7 +46,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
         {
             if(jobs == null)
             {
-                jobs = GetDefaultJobs(triggerEvent, SyncState);
+                jobs = GetDefaultJobs(triggerEvent, triggerServerEventProxy, SyncState);
             }
 
             _jobs = new JobControllerBase[jobs.Length];

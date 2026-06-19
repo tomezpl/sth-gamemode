@@ -508,6 +508,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+
+        private const float AmbientLeavingAreaCheckIntervalSeconds = 1f;
+        private float _timeSinceAmbientLeavingAreaCheck = 0f;
         /// <summary>
         /// Called every tick regardless of whether the job is active or not
         /// </summary>
@@ -518,6 +521,46 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 DrawMarker((int)MarkerType.VerticalCylinder, _startTriggerPos.X, _startTriggerPos.Y, _startTriggerPos.Z, 0, 0, 0, 0, 0, 0, 1f, 1f, 1f, 255, 255, 255, 128, false, false, 2, false, null, null, false);
             }
+
+            /*_timeSinceAmbientLeavingAreaCheck += deltaTime;
+            if(!_state.IsOver && _state.JobStage == Stage.LeaveArea && _timeSinceAmbientLeavingAreaCheck >= AmbientLeavingAreaCheckIntervalSeconds)
+            {
+                _timeSinceAmbientLeavingAreaCheck = 0f;
+                if(CheckAreAllHuntedOutsideArea())
+                {
+
+                }
+            }*/
+        }
+
+        private bool CheckAreAllHuntedOutsideArea(int? playerPed, ref bool isLocalPlayerInArea)
+        {
+            bool allOutsideArea = true;
+
+            foreach (HuntPlayer player in GameState.Hunt.HuntedPlayers)
+            {
+                int ped = GetPlayerPed(player.PlayerHandle);
+
+                Vector3 coords = GetEntityCoords(ped, false);
+                if ((allOutsideArea || ped == playerPed) && coords.DistanceToSquared(_startTriggerPos) <= ActiveRadiusSq)
+                {
+                    allOutsideArea = false;
+
+                    // While we're scanning through players in the area, might as well store whether the local player is in the area
+                    if (ped == playerPed)
+                    {
+                        isLocalPlayerInArea = true;
+                    }
+                }
+            }
+
+            return allOutsideArea;
+        }
+
+        private bool CheckAreAllHuntedOutsideArea()
+        {
+            bool dummy = false;
+            return CheckAreAllHuntedOutsideArea(null, ref dummy);
         }
 
         /// <summary>
@@ -535,25 +578,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             // Deactivate the job if all hunted players are outside the area
             if(PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
             {
-                bool allOutsideArea = true;
-
-                foreach(HuntPlayer player in GameState.Hunt.HuntedPlayers)
-                {
-                    int ped = GetPlayerPed(player.PlayerHandle);
-
-                    Vector3 coords = GetEntityCoords(ped, false);
-                    if(coords.DistanceToSquared(_startTriggerPos) <= ActiveRadiusSq)
-                    {
-                        allOutsideArea = false;
-
-                        // While we're scanning through players in the area, might as well store whether the local player is in the area
-                        if(ped == playerPed)
-                        {
-                            isPlayerInArea = true;
-                            break;
-                        }
-                    }
-                }
+                bool allOutsideArea = CheckAreAllHuntedOutsideArea(PlayerPedId(), ref isPlayerInArea);
 
                 needsToDeactivate = needsToDeactivate || allOutsideArea;
             }

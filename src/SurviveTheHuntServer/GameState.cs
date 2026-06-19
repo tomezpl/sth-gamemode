@@ -1,6 +1,10 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntServer.Helpers;
 using SurviveTheHuntShared.Core;
+using SurviveTheHuntShared.Interfaces;
+using SurviveTheHuntShared.Plugins;
 using System;
+using System.Collections.Generic;
 using SharedConstants = SurviveTheHuntShared.Constants;
 
 namespace SurviveTheHuntServer
@@ -67,6 +71,29 @@ namespace SurviveTheHuntServer
             /// </summary>
             public TimeSpan EndTimeOffset { get; set; } = TimeSpan.Zero;
 
+            private Dictionary<PluginIndex, IPluginState> _pluginStates = new Dictionary<PluginIndex, IPluginState>();
+            internal Dictionary<PluginIndex, IPluginState> PluginStates => _pluginStates;
+
+            internal IPluginState GetOrCreatePluginState(PluginIndex plugin)
+            {
+                if(_pluginStates.TryGetValue(plugin, out IPluginState state))
+                {
+                    return state;
+                }
+                
+                try
+                {
+                    IPluginState newState = PluginStateFactory.Create(plugin);
+                    _pluginStates.Add(plugin, newState);
+                    return newState;
+                } catch(Exception ex)
+                {
+                    Debug.WriteLine($"{nameof(GameState)}.{nameof(HuntDetails)}.{nameof(GetOrCreatePluginState)}({nameof(plugin)}: {plugin}): state does not exist and could not be created: {ex}");
+                }
+
+                return null;
+            }
+
             /// <summary>
             /// Starts the hunt for a given player.
             /// </summary>
@@ -80,6 +107,8 @@ namespace SurviveTheHuntServer
                 LastPingTime = DateTime.UtcNow + TimeSpan.FromSeconds(prepPhaseSeconds) - SharedConstants.HuntedPingInterval;
                 PrepPhaseEndTime = StartTime + TimeSpan.FromSeconds(prepPhaseSeconds);
                 EndTimeOffset = TimeSpan.FromSeconds(prepPhaseSeconds);
+
+                _pluginStates = new Dictionary<PluginIndex, IPluginState>();
             }
 
             /// <summary>

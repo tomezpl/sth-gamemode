@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using CitizenFX.Core;
 using SurviveTheHuntServer.Helpers;
+using SurviveTheHuntServer.Models;
 using SurviveTheHuntShared;
 using SurviveTheHuntShared.Core;
 using static CitizenFX.Core.Native.API;
@@ -312,6 +313,11 @@ namespace SurviveTheHuntServer
                     })
                 }
             };
+        }
+
+        private PluginEventContext CreatePluginContext(Player sender)
+        {
+            return new PluginEventContext(sender, TriggerEvent, TriggerClientEvent, TriggerClientEvent);
         }
     }
 }

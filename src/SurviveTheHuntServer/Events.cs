@@ -8,7 +8,8 @@ using static CitizenFX.Core.Native.API;
 using SurviveTheHuntShared;
 using SurviveTheHuntShared.Core;
 using SurviveTheHuntServer.Helpers;
-using System.Dynamic;
+using SurviveTheHuntShared.Interfaces;
+using SurviveTheHuntShared.Plugins;
 
 namespace SurviveTheHuntServer
 {
@@ -178,6 +179,34 @@ namespace SurviveTheHuntServer
         {
             Debug.WriteLine($"Notifying all players about entity {netId}{(string.IsNullOrWhiteSpace(name) ? "." : $" (named \"{name}\").")}");
             TriggerClientEvent(Events.Client.RecvNetEntity, netId, name);
+        }
+
+        [EventHandler(Events.Server.SetServerState)]
+        public void SetServerState([FromSource] Player player, byte pluginIndex, byte serverStatePropId, object serverStatePropValue)
+        {
+            Debug.WriteLine($"{nameof(SetServerState)} received with {nameof(pluginIndex)} {pluginIndex}: prop {serverStatePropId} = {serverStatePropValue}");
+            
+            if(GameState?.Hunt?.PluginStates != null)
+            {
+                bool isPluginIndex = Enum.IsDefined(typeof(PluginIndex), (int)pluginIndex);
+                if(isPluginIndex)
+                {
+                    IPluginState state = GameState.Hunt.GetOrCreatePluginState((PluginIndex)pluginIndex);
+                    if(state != null)
+                    {
+                        Debug.WriteLine($"Setting state prop {serverStatePropId} to {serverStatePropValue} on state impl {state}");
+                        state.Set(serverStatePropId, serverStatePropValue, CreatePluginContext(player));
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"Plugin {(PluginIndex)pluginIndex} does not implement a state");
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"{nameof(pluginIndex)} {pluginIndex} is not a valid {nameof(PluginIndex)}");
+                }
+            }
         }
     }
 }
