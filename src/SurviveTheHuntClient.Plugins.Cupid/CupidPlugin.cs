@@ -190,6 +190,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 _plugin.JobManager.OnStateReceived(jobId, statePropId, statePropValue);
             }
+
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.CupidReceiveSpecialEvent)]
+            public void ReceiveSpecialEvent(object specialEventType, List<object> args)
+            {
+                //Debug.WriteLine($"Received special event {specialEventType} with {args.Count} args");
+                _plugin.JobManager.OnSpecialEvent((Constants.SpecialEvent)Convert.ToInt32(specialEventType), args.ToArray());
+            }
         }
 
         public override void OnResourceStopping()

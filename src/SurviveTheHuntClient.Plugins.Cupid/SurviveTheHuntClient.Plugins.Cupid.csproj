@@ -54,6 +54,7 @@
     <Compile Include="Constants\Settings.cs" />
     <Compile Include="Constants\CruisegoerSpawns.cs" />
     <Compile Include="Constants\ShipDeviceLocations.cs" />
+    <Compile Include="Constants\SpecialEvent.cs" />
     <Compile Include="Controllers\BleedoutController.cs" />
     <Compile Include="Controllers\HeatController.cs" />
     <Compile Include="Controllers\Jobs\CarRobberyJobController.cs" />

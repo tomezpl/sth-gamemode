@@ -93,6 +93,7 @@ namespace SurviveTheHuntShared
             public const string CupidReceiveStartRevive = "sth:cupid:recvStartRevive";
             public const string CupidReceiveSyncState = "sth:cupid:recvJobSyncState";
             public const string CupidReceiveHeatScore = "sth:cupid:recvHeatScore";
+            public const string CupidReceiveSpecialEvent = "sth:cupid:recvSpecialEvent";
         }
 
         /// <summary>
@@ -131,6 +132,7 @@ namespace SurviveTheHuntShared
             public const string CupidNotifyReviveStart = "sth:cupid:notifyReviveStart";
             public const string CupidJobSyncState = "sth:cupid:jobSyncState";
             public const string CupidNotifyNewHeatScore = "sth:cupid:notifyHeatScore";
+            public const string CupidBroadcastSpecialEvent = "sth:cupid:broadcastSpecialEvent";
             public const string SetServerState = "sth:setServerState";
         }
     }

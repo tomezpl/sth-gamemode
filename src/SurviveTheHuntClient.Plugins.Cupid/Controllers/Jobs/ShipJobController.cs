@@ -329,7 +329,78 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private int[] _optionalPedHandles = new int[0];
         private int[] _optionalPedNetIds = new int[0];
 
-        private Dictionary<int, PedNode.AnimInfo> _animRequests = new Dictionary<int, PedNode.AnimInfo>();
+        private class AnimRequestHelper : ITickable
+        {
+            private readonly TriggerServerEventProxyDelegate TriggerServerEvent;
+            private readonly ShipJobController Controller;
+            internal AnimRequestHelper(TriggerServerEventProxyDelegate triggerServerEvent, ShipJobController controller)
+            {
+                TriggerServerEvent = triggerServerEvent;
+                Controller = controller;
+                Controller.RemoteAnimRequestReceived += OnAnimRequestReceived;
+            }
+
+            private void OnAnimRequestReceived(object pedNetId, object serialisedAnimInfo)
+            {
+                PedNode.AnimInfo animInfo = new PedNode.AnimInfo((string)serialisedAnimInfo);
+                _current[Convert.ToInt32(pedNetId)] = animInfo;
+                Debug.WriteLine($"ped {pedNetId} will play anim clip {animInfo.Clip} from dict {animInfo.Dict}");
+            }
+
+            /// <summary>
+            /// Animations that need to be loaded for a specific net ID
+            /// </summary>
+            private Dictionary<int, PedNode.AnimInfo> _current = new Dictionary<int, PedNode.AnimInfo>();
+
+            public void Tick(float deltaTime)
+            {
+                int localPlayerPed = PlayerPedId();
+                // Only play one anim every tick
+                int? animRequestToRemove = null;
+                foreach (KeyValuePair<int, PedNode.AnimInfo> pedAnim in _current)
+                {
+                    if (HasAnimDictLoaded(pedAnim.Value.Dict))
+                    {
+                        bool entityExists = NetworkDoesNetworkIdExist(pedAnim.Key) && NetworkDoesEntityExistWithNetworkId(pedAnim.Key);
+                        if(entityExists)
+                        {
+                            int pedHandle = NetToPed(pedAnim.Key);
+                            // Only play if it's a spawned ped and we're ped god, OR if it's us
+                            if ((!IsPedAPlayer(pedHandle) && Controller.IsLocalPlayerPedGod) || localPlayerPed == pedHandle)
+                            {
+                                TaskPlayAnim(pedHandle, pedAnim.Value.Dict, pedAnim.Value.Clip, 1f, 1f, -1, 1 | 4, 0f, false, false, false);
+                            }
+                            else
+                            {
+
+                            }
+                        }
+                        animRequestToRemove = pedAnim.Key;
+                        break;
+                    }
+                    else
+                    {
+                        RequestAnimDict(pedAnim.Value.Dict);
+                    }
+                }
+
+                if (animRequestToRemove != null)
+                {
+                    _current.Remove(animRequestToRemove.Value);
+                }
+            }
+
+            internal void Request(int pedNetId, PedNode.AnimInfo anim)
+            {
+                TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidBroadcastSpecialEvent, Constants.SpecialEvent.RemoteAnimRequest, pedNetId, anim.ToString());
+            }
+
+            ~AnimRequestHelper()
+            {
+                Controller.RemoteAnimRequestReceived -= OnAnimRequestReceived;
+            }
+        }
+        private readonly AnimRequestHelper AnimRequests;
 
         internal const float PedBrainTickIntervalSeconds = 20f;
 
@@ -505,11 +576,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private readonly TriggerEventProxyDelegate TriggerEvent;
         private readonly PhoneTextHelper PhoneTextHelper;
 
+        private delegate void RemoteAnimRequestReceivedDelegate(object pedNetId, object serialisedAnimInfo);
+        private event RemoteAnimRequestReceivedDelegate RemoteAnimRequestReceived;
+
         internal ShipJobController(TriggerEventProxyDelegate triggerEventProxy, TriggerServerEventProxyDelegate triggerServerEventProxy, JobStateRpcUpdateDelegate updateJobStateRpc) : base("ship", updateJobStateRpc)
         {
             TriggerEvent = triggerEventProxy;
             TriggerServerEvent = triggerServerEventProxy;
             PhoneTextHelper = new PhoneTextHelper(triggerEventProxy);
+
+            AnimRequests = new AnimRequestHelper(triggerServerEventProxy, this);
 
             _state.PedNetIdsChanged += OnPedNetIdsChanged;
             _state.PyreTwigSpawnLocationIndexChanged += OnPyreTwigSpawnLocationChanged;
@@ -597,12 +673,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     case JobState.SpookedType.SpookedByGunfire:
 
                         _gunfireEvent = AddShockingEventAtPosition(90, Origin.X, Origin.Y, Origin.Z, (float)(GameState.Hunt.ActualEndTime - DateTime.UtcNow).TotalSeconds);
-                        foreach (int? ped in _pedHandles)
+                        foreach (int pedNetId in _pedNetIds)
                         {
-                            if (ped.HasValue)
+                            if (NetworkDoesNetworkIdExist(pedNetId) && NetworkDoesEntityExistWithNetworkId(pedNetId))
                             {
-                                SetBlockingOfNonTemporaryEvents(ped.Value, false);
-                                TaskShockingEventReact(ped.Value, _gunfireEvent.Value);
+                                int ped = NetToPed(pedNetId);
+                                SetBlockingOfNonTemporaryEvents(ped, false);
+                                TaskShockingEventReact(ped, _gunfireEvent.Value);
                             }
                         }
                         break;
@@ -668,6 +745,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     }
                 }
             }
+        }
+
+        internal void OnRemoteAnimRequest(object pedNetId, object serialisedAnimInfo)
+        {
+            //Debug.WriteLine($"{nameof(OnRemoteAnimRequest)}({nameof(pedNetId)}: {pedNetId}, {nameof(serialisedAnimInfo)}: {serialisedAnimInfo})");
+            RemoteAnimRequestReceived.Invoke(pedNetId, serialisedAnimInfo);
         }
 
         private void BeepPyreTwig()
@@ -957,7 +1040,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     }
                     else if(animToUse.HasValue)
                     {
-                        _animRequests[PlayerPedId()] = animToUse.Value;
+                        AnimRequests.Request(PedToNet(PlayerPedId()), animToUse.Value);
                         Debug.WriteLine($"Blending in with anim {animToUse.Value.Dict} {animToUse.Value.Clip}");
                     }
                     else
@@ -1071,7 +1154,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 {
                     uint playerModel = (uint)GetEntityModel(playerPed);
                     bool isMale = IsPedAMaleModel(playerModel);
-                    _animRequests[playerPed] = Constants.AnimNames.Shower.Get(isMale);
+                    AnimRequests.Request(PedToNet(playerPed), Constants.AnimNames.Shower.Get(isMale));
                     SetEntityCoords(playerPed, _nearestLocalPlayerShower.Value.Position.X, _nearestLocalPlayerShower.Value.Position.Y, _nearestLocalPlayerShower.Value.Position.Z, false, false, false, false);
                     SetEntityHeading(playerPed, _nearestLocalPlayerShower.Value.Position.Heading);
                     _isLocalPlayerInShower = true;
@@ -1104,6 +1187,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         if(i != (uint)PedComponents.Hair && i != (uint)PedComponents.Head)
                         {
                             int drawable = -1;
+                            // FIXME: need to use something else here, doesn't seem to sync properly
                             if(i == (uint)PedComponents.Torso || i == (uint)PedComponents.Legs)
                             {
                                 drawable = i == (uint)PedComponents.Legs && isMale ? 14 : 15;
@@ -1211,6 +1295,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 {
                     foreach(int netId in _optionalPedNetIds)
                     {
+                        // FIXME: one of these sometimes spams warnings that the net ID doesn't exist
                         SetNetworkIdAlwaysExistsForPlayer(netId, PlayerId(), true);
                         NetworkDisableProximityMigration(netId);
                         SetNetworkIdCanMigrate(netId, false);
@@ -1236,7 +1321,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         {
                             Debug.WriteLine($"We have control of net {netId} but we're not ped god. Relinquishing...");
                             SetNetworkIdCanMigrate(netId, true);
-                            NetworkSetNetworkIdDynamic(netId, false);
+                            NetworkSetNetworkIdDynamic(netId, true);
                         }
                     }
                 }
@@ -1292,26 +1377,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 _pedSpawner.Tick(deltaTime);
             }
 
-            // Only play one anim every tick
-            int? animRequestToRemove = null;
-            foreach(KeyValuePair<int, PedNode.AnimInfo> pedAnim in _animRequests)
-            {
-                if(HasAnimDictLoaded(pedAnim.Value.Dict))
-                {
-                    TaskPlayAnim(pedAnim.Key, pedAnim.Value.Dict, pedAnim.Value.Clip, 1f, 1f, -1, 1 | 4, 0f, false, false, false);
-                    animRequestToRemove = pedAnim.Key;
-                    break;
-                }
-                else
-                {
-                    RequestAnimDict(pedAnim.Value.Dict);
-                }
-            }
-
-            if(animRequestToRemove != null)
-            {
-                _animRequests.Remove(animRequestToRemove.Value);
-            }
+            AnimRequests.Tick(deltaTime);
 
             if(_state.PyreTwigSpawnLocationIndex == -1 && IsLocalPlayerPedGod)
             {
@@ -1383,7 +1449,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 netIds.Add(netId);
                 Debug.WriteLine($"Sending net ID {netId} for ped handle {pedHandle}");
                 _timeTillPedBrainTick[netId] = s_RNG.Next(0, 45);
-                NetworkSetNetworkIdDynamic(netId, false);
+                NetworkSetNetworkIdDynamic(netId, true);
             }
 
             _state.PedNetIds = netIds;
@@ -1859,7 +1925,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                         if (HasCollisionLoadedAroundEntity(ped))
                         {
-                            Debug.WriteLine($"We've got collision for ped {ped} (net: {pedNetId}), tasking...");
+                            //Debug.WriteLine($"We've got collision for ped {ped} (net: {pedNetId}), tasking...");
                         }
                         else
                         {
@@ -1983,7 +2049,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                                         if (!string.IsNullOrEmpty(anim.Clip))
                                         {
                                             //Debug.WriteLine($"Requesting anim {anim.Dict} {anim.Clip} for ped {ped}");
-                                            _animRequests[pedNetId] = anim;
+                                            AnimRequests.Request(pedNetId, anim);
                                         }
                                     }
 

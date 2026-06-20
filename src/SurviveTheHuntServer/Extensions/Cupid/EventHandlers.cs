@@ -71,5 +71,17 @@ namespace SurviveTheHuntServer
             // Then this broadcasts the new score to all clients. Meaning we'll send the data to all clients twice. oh well
             TriggerLatentClientEvent(SurviveTheHuntShared.Events.Client.CupidReceiveHeatScore, sizeof(ushort), heatScore);
         }
+
+        [EventHandler(SurviveTheHuntShared.Events.Server.CupidBroadcastSpecialEvent)]
+        public void CupidBroadcastSpecialEvent(int specialEventType, params object[] args)
+        {
+            //Debug.WriteLine($"{nameof(CupidBroadcastSpecialEvent)}: received {SurviveTheHuntShared.Events.Server.CupidBroadcastSpecialEvent} for special event {specialEventType} with {args.Length} arguments:");
+            int counter = 0;
+            foreach(object arg in args)
+            {
+                //Debug.WriteLine($"{nameof(arg)}[{++counter}]: {arg}");
+            }
+            TriggerLatentClientEvent(SurviveTheHuntShared.Events.Client.CupidReceiveSpecialEvent, 128, specialEventType, args);
+        }
     }
 }

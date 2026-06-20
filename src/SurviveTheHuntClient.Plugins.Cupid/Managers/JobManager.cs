@@ -113,6 +113,24 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
             }
         }
 
+        internal void OnSpecialEvent(Constants.SpecialEvent eventType, object[] args)
+        {
+            switch(eventType)
+            {
+                case Constants.SpecialEvent.RemoteAnimRequest:
+                    foreach(JobControllerBase job in _jobs)
+                    {
+                        ShipJobController shipJob = job as ShipJobController;
+                        if(shipJob != null)
+                        {
+                            shipJob.OnRemoteAnimRequest(args[0], args[1]);
+                            break;
+                        }
+                    }
+                    break;
+            }
+        }
+
         internal LabelledItem[] CurrentJobUI => _currentJob != null && _currentJob.IsActive ? _currentJob.CurrentUI : LabelledItem.Empty;
 
         internal void Cleanup(bool force = false)
