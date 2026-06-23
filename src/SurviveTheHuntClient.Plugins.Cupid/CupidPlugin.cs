@@ -58,6 +58,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             internal ushort HuntedHeatScore = 0;
 
             internal Constants.Clothing.OutfitPair? LastWornOutfit = null;
+
+            internal bool HasRunPostIntro = false;
         }
 
         private int ScriptCamera;
@@ -102,6 +104,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 { DirectedScene.JasonDrivingHood, new SceneHandlers.Intro.IntroJ2Handler(context.TriggerEventProxy, context.TriggerServerEventProxy) }
             };
 
+            if (Constants.Settings.IsDebug)
+            {
+                RegisterCommand("heat", new Action<int, List<object>, string>((player, args, raw) =>
+                {
+                    ushort heat = Convert.ToUInt16(args[0]);
+                    HeatController.CurrentHeat = Math.Max(HeatController.CurrentHeat, heat);
+                }), false);
+            }
+
             DirectedScene[] allScenes = GetAllHandledScenes(SceneHandlers);
             _lastScene = allScenes[allScenes.Length - 1];
 
@@ -110,6 +121,19 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             BleedoutController.FinishedDying += OnFinishedDying;
 
             UIMenuHelper = new UIMenuHelper(context.TriggerEventProxy);
+        }
+
+        private void OnHeatTierChanged(HeatThresholds prev, HeatThresholds current)
+        {
+            Debug.WriteLine($"Heat tier changed to {current}");
+            switch(current)
+            {
+                case HeatThresholds.Heat1:
+                    State.CurrentScene = DirectedScene.Default2;
+                    break;
+            }
+
+            SetPlayerClothing(State.LocalRole, State.CurrentScene, true);
         }
 
         private void OnFinishedDying(int playerPed)
@@ -244,6 +268,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
 
             HeatController = new HeatController();
+            HeatController.HeatTierChanged += OnHeatTierChanged;
 
             UIMenuHelper.SetItemBlocked(SurviveTheHuntShared.Models.UI.BlockedItem.Appearance);
         }
@@ -257,7 +282,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         private void SetScene(DirectedScene scene)
         {
             State.CurrentScene = scene;
-            SceneHandlers[scene].StartScene(in GameState, ScriptCamera);
+            if (SceneHandlers.TryGetValue(scene, out ISceneHandler sceneHandler))
+            {
+                sceneHandler.StartScene(in GameState, ScriptCamera);
+            }
         }
 
         private bool AdvanceScene()
@@ -362,37 +390,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             int pedId = PlayerPedId();
 
-            bool isFemale = !IsPedMale(pedId) || (PedHash)GetEntityModel(pedId) == PedHash.FreemodeFemale01;
-
-            PedOutfit outfit = currentSceneOutfit.GetOutfit(isFemale);
-
-            if (outfit == null)
-            {
-                Debug.WriteLine($"{(isFemale ? "Female" : "Male")} {playerType} player model does not have an outfit for scene {scene}");
-            }
-
-            ClearAllPedProps(pedId);
-            List<int> ignoredComps = new List<int> { (int)PedComponents.Hair, (int)PedComponents.Face };
-            for (int i = 0; i <= 11; i++)
-            {
-                if (!ignoredComps.Contains(i))
-                {
-                    SetPedComponentVariation(pedId, i, 0, 0, 0);
-                }
-            }
-
-            foreach (KeyValuePair<PedComponents, PedVariation> comp in outfit.ComponentsToApply)
-            {
-                if (!ignoredComps.Contains((int)comp.Key))
-                {
-                    SetPedComponentVariation(pedId, (int)comp.Key, comp.Value.Drawable, comp.Value.Texture, 0);
-                }
-            }
-
-            foreach (KeyValuePair<PedProps, PedVariation> comp in outfit.PropsToApply)
-            {
-                SetPedPropIndex(pedId, (int)comp.Key, comp.Value.Drawable, comp.Value.Texture, true);
-            }
+            SetPlayerClothing(pedId, currentSceneOutfit, playerType, scene);
 
             State.RequestClothesChange(false);
 
@@ -404,8 +402,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             int pedId = PlayerPedId();
 
             Debug.WriteLine($"Changing clothing to {playerType}");
-
-            bool failed = false;
 
             State.RequestClothesChange(false);
 
@@ -431,6 +427,71 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
 
             SetPlayerClothing(currentSceneOutfit, playerType, scene);
+        }
+
+        /// <summary>
+        /// Instantly applies a matching outfit for <paramref name="playerType"/> in <paramref name="scene"/> to ped <paramref name="pedHandle"/>.
+        /// </summary>
+        /// <param name="pedHandle"></param>
+        /// <param name="playerType"></param>
+        /// <param name="scene"></param>
+        internal static void SetPlayerClothing(int pedHandle, PlayerType playerType, DirectedScene scene)
+        {
+            if (!Constants.Clothing.Outfits.TryGetValue(playerType, out Constants.Clothing.SceneOutfits sceneOutfits))
+            {
+                Debug.WriteLine($"Player type {playerType} doesn't have any scene outfits");
+                return;
+            }
+
+            if (!sceneOutfits.TryGetValue(scene, out Constants.Clothing.OutfitPair currentSceneOutfit))
+            {
+                Debug.WriteLine($"Player type {playerType} does not have an outfit for scene {scene}");
+                return;
+            }
+
+            SetPlayerClothing(pedHandle, currentSceneOutfit, playerType, scene);
+        }
+
+        /// <summary>
+        /// Instantly applies <paramref name="currentSceneOutfit"/> to ped <paramref name="pedHandle"/>.
+        /// </summary>
+        /// <param name="pedHandle"></param>
+        /// <param name="currentSceneOutfit"></param>
+        /// <param name="playerType"></param>
+        /// <param name="scene"></param>
+        internal static void SetPlayerClothing(int pedHandle, Constants.Clothing.OutfitPair currentSceneOutfit, PlayerType? playerType = null, DirectedScene? scene = null)
+        {
+            bool isFemale = !IsPedMale(pedHandle) || (PedHash)GetEntityModel(pedHandle) == PedHash.FreemodeFemale01;
+
+            PedOutfit outfit = currentSceneOutfit.GetOutfit(isFemale);
+
+            if (outfit == null)
+            {
+                Debug.WriteLine($"{(isFemale ? "Female" : "Male")} {playerType} player model does not have an outfit for scene {scene}");
+            }
+
+            ClearAllPedProps(pedHandle);
+            List<int> ignoredComps = new List<int> { (int)PedComponents.Hair, (int)PedComponents.Face };
+            for (int i = 0; i <= 11; i++)
+            {
+                if (!ignoredComps.Contains(i))
+                {
+                    SetPedComponentVariation(pedHandle, i, 0, 0, 0);
+                }
+            }
+
+            foreach (KeyValuePair<PedComponents, PedVariation> comp in outfit.ComponentsToApply)
+            {
+                if (!ignoredComps.Contains((int)comp.Key))
+                {
+                    SetPedComponentVariation(pedHandle, (int)comp.Key, comp.Value.Drawable, comp.Value.Texture, 0);
+                }
+            }
+
+            foreach (KeyValuePair<PedProps, PedVariation> comp in outfit.PropsToApply)
+            {
+                SetPedPropIndex(pedHandle, (int)comp.Key, comp.Value.Drawable, comp.Value.Texture, true);
+            }
         }
 
         public override void OnClockReceived(int hours, int minutes, int seconds)
@@ -506,6 +567,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
         }
 
+        private void OnIntroEnded()
+        {
+            Debug.WriteLine($"{nameof(CupidPlugin)}: intro ended, setting scene from {State.CurrentScene} to {DirectedScene.Default1}");
+            State.CurrentScene = DirectedScene.Default1;
+            SetPlayerClothing(State.LocalRole, State.CurrentScene, true);
+        }
+
         public void Tick(float deltaTime)
         {
             if(GameState?.Mode != "cupid")
@@ -524,32 +592,47 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
 
             bool isIntroOver = false;
+            bool sceneAllowsHud = true;
 
             if(GameState != null)
             {
-                if (!SceneHandlers[State.CurrentScene].IsOver)
+                if (SceneHandlers.TryGetValue(State.CurrentScene, out ISceneHandler scene))
                 {
-                    // Run the tick for the current scene.
-                    SceneHandlers[State.CurrentScene].Tick(deltaTime);
+                    if (!scene.IsOver)
+                    {
+                        // Run the tick for the current scene.
+                        scene.Tick(deltaTime);
+                        sceneAllowsHud = scene.CanShowHud;
+                    }
+                    else
+                    {
+                        // When the scene is over, move to the next one.
+                        isIntroOver = !AdvanceScene();
+                        if(SceneHandlers.TryGetValue(State.CurrentScene, out ISceneHandler newScene))
+                        {
+                            sceneAllowsHud = newScene.CanShowHud;
+                        }
+                    }
                 }
                 else
                 {
-                    // When the scene is over, move to the next one.
-                    isIntroOver = !AdvanceScene();
+                    isIntroOver = true;
                 }
             }
 
             // Hide the HUD for the majority of the intro until control is given back to the player
-            _canShowHud = GameState?.Hunt?.IsStarted != true || isIntroOver || SceneHandlers[State.CurrentScene].CanShowHud;
+            _canShowHud = GameState?.Hunt?.IsStarted != true || isIntroOver || sceneAllowsHud;
 
             if (GameState?.Hunt?.IsStarted == true && State.CurrentScene != _lastScene && !isIntroOver)
             {
                 DisableAllControlActions(0);
             }
 
-            if(isIntroOver && JobManager != null)
+            if(isIntroOver && JobManager != null && !State.HasRunPostIntro)
             {
+                State.HasRunPostIntro = true;
                 JobManager.Start();
+                OnIntroEnded();
             }
 
             BleedoutController.Tick(deltaTime);

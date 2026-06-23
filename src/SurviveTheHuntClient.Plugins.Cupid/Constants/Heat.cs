@@ -17,6 +17,7 @@
 
         internal enum HeatThresholds
         {
+            Start = 0,
             Heat1 = 100,
             Heat2 = 200,
 

@@ -504,6 +504,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 if(state.StageJustSwitched)
                 {
                     state.Handler.AVControllerHelper.StartStage("Prison");
+
+                    CupidPlugin.SetPlayerClothing(state.LuPed, PlayerType.HuntedL, Cupid.Constants.DirectedScene.JasonDrivingHood);
                 }
             }
 
@@ -590,6 +592,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     SetCamRot(state.Camera, Constants.BedCamRotX, Constants.BedCamRotY, Constants.BedCamRotZ, 2);
                     SetCamFov(state.Camera, Constants.BedCamFov);
 
+                    CupidPlugin.SetPlayerClothing(state.JasPed, PlayerType.HuntedJ, Cupid.Constants.DirectedScene.Bed);
+                    CupidPlugin.SetPlayerClothing(state.LuPed, PlayerType.HuntedL, Cupid.Constants.DirectedScene.Bed);
+
                     SetEntityCoords(state.JasPed, Constants.BedX, Constants.BedY, Constants.BedZ, false, false, false, false);
                     SetEntityNoCollisionEntity(state.JasPed, state.LuPed, false);
                     SetEntityNoCollisionEntity(state.LuPed, state.JasPed, false);
@@ -616,6 +621,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
                     SetFocusEntity(playerPed);
 
+                    CupidPlugin.SetPlayerClothing(playerPed, playerType, Cupid.Constants.DirectedScene.Default1);
 
                     if (playerType != PlayerType.Cop)
                     {

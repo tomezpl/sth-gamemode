@@ -1,6 +1,7 @@
 ﻿using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models.UI;
 using System;
+using CitizenFX.Core;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 {
@@ -23,24 +24,68 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                 if(old != value)
                 {
                     _currentHeat = value;
-                    OnHeatChanged(old, value);
+                    HeatChanged.Invoke(old, value);
                 }
             }
         }
 
-        private void OnHeatChanged(ushort old, ushort current)
+        internal static Constants.HeatThresholds GetTier(ushort score)
         {
-            float progress = Math.Max(0f, Math.Min(1f, (float)current / (float)Constants.HeatThresholds.Target));
+            if(score >= (ushort)Constants.HeatThresholds.Target)
+            {
+                return Constants.HeatThresholds.Target;
+            }
 
-            _heatBar.Value = SurviveTheHuntShared.Utils.EncodingHelper.Utf16FromNormalFloat(progress);
-            _heatBar.Colour = GetHeatColour(progress);
+            if(score >= (ushort)Constants.HeatThresholds.Heat2)
+            {
+                return Constants.HeatThresholds.Heat2;
+            }
+
+            if (score >= (ushort)Constants.HeatThresholds.Heat1)
+            {
+                return Constants.HeatThresholds.Heat1;
+            }
+
+            return Constants.HeatThresholds.Start;
         }
 
         private bool _hasStarted = false;
 
+        internal delegate void HeatTierChangedEvent(Constants.HeatThresholds prev, Constants.HeatThresholds current);
+        internal event HeatTierChangedEvent HeatTierChanged;
+
+        internal delegate void HeatChangedEvent(ushort old, ushort current);
+        internal event HeatChangedEvent HeatChanged;
+
+        internal Constants.HeatThresholds Tier => GetTier(_currentHeat);
+
+        private void OnHeatChanged(ushort old, ushort current)
+        {
+            Constants.HeatThresholds prevTier = GetTier(old);
+            Constants.HeatThresholds currentTier = GetTier(current);
+
+            float progress = Math.Max(0f, Math.Min(1f, (float)current / (float)Constants.HeatThresholds.Target));
+
+            _heatBar.Value = SurviveTheHuntShared.Utils.EncodingHelper.Utf16FromNormalFloat(progress);
+            _heatBar.Colour = GetHeatColour(progress);
+
+            if (prevTier != currentTier)
+            {
+                Debug.WriteLine($"{HeatTierChanged} {HeatChanged} {prevTier} {currentTier}");
+                HeatTierChanged.Invoke(prevTier, currentTier);
+            }
+        }
+
+        private static void HeatTierChangedNoop(Constants.HeatThresholds a, Constants.HeatThresholds b)
+        {
+
+        }
+
         internal HeatController()
         {
             _uiItems[0] = _heatBar;
+            HeatChanged += OnHeatChanged;
+            HeatTierChanged += HeatTierChangedNoop;
         }
 
         private static uint GetHeatColour(float progress)

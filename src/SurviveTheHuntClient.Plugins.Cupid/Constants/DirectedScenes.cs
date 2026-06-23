@@ -11,7 +11,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         internal enum DirectedScene
         {
             IntroJason,
-            JasonDrivingHood
+            JasonDrivingHood,
+            Bed,
+            Default1,
+            Default2,
+            Party,
         }
     }
 }
