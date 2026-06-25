@@ -395,7 +395,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidBroadcastSpecialEvent, Constants.SpecialEvent.RemoteAnimRequest, pedNetId, anim.ToString());
             }
 
-            ~AnimRequestHelper()
+            internal void Cleanup()
             {
                 Controller.RemoteAnimRequestReceived -= OnAnimRequestReceived;
             }
@@ -2129,6 +2129,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 RemoveShockingEvent(_gunfireEvent.Value);
                 _gunfireEvent = null;
             }
+
+            AnimRequests.Cleanup();
         }
     }
 }

@@ -56,6 +56,7 @@
     <Compile Include="Constants\ShipDeviceLocations.cs" />
     <Compile Include="Constants\SpecialEvent.cs" />
     <Compile Include="Controllers\BleedoutController.cs" />
+    <Compile Include="Controllers\CopSpawnController.cs" />
     <Compile Include="Controllers\HeatController.cs" />
     <Compile Include="Controllers\Jobs\CarRobberyJobController.cs" />
     <Compile Include="Controllers\Jobs\JobControllerBase.cs" />
@@ -68,6 +69,7 @@
     <Compile Include="Helpers\UIMenuHelper.cs" />
     <Compile Include="Interfaces\ISceneHandler.cs" />
     <Compile Include="Managers\JobManager.cs" />
+    <Compile Include="Models\CopSpawnInfo.cs" />
     <Compile Include="Models\CruisegoerSpawnBase.cs" />
     <Compile Include="Models\CruisegoerSpawnCluster.cs" />
     <Compile Include="Models\CruisegoerSpawnLine.cs" />

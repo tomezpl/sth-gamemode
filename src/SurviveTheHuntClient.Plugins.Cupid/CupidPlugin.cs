@@ -32,6 +32,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         private JobManager JobManager = null;
         private HeatController HeatController = new HeatController();
 
+        private CopSpawnController CopSpawnController;
+
         private readonly UIMenuHelper UIMenuHelper;
 
         internal class PluginState
@@ -121,6 +123,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             BleedoutController.FinishedDying += OnFinishedDying;
 
             UIMenuHelper = new UIMenuHelper(context.TriggerEventProxy);
+
+            CopSpawnController = new CopSpawnController(new AVControllerHelper(TriggerEventProxy));
         }
 
         private void OnHeatTierChanged(HeatThresholds prev, HeatThresholds current)
@@ -232,7 +236,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 handler.Cleanup();
             }
 
-            JobManager.Cleanup(true);
+            JobManager?.Cleanup(true);
+
+            CopSpawnController?.Cleanup();
         }
 
         public override void OnHuntStarted(IGameState gameState, IPlayerState playerState)
@@ -271,6 +277,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             HeatController.HeatTierChanged += OnHeatTierChanged;
 
             UIMenuHelper.SetItemBlocked(SurviveTheHuntShared.Models.UI.BlockedItem.Appearance);
+
+            CopSpawnController = new CopSpawnController(new AVControllerHelper(TriggerEventProxy));
         }
 
         private void OnJobCompleted(ushort heatValue)
@@ -335,8 +343,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 State.RequestClothesChange();
             }
 
-            BleedoutController.Enabled = GameState?.Mode == "cupid";
+            bool isCupid = GameState?.Mode == "cupid";
+            BleedoutController.Enabled = isCupid;
             BleedoutController.OnRespawn();
+
+            if (isCupid && GameState.Hunt?.IsStarted == true && _state.LocalRole == PlayerType.Cop)
+            {
+                CopSpawnController.Enabled = true;
+            }
         }
 
         internal bool TryGetPlayer(PlayerType playerType, out HuntPlayer? huntPlayer, int index = 0)
@@ -572,6 +586,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             Debug.WriteLine($"{nameof(CupidPlugin)}: intro ended, setting scene from {State.CurrentScene} to {DirectedScene.Default1}");
             State.CurrentScene = DirectedScene.Default1;
             SetPlayerClothing(State.LocalRole, State.CurrentScene, true);
+
+            if(State.LocalRole == PlayerType.Cop)
+            {
+                CopSpawnController.Enabled = true;
+            }
         }
 
         public void Tick(float deltaTime)
@@ -638,6 +657,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             BleedoutController.Tick(deltaTime);
             JobManager?.Tick(deltaTime);
             HeatController?.Tick(deltaTime);
+            CopSpawnController.Tick(deltaTime);
         }
     }
 }
