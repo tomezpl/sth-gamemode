@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using CitizenFX.Core;
 using SurviveTheHuntServer.Helpers;
 using SurviveTheHuntServer.Models;
@@ -13,6 +14,8 @@ namespace SurviveTheHuntServer.Extensions.Cupid
         /// Server ID of the first player to have reached the ship's active radius.
         /// </summary>
         private int? _firstPlayerOnShip = null;
+
+        internal readonly Dictionary<string, bool[]> CopStationBusyCarSlots = new Dictionary<string, bool[]>();
 
         internal static CupidPluginState Create()
         {

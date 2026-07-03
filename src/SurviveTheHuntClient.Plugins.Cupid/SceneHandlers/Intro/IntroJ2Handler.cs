@@ -79,6 +79,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
             internal readonly PlayerType LocalPlayerType;
 
+            internal bool ForceDisableCamera = false;
+
             public State()
             {
                 Car = 0;
@@ -186,6 +188,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
             RequestModel((uint)_carHash);
         }
+
+        internal delegate void StageReachedEvent();
+        internal event StageReachedEvent OutroReached;
 
         private static class Constants
         {
@@ -470,6 +475,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     
                     SetEntityCoords(state.JasPed, Constants.JasPrison1X, Constants.JasPrison1Y, z, false, false, false, false);
                     SetEntityHeading(state.JasPed, Constants.JasPrison1Heading);
+
+                    CupidPlugin.SetPlayerClothing(state.JasPed, PlayerType.HuntedJ, Cupid.Constants.DirectedScene.JasonDrivingHood);
                 }
 
                 const float camStartPosX = 1901.8f, camStartPosY = 2645.8f, camStartPosZ = 45.08f;
@@ -638,6 +645,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                             //TaskVehicleDriveWander(playerPed, state.Car2, 15f, 0);
                         }
                     }
+
+                    state.ForceDisableCamera = state.LocalPlayerType == PlayerType.Cop;
+                    state.Handler.OutroReached?.Invoke();
                 }
 
                 if(state.LocalPlayerType != PlayerType.Cop)
@@ -853,7 +863,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 }
             }
 
-            RenderScriptCams(CurrentStage < s_LastStage, CurrentStage == s_LastStage, 1500, true, false);
+            RenderScriptCams(!CurrentState.ForceDisableCamera && CurrentStage < s_LastStage, CurrentStage == s_LastStage, 1500, true, false);
         }
 
         public sealed override bool CanShowHud => CurrentStage >= s_LastStage && CurrentState.CurrentStageTime > 4.5;

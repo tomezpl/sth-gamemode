@@ -7,7 +7,7 @@
         /// </summary>
         internal static class Settings
         {
-            internal const bool IsDebug = false;
+            internal const bool IsDebug = true;
 
             /// <summary>
             /// If true, <see cref="Controllers.BleedoutController"/> should allow players to revive themselves.

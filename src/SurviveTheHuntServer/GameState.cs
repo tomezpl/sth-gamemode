@@ -108,7 +108,7 @@ namespace SurviveTheHuntServer
                 PrepPhaseEndTime = StartTime + TimeSpan.FromSeconds(prepPhaseSeconds);
                 EndTimeOffset = TimeSpan.FromSeconds(prepPhaseSeconds);
 
-                _pluginStates = new Dictionary<PluginIndex, IPluginState>();
+                _pluginStates.Clear();// = new Dictionary<PluginIndex, IPluginState>();
             }
 
             /// <summary>

@@ -1,5 +1,6 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Models;
+using System.Security.Policy;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
 {
@@ -19,7 +20,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
         internal enum EventName
         {
             StartStage,
-            EndStage
+            EndStage,
+            ShowStation,
+            SetStationCoords,
         }
 
         internal static string BuildEventName(EventName eventName)
@@ -31,7 +34,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
         internal void StartStage(string stage)
         {
             string eventName = BuildEventName(EventName.StartStage);
-            Debug.WriteLine($"Sending event {eventName} with {stage}");
+            //Debug.WriteLine($"Sending event {eventName} with {stage}");
 
             TriggerEventProxy(eventName, stage, Constants.Settings.ApplySpoilerGuard);
 
@@ -46,6 +49,32 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
             }
 
             _isInStage = false;
+        }
+
+        private string _currentStation = null;
+        internal string CurrentStation
+        {
+            get => _currentStation;
+            set
+            {
+                if (_currentStation != value)
+                {
+                    _currentStation = value;
+                    TriggerEventProxy(BuildEventName(EventName.ShowStation), _currentStation);
+                }
+            }
+        }
+
+        private float _prevStationX = 0.5f, _prevStationY = 0.5f;
+
+        internal void SetStationPos(float x, float y)
+        {
+            if(_currentStation != null && (x != _prevStationX || y != _prevStationY))
+            {
+                _prevStationX = x;
+                _prevStationY = y;
+                TriggerEventProxy(BuildEventName(EventName.SetStationCoords), x * 100f, y * 100f);
+            }
         }
     }
 }

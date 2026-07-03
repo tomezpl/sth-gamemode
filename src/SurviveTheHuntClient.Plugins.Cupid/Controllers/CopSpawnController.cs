@@ -1,13 +1,16 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Interfaces;
+using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Plugins.Cupid.Helpers;
+using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
 using SurviveTheHuntClient.Plugins.Cupid.Models;
 using System;
+using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 {
-    internal class CopSpawnController : ITickable
+    internal class CopSpawnController : ITickable, INetEntityListener
     {
         private bool _enabled = false;
 
@@ -39,9 +42,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             }
         }
 
-        internal CopSpawnController(AVControllerHelper avControllerHelper)
-        {
+        private readonly AVControllerHelper AVControllerHelper;
+        private readonly TriggerServerEventProxyDelegate TriggerServerEvent;
 
+        internal CopSpawnController(AVControllerHelper avControllerHelper, TriggerServerEventProxyDelegate triggerServerEvent)
+        {
+            AVControllerHelper = avControllerHelper;
+            TriggerServerEvent = triggerServerEvent;
         }
 
         private void EnsureCamera()
@@ -106,6 +113,39 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             {
                 _timeTillTransitionEnd = float.MinValue;
                 SelectNearestSpawn();
+
+                // Remove the current car if we have one, as we're likely respawning
+                if(_currentCar.HasValue)
+                {
+                    if(NetworkDoesNetworkIdExist(_currentCar.Value.NetId))
+                    {
+                        if(DoesBlipExist(_currentCar.Value.Blip))
+                        {
+                            int blip = _currentCar.Value.Blip;
+                            RemoveBlip(ref blip);
+                        }
+
+                        if(NetworkDoesEntityExistWithNetworkId(_currentCar.Value.NetId))
+                        {
+                            int entity = NetToVeh(_currentCar.Value.NetId);
+                            if(DoesEntityExist(entity))
+                            {
+                                SetEntityAsMissionEntity(entity, false, false);
+                                SetEntityAsNoLongerNeeded(ref entity);
+                            }
+                        }
+                    }
+
+                    string station = _currentCar.Value.StationName;
+                    byte slot = _currentCar.Value.Slot;
+                    bool needsToFreeOnServer = !_currentCar.Value.HasLeftSpawn;
+                    _currentCar = null;
+
+                    if (needsToFreeOnServer)
+                    {
+                        TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidCopCarLeftSpawn, station, slot);
+                    }
+                }
             }
 
             if(_camera.HasValue)
@@ -114,6 +154,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                 SetCamCoord(_camera.Value, _selectedSpawn.SpawnInfo.Camera.Pos.X, _selectedSpawn.SpawnInfo.Camera.Pos.Y, _selectedSpawn.SpawnInfo.Camera.Pos.Z);
                 SetCamRot(_camera.Value, _selectedSpawn.SpawnInfo.Camera.Rot.X, _selectedSpawn.SpawnInfo.Camera.Rot.Y, _selectedSpawn.SpawnInfo.Camera.Rot.Z, 2);
                 RenderScriptCams(current, !current, current ? 0 : CamTransitionTime, !current, false);
+            }
+
+            if(!current)
+            {
+                AVControllerHelper.CurrentStation = null;
             }
         }
 
@@ -134,6 +179,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                 OnSelectedSpawnChanged(old, nearest);
             }
         }
+
+        private int? _playerCopCar = null;
 
         private void CycleSelectedSpawn(bool up)
         {
@@ -179,6 +226,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 
                 // TODO: get screen space pos of spawn and send to av controller
             }
+
+            if(_camera.HasValue)
+            {
+                AVControllerHelper.CurrentStation = current.Name;
+            }
         }
 
         internal const float CamTransitionTimeSeconds = (1f * CamTransitionTime) / 1000f;
@@ -198,10 +250,55 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 
         private bool _isSpawning = false;
 
+        internal const float CarSpawnSafeRadius = 10f;
+        private const float CarSpawnSafeRadiusSq = CarSpawnSafeRadius * CarSpawnSafeRadius;
+
+        private struct SpawnedCar
+        {
+            internal int Blip;
+            internal int NetId;
+            internal uint Model;
+            // TODO: when this is set, the slot needs to be freed on the server
+            internal bool HasLeftSpawn;
+            internal Vector3 InitialPos;
+            internal byte Slot;
+            internal string StationName;
+        }
+
+        private struct CarSpawnRequest
+        {
+            internal Vector3 Pos;
+            internal float Heading;
+            internal uint Model;
+            internal byte Slot;
+            internal string StationName;
+        }
+
+        private SpawnedCar? _currentCar = null;
+        private CarSpawnRequest? _currentCarSpawnRequest = null;
         private void ConfirmSelectedSpawn()
         {
             _isSpawning = true;
             _timeTillTransitionEnd = CamTransitionTimeSeconds;
+
+            // Ask server for a car spawn
+            Debug.WriteLine($"Asking for a car spawn at {_selectedSpawn.SpawnInfo.Name} in one of the {_selectedSpawn.SpawnInfo.CarLayout.Count} slots");
+            TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidCopSpawning, _selectedSpawn.SpawnInfo.Name, _selectedSpawn.SpawnInfo.CarLayout.Count);
+            /*
+            Vector3 carPos = default;
+            float carHeading = default;
+            byte? carSlotIndex = GetSpawnPosForCar(_selectedSpawn.SpawnInfo, out carPos, out carHeading);
+
+            if(carSlotIndex.HasValue)
+            {
+                TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidBroadcastSpecialEvent, Constants.SpecialEvent.BlockCopCarSpawn, _selectedSpawn.SpawnInfo.Name, carSlotIndex);
+            }*/
+        }
+
+        private static Vector3 GetSpawnPosForCar(CopSpawnInfo.CarPosInfo carLayout, byte slot, out float heading)
+        {
+            heading = carLayout.Heading;
+            return new Vector3(carLayout.Origin.X + carLayout.Step.X * slot, carLayout.Origin.Y + carLayout.Step.Y * slot, carLayout.Origin.Z);
         }
 
         private float _timeTillTransitionEnd = float.MinValue;
@@ -235,6 +332,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                 }
             }
 
+            if(_enabled)
+            {
+                float screenX = 0.5f, screenY = 0.5f;
+                World3dToScreen2d(_selectedSpawn.SpawnInfo.Spawn.Pos.X, _selectedSpawn.SpawnInfo.Spawn.Pos.Y, _selectedSpawn.SpawnInfo.Spawn.Pos.Z, ref screenX, ref screenY);
+                AVControllerHelper.SetStationPos(screenX, screenY);
+            }
+
             if(_isSpawning)
             {
                 Vector3 pos = _selectedSpawn.SpawnInfo.Spawn.Pos;
@@ -245,6 +349,66 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                 SetEntityHeading(playerPed, _selectedSpawn.SpawnInfo.Spawn.Heading);
                 SetEntityHealth(playerPed, GetEntityMaxHealth(playerPed));
                 FreezeEntityPosition(playerPed, true);
+            }
+
+            if(_currentCarSpawnRequest.HasValue)
+            {
+                uint model = _currentCarSpawnRequest.Value.Model;
+                RequestModel(model);
+                if(HasModelLoaded(model))
+                {
+                    Vector3 pos = _currentCarSpawnRequest.Value.Pos;
+                    float heading = _currentCarSpawnRequest.Value.Heading;
+                    byte slot = _currentCarSpawnRequest.Value.Slot;
+                    string station = _currentCarSpawnRequest.Value.StationName;
+                    _currentCarSpawnRequest = null;
+                    int handle = CreateVehicle(model, pos.X, pos.Y, pos.Z, heading, true, true);
+                    _currentCar = new SpawnedCar
+                    {
+                        Model = model,
+                        NetId = VehToNet(handle),
+                        Blip = AddBlipForEntity(handle),
+                        HasLeftSpawn = false,
+                        InitialPos = pos,
+                        Slot = slot,
+                        StationName = station,
+                    };
+                    SetEntityAsMissionEntity(handle, true, true);
+                    SetNetworkIdCanMigrate(_currentCar.Value.NetId, false);
+                    SetNetworkIdAlwaysExistsForPlayer(_currentCar.Value.NetId, PlayerId(), true);
+                }
+            }
+
+            if(_currentCar.HasValue && !_currentCar.Value.HasLeftSpawn)
+            {
+                if(NetworkDoesNetworkIdExist(_currentCar.Value.NetId) && NetworkDoesEntityExistWithNetworkId(_currentCar.Value.NetId))
+                {
+                    int car = NetToVeh(_currentCar.Value.NetId);
+
+                    bool isDestroyed = !IsVehicleDriveable(car, false);
+                    if(isDestroyed)
+                    {
+                        int entity = car;
+                        SetEntityAsNoLongerNeeded(ref entity);
+                        SetEntityAsMissionEntity(car, false, false);
+                        int blip = _currentCar.Value.Blip;
+                        RemoveBlip(ref blip);
+                        Debug.WriteLine("Cop car destroyed, setting as not needed");
+                    }
+
+                    if(isDestroyed || GetEntityCoords(car, false).DistanceToSquared(_currentCar.Value.InitialPos) > CarSpawnSafeRadiusSq)
+                    {
+                        SpawnedCar updatedCar = _currentCar.Value;
+                        updatedCar.HasLeftSpawn = true;
+                        _currentCar = updatedCar;
+                        TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidCopCarLeftSpawn, updatedCar.StationName, updatedCar.Slot);
+                    }
+
+                    if(isDestroyed)
+                    {
+                        _currentCar = null;
+                    }
+                }
             }
 
             RenderScriptCams(_enabled, true, CamTransitionTime, true, false);
@@ -259,6 +423,38 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                 DestroyCam(_camera1.Value, true);
                 DestroyCam(_camera2.Value, true);
             }
+
+            if(_currentCar.HasValue)
+            {
+                if(NetworkDoesNetworkIdExist(_currentCar.Value.NetId) && NetworkDoesEntityExistWithNetworkId(_currentCar.Value.NetId))
+                {
+                    int handle = NetToVeh(_currentCar.Value.NetId);
+                    NetworkRequestControlOfEntity(handle);
+                    SetEntityAsMissionEntity(handle, true, true);
+                    DeleteEntity(ref handle);
+                    _currentCar = null;
+                }
+            }
+        }
+
+        private readonly static Random s_RNG = new Random();
+
+        internal void OnCopCarSpawnGranted(CopSpawnInfo station, byte slot)
+        {
+            Vector3 pos = GetSpawnPosForCar(station.CarLayout, slot, out float heading);
+            _currentCarSpawnRequest = new CarSpawnRequest
+            {
+                Pos = pos,
+                Heading = heading,
+                Model = station.CopCarModels[s_RNG.Next(0, station.CopCarModels.Length)],
+                StationName = station.Name,
+                Slot = slot,
+            };
+        }
+
+        public void OnNetEntityReceived(string name, int netId)
+        {
+
         }
     }
 }

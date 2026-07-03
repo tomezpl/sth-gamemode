@@ -67,7 +67,9 @@
     <Compile Include="Helpers\PhoneTextHelper.cs" />
     <Compile Include="Helpers\ShipPedSpawnHelper.cs" />
     <Compile Include="Helpers\UIMenuHelper.cs" />
+    <Compile Include="Interfaces\INetEntityListener.cs" />
     <Compile Include="Interfaces\ISceneHandler.cs" />
+    <Compile Include="Interfaces\ISpecialEventListener.cs" />
     <Compile Include="Managers\JobManager.cs" />
     <Compile Include="Models\CopSpawnInfo.cs" />
     <Compile Include="Models\CruisegoerSpawnBase.cs" />

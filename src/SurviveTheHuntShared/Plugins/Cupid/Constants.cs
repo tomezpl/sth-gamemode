@@ -12,6 +12,7 @@
         public enum ServerStateKey
         {
             ShipOwner,
+            CopStationCarSlotBusyMap,
         }
     }
 }

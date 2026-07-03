@@ -36,6 +36,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         private readonly UIMenuHelper UIMenuHelper;
 
+        private class SubscriberState
+        {
+            internal readonly List<INetEntityListener> NetEntity = new List<INetEntityListener>();
+            internal readonly List<ISpecialEventListener> SpecialEvent = new List<ISpecialEventListener>();
+        }
+
+        private SubscriberState Subscribers = new SubscriberState();
+
         internal class PluginState
         {
             public PlayerType LocalRole = PlayerType.Cop;
@@ -100,11 +108,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         /// <param name="context"></param>
         public CupidPlugin(PluginContext context) : base("cupid", context)
         {
+            SceneHandlers.Intro.IntroJ2Handler jas2Handler = new SceneHandlers.Intro.IntroJ2Handler(context.TriggerEventProxy, context.TriggerServerEventProxy);
+
             SceneHandlers = new Dictionary<DirectedScene, ISceneHandler>()
             {
                 { DirectedScene.IntroJason, new SceneHandlers.Intro.IntroJ1Handler(context.TriggerEventProxy, context.TriggerServerEventProxy) },
-                { DirectedScene.JasonDrivingHood, new SceneHandlers.Intro.IntroJ2Handler(context.TriggerEventProxy, context.TriggerServerEventProxy) }
+                { DirectedScene.JasonDrivingHood, jas2Handler }
             };
+
+            jas2Handler.OutroReached += OnIntroOutroReached;
 
             if (Constants.Settings.IsDebug)
             {
@@ -124,7 +136,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             UIMenuHelper = new UIMenuHelper(context.TriggerEventProxy);
 
-            CopSpawnController = new CopSpawnController(new AVControllerHelper(TriggerEventProxy));
+            CopSpawnController = new CopSpawnController(new AVControllerHelper(TriggerEventProxy), TriggerServerEventProxy);
+            Subscribers.NetEntity.Add(CopSpawnController);
+        }
+
+        private void OnIntroOutroReached()
+        {
+            SetPlayerClothing(State.LocalRole, DirectedScene.Default1, true);
+
+            if (_state.LocalRole == PlayerType.Cop)
+            {
+                CopSpawnController.Enabled = true;
+            }
         }
 
         private void OnHeatTierChanged(HeatThresholds prev, HeatThresholds current)
@@ -222,8 +245,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             [SthNamedEvent(SurviveTheHuntShared.Events.Client.CupidReceiveSpecialEvent)]
             public void ReceiveSpecialEvent(object specialEventType, List<object> args)
             {
+                object[] argsArray = args.ToArray();
+                Constants.SpecialEvent specialEvent = (Constants.SpecialEvent)Convert.ToInt32(specialEventType);
                 //Debug.WriteLine($"Received special event {specialEventType} with {args.Count} args");
-                _plugin.JobManager.OnSpecialEvent((Constants.SpecialEvent)Convert.ToInt32(specialEventType), args.ToArray());
+                _plugin.JobManager.OnSpecialEvent(specialEvent, argsArray);
+
+                foreach(ISpecialEventListener listener in _plugin.Subscribers.SpecialEvent)
+                {
+                    listener.OnSpecialEvent(specialEvent, argsArray);
+                }
+            }
+
+            [SthNamedEvent(SurviveTheHuntShared.Events.Client.CupidReceiveCopCarSpawnPermission)]
+            public void ReceiveCopCarSpawnGrant(string stationName, object slot)
+            {
+                _plugin.CopSpawnController.OnCopCarSpawnGranted(Constants.Location.CopSpawn.FromName(stationName), Convert.ToByte(slot));
             }
         }
 
@@ -278,7 +314,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             UIMenuHelper.SetItemBlocked(SurviveTheHuntShared.Models.UI.BlockedItem.Appearance);
 
-            CopSpawnController = new CopSpawnController(new AVControllerHelper(TriggerEventProxy));
+            if(CopSpawnController != null)
+            {
+                Subscribers.NetEntity.Remove(CopSpawnController);
+            }
+            CopSpawnController = new CopSpawnController(new AVControllerHelper(TriggerEventProxy), TriggerServerEventProxy);
+            Subscribers.NetEntity.Add(CopSpawnController);
         }
 
         private void OnJobCompleted(ushort heatValue)
@@ -527,6 +568,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
 
             JobManager.OnNetEntityReceived(netId, name);
+
+            foreach(INetEntityListener subscriber in Subscribers.NetEntity)
+            {
+                subscriber.OnNetEntityReceived(name, netId);
+            }
         }
 
         private bool _canShowHud = true;
@@ -585,12 +631,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         {
             Debug.WriteLine($"{nameof(CupidPlugin)}: intro ended, setting scene from {State.CurrentScene} to {DirectedScene.Default1}");
             State.CurrentScene = DirectedScene.Default1;
-            SetPlayerClothing(State.LocalRole, State.CurrentScene, true);
-
-            if(State.LocalRole == PlayerType.Cop)
-            {
-                CopSpawnController.Enabled = true;
-            }
         }
 
         public void Tick(float deltaTime)

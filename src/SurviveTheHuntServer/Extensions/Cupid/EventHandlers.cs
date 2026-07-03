@@ -1,4 +1,6 @@
 ﻿using CitizenFX.Core;
+using SurviveTheHuntServer.Extensions.Cupid;
+using System;
 using System.Collections.Generic;
 
 namespace SurviveTheHuntServer
@@ -82,6 +84,72 @@ namespace SurviveTheHuntServer
                 //Debug.WriteLine($"{nameof(arg)}[{++counter}]: {arg}");
             }
             TriggerLatentClientEvent(SurviveTheHuntShared.Events.Client.CupidReceiveSpecialEvent, 128, specialEventType, args);
+        }
+
+        [EventHandler(SurviveTheHuntShared.Events.Server.CupidCopSpawning)]
+        public void CupidCopSpawning([FromSource] Player player, string stationName, object stationSlots)
+        {
+            byte stationSlotCount = Convert.ToByte(stationSlots);
+
+            Debug.WriteLine($"Player {player.Name} is asking to spawn at station {stationName} which has {stationSlots} slots");
+
+            CupidPluginState state = (CupidPluginState)GameState.Hunt.GetOrCreatePluginState(SurviveTheHuntShared.Plugins.PluginIndex.Cupid);
+
+            bool[] busyMap;
+            if(!state.CopStationBusyCarSlots.TryGetValue(stationName, out busyMap))
+            {
+                busyMap = new bool[stationSlotCount];
+                state.CopStationBusyCarSlots.Add(stationName, busyMap);
+            }
+
+            if(stationSlotCount > busyMap.Length)
+            {
+                bool[] newBusyMap = new bool[stationSlotCount];
+                busyMap.CopyTo(newBusyMap, 0);
+                busyMap = newBusyMap;
+                state.CopStationBusyCarSlots[stationName] = busyMap;
+            }
+
+            for(int i = 0; i < busyMap.Length; i++)
+            {
+                if (!busyMap[i])
+                {
+                    // Mark as busy
+                    busyMap[i] = true;
+                    Debug.WriteLine($"Marking slot {i} of {stationName} as busy to let {player.Name} spawn a car");
+                    TriggerClientEvent(player, SurviveTheHuntShared.Events.Client.CupidReceiveCopCarSpawnPermission, stationName, i);
+                    break;
+                }
+            }
+        }
+
+        [EventHandler(SurviveTheHuntShared.Events.Server.CupidCopCarLeftSpawn)]
+        public void CupidCopCarLeftSpawn(string stationName, object slot)
+        {
+            byte slotIndex = Convert.ToByte(slot);
+
+            CupidPluginState state = (CupidPluginState)GameState.Hunt.GetOrCreatePluginState(SurviveTheHuntShared.Plugins.PluginIndex.Cupid);
+
+            Debug.WriteLine($"Car left slot {slotIndex} at station {stationName}");
+
+            bool[] busyMap;
+            if (!state.CopStationBusyCarSlots.TryGetValue(stationName, out busyMap))
+            {
+                busyMap = new bool[slotIndex + 1];
+                // this shouldn't ever happen but whatever
+                state.CopStationBusyCarSlots.Add(stationName, busyMap);
+            }
+
+            if (slotIndex >= busyMap.Length)
+            {
+                bool[] newBusyMap = new bool[slotIndex + 1];
+                busyMap.CopyTo(newBusyMap, 0);
+                busyMap = newBusyMap;
+                state.CopStationBusyCarSlots[stationName] = busyMap;
+            }
+
+            // Mark as free
+            busyMap[slotIndex] = false;
         }
     }
 }

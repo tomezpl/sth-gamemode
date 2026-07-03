@@ -4,7 +4,9 @@
     {
         internal enum SpecialEvent
         {
-            RemoteAnimRequest
+            RemoteAnimRequest,
+            BlockCopCarSpawn,
+            FreeCopCarSpawn,
         }
     }
 }
