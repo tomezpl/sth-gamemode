@@ -53,5 +53,6 @@ namespace SurviveTheHuntClient.Interfaces
 
         uint HunterRelationshipGroup { get; set; }
         uint HuntedRelationshipGroup { get; set; }
+        bool IsDrivebyAllowedForPassengers { get; }
     }
 }

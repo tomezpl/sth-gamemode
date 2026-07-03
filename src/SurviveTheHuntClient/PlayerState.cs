@@ -56,6 +56,12 @@ namespace SurviveTheHuntClient
 
         public GameState GameState { get; set; }
 
+        private readonly MainScript.ExecutePluginsDelegate ExecutePlugins;
+        internal PlayerState(MainScript.ExecutePluginsDelegate executePlugins)
+        {
+            ExecutePlugins = executePlugins;
+        }
+
         /// <summary>
         /// Manages the state of the bigmap widget on the HUD.
         /// </summary>
@@ -152,7 +158,18 @@ namespace SurviveTheHuntClient
             {
                 // Weapons aren't allowed in vehicles.
                 // However, the hunted player should be able to driveby if they're a passenger.
-                weaponsAllowed = (!playerPed.IsGettingIntoAVehicle && !playerPed.IsInVehicle()) || (Team == Teams.Team.Hunted && playerPed.SeatIndex >= 0);
+                bool couldPotentiallyDriveby = Team == Teams.Team.Hunted;
+                if(!couldPotentiallyDriveby)
+                {
+                    ExecutePlugins(plugin =>
+                    {
+                        if(!couldPotentiallyDriveby)
+                        {
+                            couldPotentiallyDriveby = plugin.IsDrivebyAllowedForPassengers;
+                        }
+                    });
+                }
+                weaponsAllowed = (!playerPed.IsGettingIntoAVehicle && !playerPed.IsInVehicle()) || (couldPotentiallyDriveby && playerPed.SeatIndex >= 0);
             }
 
             // If the player has a weapon equipped, store the weapon in LastWeaponEquipped so we keep track in case we need to re-equip it.

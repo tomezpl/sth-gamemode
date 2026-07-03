@@ -699,5 +699,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             HeatController?.Tick(deltaTime);
             CopSpawnController.Tick(deltaTime);
         }
+
+        // Allow a driver and a gunner
+        public sealed override bool IsDrivebyAllowedForPassengers => true;
     }
 }

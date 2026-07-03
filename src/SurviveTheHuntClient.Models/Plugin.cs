@@ -300,5 +300,7 @@ namespace SurviveTheHuntClient.Models
                 _huntedRelationshipGroup = value;
             }
         }
+
+        public virtual bool IsDrivebyAllowedForPassengers => false;
     }
 }

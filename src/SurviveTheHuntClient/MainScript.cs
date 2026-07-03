@@ -22,7 +22,7 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Local player state maintained by the client script.
         /// </summary>
-        protected PlayerState PlayerState = new PlayerState();
+        protected PlayerState PlayerState;
 
         /// <summary>
         /// Game state synced from the server.
@@ -126,8 +126,11 @@ namespace SurviveTheHuntClient
             }
         }
 
+        internal delegate void ExecutePluginsDelegate(Action<IPlugin> pluginAction, bool runAll = false);
+
         public MainScript()
         {
+            PlayerState = new PlayerState(ExecutePlugins);
             PlayerState.GameState = GameState;
 
             EventHandlers["onClientGameTypeStart"] += new Action<string>(OnClientGameTypeStart);
