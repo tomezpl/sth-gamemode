@@ -38,7 +38,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 (
                     "davis",
                     camera: new CopSpawnInfo.CameraInfo(pos: new Vector3(488.38f, -1664.34f, 435.65f), rot: new Vector3(-75.04f, -3.873f, 46.93f)),
-                    spawn: new CopSpawnInfo.SpawnPosInfo(pos: new Vector3(376.9f, -1613.02f, -29.506f), heading: -119.54f),
+                    spawn: new CopSpawnInfo.SpawnPosInfo(pos: new Vector3(376.9f, -1613.02f, 29.506f), heading: -119.54f),
                     carLayout: new CopSpawnInfo.CarPosInfo(origin: DavisCarOrigin, step: new Vector2(407.9486f, -1654.812f) - (Vector2)DavisCarOrigin, end: new Vector3(396.1904f, -1644.51f, 29.29192f), heading: 317f),
                     copCarModels: new uint[]
                     {
