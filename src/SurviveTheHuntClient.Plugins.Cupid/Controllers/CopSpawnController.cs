@@ -48,6 +48,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
         private const string ServiceVehicleBlipTextKey = "STH_CUPID_COP_CAR_BLIP";
         private const string ServiceVehicleBlipTextContent = "Service Vehicle";
 
+        private const string CarBootChangeClothesHintKey = "STH_CUPID_COP_CHANGE_CLOTHES_HELP";
+        private const string CarBootChangeClothesHintContent = "Press ~INPUT_CONTEXT~ to change between uniform and undercover gear.";
+
         private static readonly bool s_InitDone = Init();
 
         private static bool Init()
@@ -55,6 +58,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             if(!s_InitDone)
             {
                 AddTextEntry(ServiceVehicleBlipTextKey, ServiceVehicleBlipTextContent);
+                AddTextEntry(CarBootChangeClothesHintKey, CarBootChangeClothesHintContent);
             }
 
             return true;
@@ -148,6 +152,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                                 SetEntityAsMissionEntity(entity, false, false);
                                 SetEntityAsNoLongerNeeded(ref entity);
                             }
+                        }
+
+                        if(_scannedRemoteCars.ContainsKey(_currentCar.Value.NetId))
+                        {
+                            _scannedRemoteCars.Remove(_currentCar.Value.NetId);
                         }
                     }
 
@@ -319,6 +328,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
         private float _timeTillTransitionEnd = float.MinValue;
         private float _timeSinceVehicleCheck = 0f;
         private const float VehicleCheckIntervalSeconds = 1f;
+        private struct CopCarInteractState
+        {
+            internal bool ChangeClothesFromBootHintActive;
+            internal float TimeTillClothesChanged;
+            internal int CarHandle;
+        }
+        private CopCarInteractState _carInteractState = new CopCarInteractState
+        {
+            ChangeClothesFromBootHintActive = false,
+            TimeTillClothesChanged = float.MinValue,
+            CarHandle = 0
+        };
         public void Tick(float deltaTime)
         {
             EnsureCamera();
@@ -390,13 +411,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                         HasLeftSpawn = false,
                         InitialPos = pos,
                         Slot = slot,
-                        StationName = station,
+                        StationName = station
                     };
                     SetEntityAsMissionEntity(handle, true, true);
                     SetNetworkIdCanMigrate(_currentCar.Value.NetId, false);
                     SetNetworkIdAlwaysExistsForPlayer(_currentCar.Value.NetId, PlayerId(), true);
                     SetBlipSprite(blip, (int)BlipSprite.PersonalVehicleCar);
                     SetBlipNameFromTextFile(blip, ServiceVehicleBlipTextKey);
+                    TriggerServerEvent(SurviveTheHuntShared.Events.Server.NotifyNetEntity, _currentCar.Value.NetId, PoliceCarNetEntityName);
                 }
             }
 
@@ -418,6 +440,53 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                     else
                     {
                         SetBlipDisplay(_currentCar.Value.Blip, 6);
+
+                        if (_carInteractState.TimeTillClothesChanged <= 0f)
+                        {
+                            bool nearBoot = false;
+                            foreach(KeyValuePair<int, RemoteCarInfo> scannedCar in _scannedRemoteCars)
+                            {
+                                if (NetworkDoesNetworkIdExist(scannedCar.Key) && NetworkDoesEntityExistWithNetworkId(scannedCar.Key))
+                                {
+                                    int nearestCarHandle = NetToVeh(scannedCar.Key);
+                                    Vector3 carDir = GetEntityForwardVector(nearestCarHandle);
+                                    const float bootOffset = 1f;
+                                    Vector3 bootPos = GetWorldPositionOfEntityBone(nearestCarHandle, scannedCar.Value.BootBoneIndex) - (bootOffset * carDir);
+
+                                    Vector3 playerPos = GetEntityCoords(playerPed, false);
+                                    const float bootTriggerDistance = 0.85f;
+                                    if (bootPos.DistanceToSquared(playerPos) < (bootTriggerDistance * bootTriggerDistance))
+                                    {
+                                        Vector3 playerToCarDir = playerPos - GetEntityCoords(nearestCarHandle, false);
+                                        playerToCarDir.Normalize();
+                                        // Check the player is actually behind the car
+                                        float dot = Vector3.Dot(playerToCarDir, carDir);
+                                        //Debug.WriteLine($"Found a car boot at {bootPos}, player is at {playerPos}. Dot is {dot}");
+                                        if (dot < -0.55f)
+                                        {
+                                            nearBoot = true;
+                                            _carInteractState.CarHandle = nearestCarHandle;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (nearBoot != _carInteractState.ChangeClothesFromBootHintActive)
+                            {
+                                if (nearBoot)
+                                {
+                                    BeginTextCommandDisplayHelp(CarBootChangeClothesHintKey);
+                                    EndTextCommandDisplayHelp(0, true, true, -1);
+                                }
+                                else
+                                {
+                                    ClearAllHelpMessages();
+                                }
+
+                                _carInteractState.ChangeClothesFromBootHintActive = nearBoot;
+                            }
+                        }
                     }
 
                     if (!_currentCar.Value.HasLeftSpawn)
@@ -447,9 +516,41 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                         }
                     }
                 }
+
+                ScanPendingCars();
             }
 
-            if(_timeSinceVehicleCheck < VehicleCheckIntervalSeconds)
+            if (_carInteractState.ChangeClothesFromBootHintActive)
+            {
+                if (IsControlJustPressed(0, (int)Control.Context))
+                {
+                    ClearAllHelpMessages();
+                    _carInteractState.ChangeClothesFromBootHintActive = false;
+                    _carInteractState.TimeTillClothesChanged = 1.5f;
+                    SetVehicleDoorOpen(_carInteractState.CarHandle, (int)VehicleDoorIndex.Trunk, true, false);
+                }
+            }
+
+            bool hasClothesTimerJustRunOut = false;
+            if(_carInteractState.TimeTillClothesChanged > 0f)
+            {
+                _carInteractState.TimeTillClothesChanged -= deltaTime;
+                if(_carInteractState.TimeTillClothesChanged <= 0f)
+                {
+                    hasClothesTimerJustRunOut = true;
+                }
+                FreezeEntityPosition(playerPed, true);
+            }
+
+            if(hasClothesTimerJustRunOut)
+            {
+                //SwapPlayerClothes();
+                SetVehicleDoorShut(_carInteractState.CarHandle, (int)VehicleDoorIndex.Trunk, false);
+                _carInteractState.CarHandle = 0;
+                FreezeEntityPosition(playerPed, false);
+            }
+
+            if (_timeSinceVehicleCheck < VehicleCheckIntervalSeconds)
             {
                 _timeSinceVehicleCheck += deltaTime;
             }
@@ -478,6 +579,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                     _currentCar = null;
                 }
             }
+
+            ClearAllHelpMessages();
         }
 
         private readonly static Random s_RNG = new Random();
@@ -495,9 +598,68 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             };
         }
 
+        private struct RemoteCarInfo
+        {
+            internal readonly int BootBoneIndex;
+            internal readonly uint Model;
+
+            internal RemoteCarInfo(uint model, int bootBoneIndex)
+            {
+                BootBoneIndex = bootBoneIndex;
+                Model = model;
+            }
+        }
+
+        private List<int> _pendingCarNetIdsToScan = new List<int>();
+        private Dictionary<int, RemoteCarInfo> _scannedRemoteCars = new Dictionary<int, RemoteCarInfo>();
+
+        private bool ScanPendingCars()
+        {
+            bool updated = false;
+
+            if(_pendingCarNetIdsToScan.Count > 0)
+            {
+                List<int> toRemove = new List<int>(_pendingCarNetIdsToScan.Count);
+                
+                foreach(int netId in _pendingCarNetIdsToScan)
+                {
+                    if(NetworkDoesNetworkIdExist(netId) && NetworkDoesEntityExistWithNetworkId(netId))
+                    {
+                        int car = NetToVeh(netId);
+                        toRemove.Add(netId);
+                        _scannedRemoteCars[netId] = new RemoteCarInfo
+                        (
+                            model: (uint)GetEntityModel(car),
+                            bootBoneIndex: GetEntityBoneIndexByName(car, "boot")
+                        );
+                        Debug.WriteLine($"Synced new car with net ID {netId}. Model is {_scannedRemoteCars[netId].Model}, boot bone is {_scannedRemoteCars[netId].BootBoneIndex}");
+                    }
+                }
+
+                foreach(int netIdToRemove in toRemove)
+                {
+                    if(_pendingCarNetIdsToScan.Remove(netIdToRemove))
+                    {
+                        updated = true;
+                    }
+                }
+
+                Debug.WriteLine($"Synced {toRemove.Count} cars");
+            }
+
+            return updated;
+        }
+
+        private const string PoliceCarNetEntityName = "cupid_policecar";
+
         public void OnNetEntityReceived(string name, int netId)
         {
-
+            Debug.WriteLine($"{nameof(CopSpawnController)} received a net entity {name} with net ID {netId}");
+            if (name == PoliceCarNetEntityName)
+            {
+                Debug.WriteLine("This is a police car so we will store it for scanning");
+                _pendingCarNetIdsToScan.Add(netId);
+            }
         }
     }
 }
