@@ -45,6 +45,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
         private readonly AVControllerHelper AVControllerHelper;
         private readonly TriggerServerEventProxyDelegate TriggerServerEvent;
 
+        private const string ServiceVehicleBlipTextKey = "STH_CUPID_COP_CAR_BLIP";
+        private const string ServiceVehicleBlipTextContent = "Service Vehicle";
+
+        private static readonly bool s_InitDone = Init();
+
+        private static bool Init()
+        {
+            if(!s_InitDone)
+            {
+                AddTextEntry(ServiceVehicleBlipTextKey, ServiceVehicleBlipTextContent);
+            }
+
+            return true;
+        }
+
         internal CopSpawnController(AVControllerHelper avControllerHelper, TriggerServerEventProxyDelegate triggerServerEvent)
         {
             AVControllerHelper = avControllerHelper;
@@ -302,6 +317,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
         }
 
         private float _timeTillTransitionEnd = float.MinValue;
+        private float _timeSinceVehicleCheck = 0f;
+        private const float VehicleCheckIntervalSeconds = 1f;
         public void Tick(float deltaTime)
         {
             EnsureCamera();
@@ -310,7 +327,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             {
                 float prevTimeTillTransitionEnd = _timeTillTransitionEnd;
                 _timeTillTransitionEnd -= deltaTime;
-                if (_timeTillTransitionEnd <= 0f)
+                if (_timeTillTransitionEnd <= 0f && HasCollisionLoadedAroundEntity(PlayerPedId()))
                 {
                     OnTransitionEnded();
                 }
@@ -339,11 +356,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                 AVControllerHelper.SetStationPos(screenX, screenY);
             }
 
-            if(_isSpawning)
+            int playerPed = PlayerPedId();
+
+            if (_isSpawning)
             {
                 Vector3 pos = _selectedSpawn.SpawnInfo.Spawn.Pos;
                 RequestCollisionAtCoord(pos.X, pos.Y, pos.Z);
-                int playerPed = PlayerPedId();
                 SetFocusEntity(playerPed);
                 SetEntityCoords(playerPed, pos.X, pos.Y, pos.Z, false, false, false, false);
                 SetEntityHeading(playerPed, _selectedSpawn.SpawnInfo.Spawn.Heading);
@@ -363,11 +381,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                     string station = _currentCarSpawnRequest.Value.StationName;
                     _currentCarSpawnRequest = null;
                     int handle = CreateVehicle(model, pos.X, pos.Y, pos.Z, heading, true, true);
+                    int blip = AddBlipForEntity(handle);
                     _currentCar = new SpawnedCar
                     {
                         Model = model,
                         NetId = VehToNet(handle),
-                        Blip = AddBlipForEntity(handle),
+                        Blip = blip,
                         HasLeftSpawn = false,
                         InitialPos = pos,
                         Slot = slot,
@@ -376,39 +395,63 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                     SetEntityAsMissionEntity(handle, true, true);
                     SetNetworkIdCanMigrate(_currentCar.Value.NetId, false);
                     SetNetworkIdAlwaysExistsForPlayer(_currentCar.Value.NetId, PlayerId(), true);
+                    SetBlipSprite(blip, (int)BlipSprite.PersonalVehicleCar);
+                    SetBlipNameFromTextFile(blip, ServiceVehicleBlipTextKey);
                 }
             }
 
-            if(_currentCar.HasValue && !_currentCar.Value.HasLeftSpawn)
+            if(_timeSinceVehicleCheck >= VehicleCheckIntervalSeconds && _currentCar.HasValue)
             {
-                if(NetworkDoesNetworkIdExist(_currentCar.Value.NetId) && NetworkDoesEntityExistWithNetworkId(_currentCar.Value.NetId))
+                _timeSinceVehicleCheck = 0f;
+
+                if (NetworkDoesNetworkIdExist(_currentCar.Value.NetId) && NetworkDoesEntityExistWithNetworkId(_currentCar.Value.NetId))
                 {
                     int car = NetToVeh(_currentCar.Value.NetId);
 
-                    bool isDestroyed = !IsVehicleDriveable(car, false);
-                    if(isDestroyed)
+                    if(IsPedInAnyVehicle(playerPed, true))
                     {
-                        int entity = car;
-                        SetEntityAsNoLongerNeeded(ref entity);
-                        SetEntityAsMissionEntity(car, false, false);
-                        int blip = _currentCar.Value.Blip;
-                        RemoveBlip(ref blip);
-                        Debug.WriteLine("Cop car destroyed, setting as not needed");
+                        if (GetVehiclePedIsIn(playerPed, false) == car)
+                        {
+                            SetBlipDisplay(_currentCar.Value.Blip, 0);
+                        }
+                    }
+                    else
+                    {
+                        SetBlipDisplay(_currentCar.Value.Blip, 6);
                     }
 
-                    if(isDestroyed || GetEntityCoords(car, false).DistanceToSquared(_currentCar.Value.InitialPos) > CarSpawnSafeRadiusSq)
+                    if (!_currentCar.Value.HasLeftSpawn)
                     {
-                        SpawnedCar updatedCar = _currentCar.Value;
-                        updatedCar.HasLeftSpawn = true;
-                        _currentCar = updatedCar;
-                        TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidCopCarLeftSpawn, updatedCar.StationName, updatedCar.Slot);
-                    }
+                        bool isDestroyed = !IsVehicleDriveable(car, false);
+                        if (isDestroyed)
+                        {
+                            int entity = car;
+                            SetEntityAsNoLongerNeeded(ref entity);
+                            SetEntityAsMissionEntity(car, false, false);
+                            int blip = _currentCar.Value.Blip;
+                            RemoveBlip(ref blip);
+                            Debug.WriteLine("Cop car destroyed, setting as not needed");
+                        }
 
-                    if(isDestroyed)
-                    {
-                        _currentCar = null;
+                        if (isDestroyed || GetEntityCoords(car, false).DistanceToSquared(_currentCar.Value.InitialPos) > CarSpawnSafeRadiusSq)
+                        {
+                            SpawnedCar updatedCar = _currentCar.Value;
+                            updatedCar.HasLeftSpawn = true;
+                            _currentCar = updatedCar;
+                            TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidCopCarLeftSpawn, updatedCar.StationName, updatedCar.Slot);
+                        }
+
+                        if (isDestroyed)
+                        {
+                            _currentCar = null;
+                        }
                     }
                 }
+            }
+
+            if(_timeSinceVehicleCheck < VehicleCheckIntervalSeconds)
+            {
+                _timeSinceVehicleCheck += deltaTime;
             }
 
             RenderScriptCams(_enabled, true, CamTransitionTime, true, false);
