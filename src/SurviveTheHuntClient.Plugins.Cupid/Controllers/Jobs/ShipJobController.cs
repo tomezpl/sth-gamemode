@@ -2130,6 +2130,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 _gunfireEvent = null;
             }
 
+            if(_jobBlip.HasValue)
+            {
+                int blip = _jobBlip.Value;
+                RemoveBlip(ref blip);
+                _jobBlip = null;
+            }
+
             AnimRequests.Cleanup();
         }
     }
