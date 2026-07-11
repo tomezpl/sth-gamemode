@@ -5,9 +5,11 @@ using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Models.UI;
 using SurviveTheHuntClient.Plugins.Cupid.Controllers;
+using SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs;
 using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
 using SurviveTheHuntClient.Plugins.Cupid.Managers;
+using SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
 using SurviveTheHuntShared.Core;
 using System;
@@ -27,6 +29,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         public override bool IsGameMode => true;
 
         internal IGameState GameState;
+        internal IPlayerState PlayerState;
 
         private readonly BleedoutController BleedoutController;
         private JobManager JobManager = null;
@@ -70,6 +73,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             internal Constants.Clothing.OutfitPair? LastWornOutfit = null;
 
             internal bool HasRunPostIntro = false;
+
+            internal int TulipNetId = 0;
         }
 
         private int ScriptCamera;
@@ -136,8 +141,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             UIMenuHelper = new UIMenuHelper(context.TriggerEventProxy);
 
-            CopSpawnController = new CopSpawnController(new AVControllerHelper(TriggerEventProxy), TriggerServerEventProxy);
-            Subscribers.NetEntity.Add(CopSpawnController);
+            CopSpawnController = CreateCopSpawnController(CopSpawnController);
         }
 
         private void OnIntroOutroReached()
@@ -147,6 +151,38 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             if (_state.LocalRole == PlayerType.Cop)
             {
                 CopSpawnController.Enabled = true;
+            }
+        }
+
+        private CopSpawnController CreateCopSpawnController(CopSpawnController old = null)
+        {
+            old?.Cleanup();
+
+            if(old != null)
+            {
+                Subscribers.NetEntity.Remove(old);
+            }
+
+            CopSpawnController newInstance = new CopSpawnController(new AVControllerHelper(TriggerEventProxy), TriggerServerEventProxy);
+
+            Subscribers.NetEntity.Add(newInstance);
+            newInstance.DisguiseStateChanged += OnCopDisguiseStateChanged;
+            
+            return newInstance;
+        }
+
+        private void OnCopDisguiseStateChanged(DisguiseState disguise)
+        {
+            ShipJobController shipJob = JobManager?.Get<ShipJobController>("ship");
+            if(shipJob != null)
+            {
+                shipJob.OnDisguiseChanged(PlayerType.Cop, disguise);
+            }
+
+            if(PlayerState != null)
+            {
+                PlayerState.LoadoutIndex = (byte)(disguise == DisguiseState.UndercoverCop ? 1 : 0);
+                PlayerState.TakeAwayWeapons(PlayerPedId());
             }
         }
 
@@ -284,6 +320,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             ScriptCamera = CreateCam("DEFAULT_SCRIPTED_CAMERA", true);
 
             GameState = gameState;
+            PlayerState = playerState;
             _state = new PluginState();
 
             State.LocalRole = PlayerUtils.GetPlayerType(PlayerId(), GameState.Hunt.HuntedPlayers);
@@ -314,12 +351,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             UIMenuHelper.SetItemBlocked(SurviveTheHuntShared.Models.UI.BlockedItem.Appearance);
 
-            if(CopSpawnController != null)
-            {
-                Subscribers.NetEntity.Remove(CopSpawnController);
-            }
-            CopSpawnController = new CopSpawnController(new AVControllerHelper(TriggerEventProxy), TriggerServerEventProxy);
-            Subscribers.NetEntity.Add(CopSpawnController);
+            CopSpawnController = CreateCopSpawnController(CopSpawnController);
         }
 
         private void OnJobCompleted(ushort heatValue)
@@ -370,6 +402,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 JobManager.Cleanup();
                 JobManager = null;
+            }
+
+            if(CopSpawnController != null)
+            {
+                CopSpawnController.Enabled = false;
+                CopSpawnController.Cleanup();
+                CopSpawnController = null;
             }
 
             UIMenuHelper.SetItemBlocked(SurviveTheHuntShared.Models.UI.BlockedItem.Appearance, false);
@@ -573,6 +612,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 subscriber.OnNetEntityReceived(name, netId);
             }
+
+            if(name == IntroJ2Handler.TulipNetEntName)
+            {
+                State.TulipNetId = netId;
+            }
         }
 
         private bool _canShowHud = true;
@@ -697,10 +741,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             BleedoutController.Tick(deltaTime);
             JobManager?.Tick(deltaTime);
             HeatController?.Tick(deltaTime);
-            CopSpawnController.Tick(deltaTime);
+            CopSpawnController?.Tick(deltaTime);
+
+            if(NetworkDoesNetworkIdExist(State.TulipNetId) && NetworkDoesEntityExistWithNetworkId(State.TulipNetId))
+            {
+                int tulip = NetToVeh(State.TulipNetId);
+                CarModHelper.TickSpecialVehicleProperties(tulip, Constants.TulipHashKey);
+            }
         }
 
         // Allow a driver and a gunner
         public sealed override bool IsDrivebyAllowedForPassengers => true;
+
+        public sealed override bool IsDrivebyAllowedForDrivers => IsPedOnAnyBike(PlayerPedId());
     }
 }

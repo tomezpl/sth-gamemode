@@ -98,10 +98,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     carLayout: new CopSpawnInfo.CarPosInfo(origin: PaletoCarOrigin, step: new Vector2(-472.7902f, 6035.144f) - (Vector2)PaletoCarOrigin, end: new Vector3(-483.4076f, 6025.106f, 31.34056f), 224f),
                     copCarModels: new uint[]
                     {
-                        (uint)VehicleHash.Sheriff,
-                        (uint)VehicleHash.Sheriff2,
+                        //(uint)VehicleHash.Sheriff,
+                        //(uint)VehicleHash.Sheriff2,
                         (uint)VehicleHash.Policeb,
-                        (uint)VehicleHash.Pranger,
+                        //(uint)VehicleHash.Pranger,
                     }
                 );
 

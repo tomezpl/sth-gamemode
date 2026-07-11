@@ -3,6 +3,7 @@ using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Models.UI;
 using SurviveTheHuntClient.Plugins.Cupid.Helpers;
+using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
 using SurviveTheHuntClient.Plugins.Cupid.Models;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 {
-    internal sealed class ShipJobController : JobControllerBase
+    internal sealed class ShipJobController : JobControllerBase, IDisguiseEmitter, IDisguiseListener
     {
         private class JobState : JobStateBase
         {
@@ -193,6 +194,43 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 }
             }
 
+            private bool _jHasOutfit = false;
+            internal bool JHasOutfit
+            {
+                get => _jHasOutfit;
+                set
+                {
+                    bool prev = _jHasOutfit;
+                    if (value != prev)
+                    {
+                        _jHasOutfit = value;
+                        PlayerDisguiseChanged?.Invoke(SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType.HuntedJ, value);
+                        JHasOutfitChanged?.Invoke(prev, value, CanSync);
+                    }
+                }
+            }
+            internal event GenericStateChangedEvent<bool> JHasOutfitChanged;
+
+            private bool _lHasOutfit = false;
+            internal bool LHasOutfit
+            {
+                get => _lHasOutfit;
+                set
+                {
+                    bool prev = _lHasOutfit;
+                    if (value != prev)
+                    {
+                        _lHasOutfit = value;
+                        PlayerDisguiseChanged?.Invoke(SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType.HuntedL, value);
+                        LHasOutfitChanged?.Invoke(prev, value, CanSync);
+                    }
+                }
+            }
+            internal event GenericStateChangedEvent<bool> LHasOutfitChanged;
+
+            internal delegate void PlayerDisguiseChangedEvent(SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType player, bool hasDisguise);
+            internal event PlayerDisguiseChangedEvent PlayerDisguiseChanged;
+
             internal enum SpookedType
             {
                 NotSpooked,
@@ -211,6 +249,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 SpookedState,
                 HackProgress,
                 ShipOwner,
+                JHasOutfit,
+                LHasOutfit,
             }
 
             internal override Dictionary<int, object> Get()
@@ -226,6 +266,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     {(int)StateProp.SpookedState, Get((int)StateProp.SpookedState) },
                     {(int)StateProp.HackProgress, Get((int)StateProp.HackProgress) },
                     {(int)StateProp.ShipOwner, Get((int)StateProp.ShipOwner) },
+                    {(int)StateProp.JHasOutfit, Get((int)StateProp.JHasOutfit) },
+                    {(int)StateProp.LHasOutfit, Get((int)StateProp.LHasOutfit) },
                 };
             }
 
@@ -251,6 +293,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         return HackProgress;
                     case StateProp.ShipOwner:
                         return ShipOwnerServerId;
+                    case StateProp.JHasOutfit:
+                        return JHasOutfit;
+                    case StateProp.LHasOutfit:
+                        return LHasOutfit;
                     default:
                         throw new ArgumentException($"Needs to be a valid {nameof(StateProp)}", nameof(statePropId));
                 }
@@ -288,6 +334,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         break;
                     case StateProp.ShipOwner:
                         ShipOwnerServerId = Convert.ToInt32(statePropValue);
+                        break;
+                    case StateProp.JHasOutfit:
+                        JHasOutfit = Convert.ToBoolean(statePropValue);
+                        break;
+                    case StateProp.LHasOutfit:
+                        LHasOutfit = Convert.ToBoolean(statePropValue);
                         break;
                 }
             }
@@ -579,6 +631,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private delegate void RemoteAnimRequestReceivedDelegate(object pedNetId, object serialisedAnimInfo);
         private event RemoteAnimRequestReceivedDelegate RemoteAnimRequestReceived;
 
+        public event DisguiseStateChangedEvent DisguiseStateChanged;
+
         internal ShipJobController(TriggerEventProxyDelegate triggerEventProxy, TriggerServerEventProxyDelegate triggerServerEventProxy, JobStateRpcUpdateDelegate updateJobStateRpc) : base("ship", updateJobStateRpc)
         {
             TriggerEvent = triggerEventProxy;
@@ -614,6 +668,25 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             _state.HackProgressChanged += OnHackProgressChanged;
 
             _state.ShipOwnerServerIdChanged += OnShipOwnerServerIdChanged;
+
+            _state.JHasOutfitChanged += OnJHasOutfitChanged;
+            _state.LHasOutfitChanged += OnLHasOutfitChanged;
+        }
+
+        private void OnLHasOutfitChanged(bool prev, bool current, bool canSync)
+        {
+            if(canSync)
+            {
+                SyncState((int)JobState.StateProp.LHasOutfit);
+            }
+        }
+
+        private void OnJHasOutfitChanged(bool prev, bool current, bool canSync)
+        {
+            if(canSync)
+            {
+                SyncState((int)JobState.StateProp.JHasOutfit);
+            }
         }
 
         private bool _shipNeedsOwner = true;
@@ -1637,10 +1710,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         internal byte PlacedTrackerCount => (byte)Math.Max(_trackersPlaced.Count, _trackerSpawnRequests.Count);
         private const float CruisegoerSpookCheckIntervalSeconds = 5f;
         private float _timeSinceCopSpookCheck = 0f;
+        private Constants.DisguiseState _localPlayerDisguise = Constants.DisguiseState.None;
         private void HandleHuntersObjective(float deltaTime)
         {
-            bool isHunter = true;
-            bool hasUndercoverGear = true;
+            bool isHunter = !GameState.Hunt.IsHunted(PlayerId(), out _);
+            bool hasUndercoverGear = _localPlayerDisguise != Constants.DisguiseState.None;
 
             _timeSinceCopSpookCheck += deltaTime;
             if (_timeSinceCopSpookCheck > CruisegoerSpookCheckIntervalSeconds)
@@ -2138,6 +2212,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
 
             AnimRequests.Cleanup();
+        }
+
+        public void OnDisguiseChanged(SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType playerType, Constants.DisguiseState disguise)
+        {
+            _localPlayerDisguise = disguise;
+            bool hasOutfit = disguise == Constants.DisguiseState.Partygoer;
+            switch (playerType)
+            {
+                case SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType.HuntedJ:
+                    _state.JHasOutfit = hasOutfit;
+                    break;
+                case SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType.HuntedL:
+                    _state.LHasOutfit = hasOutfit;
+                    break;
+            }
         }
     }
 }

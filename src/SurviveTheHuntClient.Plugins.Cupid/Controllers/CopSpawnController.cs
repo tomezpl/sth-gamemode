@@ -10,7 +10,7 @@ using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 {
-    internal class CopSpawnController : ITickable, INetEntityListener
+    internal class CopSpawnController : ITickable, INetEntityListener, IDisguiseEmitter
     {
         private bool _enabled = false;
 
@@ -50,6 +50,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 
         private const string CarBootChangeClothesHintKey = "STH_CUPID_COP_CHANGE_CLOTHES_HELP";
         private const string CarBootChangeClothesHintContent = "Press ~INPUT_CONTEXT~ to change between uniform and undercover gear.";
+
+        private const string ChangeClothesAnimDict = "anim_heist@hs3f@ig12_change_clothes@";
+        private const string MaleChangeClothesAnimClip = "action_02_male";
+        private const string FemaleChangeClothesAnimClip = "change_noose_female";
 
         private static readonly bool s_InitDone = Init();
 
@@ -126,11 +130,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 
         internal const int CamTransitionTime = 1500;
 
+        private bool IsWearingUndercover => _clothingToRestore != null;
+        private PedOutfit _clothingToRestore = null;
         private void OnEnabledChanged(bool prev, bool current)
         {
             if(current)
             {
                 _timeTillTransitionEnd = float.MinValue;
+                _clothingToRestore = null;
                 SelectNearestSpawn();
 
                 // Remove the current car if we have one, as we're likely respawning
@@ -325,6 +332,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             return new Vector3(carLayout.Origin.X + carLayout.Step.X * slot, carLayout.Origin.Y + carLayout.Step.Y * slot, carLayout.Origin.Z);
         }
 
+        private static string GetChangeClothesAnimClipForPed(int ped)
+        {
+            if(IsMpPedMale(ped))
+            {
+                return MaleChangeClothesAnimClip;
+            }
+
+            return FemaleChangeClothesAnimClip;
+        }
+
         private float _timeTillTransitionEnd = float.MinValue;
         private float _timeSinceVehicleCheck = 0f;
         private const float VehicleCheckIntervalSeconds = 1f;
@@ -333,13 +350,19 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             internal bool ChangeClothesFromBootHintActive;
             internal float TimeTillClothesChanged;
             internal int CarHandle;
+            internal bool PlayedAnim;
+            internal int AnimCam;
         }
         private CopCarInteractState _carInteractState = new CopCarInteractState
         {
             ChangeClothesFromBootHintActive = false,
             TimeTillClothesChanged = float.MinValue,
-            CarHandle = 0
+            CarHandle = 0,
+            PlayedAnim = false,
+            AnimCam = CreateCam("DEFAULT_SCRIPTED_CAMERA", false),
         };
+        private const float ClothesChangeTimeSeconds = 7f;
+        private const float ClothesChangeTriggerTValue = 0.5f;
         public void Tick(float deltaTime)
         {
             EnsureCamera();
@@ -419,101 +442,125 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                     SetBlipSprite(blip, (int)BlipSprite.PersonalVehicleCar);
                     SetBlipNameFromTextFile(blip, ServiceVehicleBlipTextKey);
                     TriggerServerEvent(SurviveTheHuntShared.Events.Server.NotifyNetEntity, _currentCar.Value.NetId, PoliceCarNetEntityName);
+                    CarModHelper.ApplyModsForSpecialSpawnedCar(handle, model);
                 }
             }
 
-            if(_timeSinceVehicleCheck >= VehicleCheckIntervalSeconds && _currentCar.HasValue)
+            if(_currentCar.HasValue && NetworkDoesEntityExistWithNetworkId(_currentCar.Value.NetId))
             {
-                _timeSinceVehicleCheck = 0f;
+                int car = NetToVeh(_currentCar.Value.NetId);
 
-                if (NetworkDoesNetworkIdExist(_currentCar.Value.NetId) && NetworkDoesEntityExistWithNetworkId(_currentCar.Value.NetId))
+                if (!_currentCar.Value.HasLeftSpawn)
                 {
-                    int car = NetToVeh(_currentCar.Value.NetId);
+                    // Give the car invincibility in spawn
+                    SetEntityInvincible(car, true);
+                }
 
-                    if(IsPedInAnyVehicle(playerPed, true))
+                CarModHelper.TickSpecialVehicleProperties(car, _currentCar.Value.Model);
+            }
+
+            if(_timeSinceVehicleCheck >= VehicleCheckIntervalSeconds)
+            {
+                bool isInVehicle = IsPedInAnyVehicle(playerPed, true);
+
+                if (_currentCar.HasValue)
+                {
+                    _timeSinceVehicleCheck = 0f;
+
+                    if (NetworkDoesNetworkIdExist(_currentCar.Value.NetId) && NetworkDoesEntityExistWithNetworkId(_currentCar.Value.NetId))
                     {
-                        if (GetVehiclePedIsIn(playerPed, false) == car)
+                        int car = NetToVeh(_currentCar.Value.NetId);
+
+                        if (isInVehicle)
                         {
-                            SetBlipDisplay(_currentCar.Value.Blip, 0);
-                        }
-                    }
-                    else
-                    {
-                        SetBlipDisplay(_currentCar.Value.Blip, 6);
-
-                        if (_carInteractState.TimeTillClothesChanged <= 0f)
-                        {
-                            bool nearBoot = false;
-                            foreach(KeyValuePair<int, RemoteCarInfo> scannedCar in _scannedRemoteCars)
+                            if (GetVehiclePedIsIn(playerPed, false) == car)
                             {
-                                if (NetworkDoesNetworkIdExist(scannedCar.Key) && NetworkDoesEntityExistWithNetworkId(scannedCar.Key))
-                                {
-                                    int nearestCarHandle = NetToVeh(scannedCar.Key);
-                                    Vector3 carDir = GetEntityForwardVector(nearestCarHandle);
-                                    const float bootOffset = 1f;
-                                    Vector3 bootPos = GetWorldPositionOfEntityBone(nearestCarHandle, scannedCar.Value.BootBoneIndex) - (bootOffset * carDir);
-
-                                    Vector3 playerPos = GetEntityCoords(playerPed, false);
-                                    const float bootTriggerDistance = 0.85f;
-                                    if (bootPos.DistanceToSquared(playerPos) < (bootTriggerDistance * bootTriggerDistance))
-                                    {
-                                        Vector3 playerToCarDir = playerPos - GetEntityCoords(nearestCarHandle, false);
-                                        playerToCarDir.Normalize();
-                                        // Check the player is actually behind the car
-                                        float dot = Vector3.Dot(playerToCarDir, carDir);
-                                        //Debug.WriteLine($"Found a car boot at {bootPos}, player is at {playerPos}. Dot is {dot}");
-                                        if (dot < -0.55f)
-                                        {
-                                            nearBoot = true;
-                                            _carInteractState.CarHandle = nearestCarHandle;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (nearBoot != _carInteractState.ChangeClothesFromBootHintActive)
-                            {
-                                if (nearBoot)
-                                {
-                                    BeginTextCommandDisplayHelp(CarBootChangeClothesHintKey);
-                                    EndTextCommandDisplayHelp(0, true, true, -1);
-                                }
-                                else
-                                {
-                                    ClearAllHelpMessages();
-                                }
-
-                                _carInteractState.ChangeClothesFromBootHintActive = nearBoot;
+                                SetBlipDisplay(_currentCar.Value.Blip, 0);
                             }
                         }
+                        else
+                        {
+                            SetBlipDisplay(_currentCar.Value.Blip, 6);
+                        }
+
+                        if (!_currentCar.Value.HasLeftSpawn)
+                        {
+                            bool isDestroyed = !IsVehicleDriveable(car, false);
+                            if (isDestroyed)
+                            {
+                                int entity = car;
+                                SetEntityAsNoLongerNeeded(ref entity);
+                                SetEntityAsMissionEntity(car, false, false);
+                                int blip = _currentCar.Value.Blip;
+                                RemoveBlip(ref blip);
+                                Debug.WriteLine("Cop car destroyed, setting as not needed");
+                            }
+
+                            if (isDestroyed || GetEntityCoords(car, false).DistanceToSquared(_currentCar.Value.InitialPos) > CarSpawnSafeRadiusSq)
+                            {
+                                SpawnedCar updatedCar = _currentCar.Value;
+                                updatedCar.HasLeftSpawn = true;
+                                _currentCar = updatedCar;
+                                TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidCopCarLeftSpawn, updatedCar.StationName, updatedCar.Slot);
+                                SetEntityInvincible(car, false);
+                            }
+
+                            if (isDestroyed)
+                            {
+                                _currentCar = null;
+                            }
+                        }
+                    }
+                }
+
+                if (!isInVehicle && _carInteractState.TimeTillClothesChanged <= 0f)
+                {
+                    bool nearBoot = false;
+                    foreach (KeyValuePair<int, RemoteCarInfo> scannedCar in _scannedRemoteCars)
+                    {
+                        if (NetworkDoesNetworkIdExist(scannedCar.Key) && NetworkDoesEntityExistWithNetworkId(scannedCar.Key))
+                        {
+                            int nearestCarHandle = NetToVeh(scannedCar.Key);
+                            Vector3 carDir = GetEntityForwardVector(nearestCarHandle);
+                            float bootOffset = GetBootOffsetForModel(scannedCar.Value.Model);
+                            Vector3 carPos = GetEntityCoords(nearestCarHandle, false);
+                            bool isBike = IsThisModelABike(scannedCar.Value.Model);
+                            Vector3 bootPos = isBike
+                                ? (carPos - (bootOffset * carDir * 1.5f))
+                                : (GetWorldPositionOfEntityBone(nearestCarHandle, scannedCar.Value.BootBoneIndex) - (bootOffset * carDir));
+
+                            Vector3 playerPos = GetEntityCoords(playerPed, false);
+                            float bootTriggerDistance = 0.85f * GetBootDistanceMultiplierForModel(scannedCar.Value.Model);
+                            if (bootPos.DistanceToSquared(playerPos) < (bootTriggerDistance * bootTriggerDistance))
+                            {
+                                Vector3 playerToCarDir = playerPos - carPos;
+                                playerToCarDir.Normalize();
+                                // Check the player is actually behind the car
+                                float dot = Vector3.Dot(playerToCarDir, carDir);
+                                //Debug.WriteLine($"Found a car boot at {bootPos}, player is at {playerPos}. Dot is {dot}");
+                                if (dot < -0.55f)
+                                {
+                                    nearBoot = true;
+                                    _carInteractState.CarHandle = nearestCarHandle;
+                                    break;
+                                }
+                            }
+                        }
                     }
 
-                    if (!_currentCar.Value.HasLeftSpawn)
+                    if (nearBoot != _carInteractState.ChangeClothesFromBootHintActive)
                     {
-                        bool isDestroyed = !IsVehicleDriveable(car, false);
-                        if (isDestroyed)
+                        if (nearBoot)
                         {
-                            int entity = car;
-                            SetEntityAsNoLongerNeeded(ref entity);
-                            SetEntityAsMissionEntity(car, false, false);
-                            int blip = _currentCar.Value.Blip;
-                            RemoveBlip(ref blip);
-                            Debug.WriteLine("Cop car destroyed, setting as not needed");
+                            BeginTextCommandDisplayHelp(CarBootChangeClothesHintKey);
+                            EndTextCommandDisplayHelp(0, true, true, -1);
+                        }
+                        else
+                        {
+                            ClearAllHelpMessages();
                         }
 
-                        if (isDestroyed || GetEntityCoords(car, false).DistanceToSquared(_currentCar.Value.InitialPos) > CarSpawnSafeRadiusSq)
-                        {
-                            SpawnedCar updatedCar = _currentCar.Value;
-                            updatedCar.HasLeftSpawn = true;
-                            _currentCar = updatedCar;
-                            TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidCopCarLeftSpawn, updatedCar.StationName, updatedCar.Slot);
-                        }
-
-                        if (isDestroyed)
-                        {
-                            _currentCar = null;
-                        }
+                        _carInteractState.ChangeClothesFromBootHintActive = nearBoot;
                     }
                 }
 
@@ -526,28 +573,53 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                 {
                     ClearAllHelpMessages();
                     _carInteractState.ChangeClothesFromBootHintActive = false;
-                    _carInteractState.TimeTillClothesChanged = 1.5f;
-                    SetVehicleDoorOpen(_carInteractState.CarHandle, (int)VehicleDoorIndex.Trunk, true, false);
+                    _carInteractState.TimeTillClothesChanged = 7f;
+                    SetVehicleDoorOpen(_carInteractState.CarHandle, (int)VehicleDoorIndex.Trunk, false, false);
+                    Vector3 camPos = IsThisModelABike((uint)GetEntityModel(_carInteractState.CarHandle)) || !_scannedRemoteCars.TryGetValue(VehToNet(_carInteractState.CarHandle), out RemoteCarInfo carInfo)
+                        ? (GetEntityCoords(_carInteractState.CarHandle, false) + (Vector3.Up * 0.55f) + GetEntityForwardVector(_carInteractState.CarHandle) * 0.95f)
+                        : (GetWorldPositionOfEntityBone(_carInteractState.CarHandle, carInfo.BootBoneIndex));
+                    SetCamCoord(_carInteractState.AnimCam, camPos.X, camPos.Y, camPos.Z);
+                    PointCamAtEntity(_carInteractState.AnimCam, playerPed, 0f, 0f, 0f, true);
+                    SetCamActive(_carInteractState.AnimCam, true);
                 }
             }
 
             bool hasClothesTimerJustRunOut = false;
+            bool shouldChangeClothesNow = false;
             if(_carInteractState.TimeTillClothesChanged > 0f)
             {
+                const float triggerPoint = ClothesChangeTimeSeconds * ClothesChangeTriggerTValue;
+                bool wasBeforeTrigger = _carInteractState.TimeTillClothesChanged > triggerPoint;
                 _carInteractState.TimeTillClothesChanged -= deltaTime;
                 if(_carInteractState.TimeTillClothesChanged <= 0f)
                 {
                     hasClothesTimerJustRunOut = true;
                 }
+                if(wasBeforeTrigger && _carInteractState.TimeTillClothesChanged <= triggerPoint)
+                {
+                    shouldChangeClothesNow = true;
+                }
                 FreezeEntityPosition(playerPed, true);
+                RequestAnimDict(ChangeClothesAnimDict);
+                if(!_carInteractState.PlayedAnim && HasAnimDictLoaded(ChangeClothesAnimDict))
+                {
+                    _carInteractState.PlayedAnim = true;
+                    TaskPlayAnim(playerPed, ChangeClothesAnimDict, GetChangeClothesAnimClipForPed(playerPed), 4f, 4f, -1, 0, 0f, false, false, false);
+                }
             }
 
             if(hasClothesTimerJustRunOut)
             {
-                //SwapPlayerClothes();
+                _carInteractState.PlayedAnim = false;
                 SetVehicleDoorShut(_carInteractState.CarHandle, (int)VehicleDoorIndex.Trunk, false);
                 _carInteractState.CarHandle = 0;
                 FreezeEntityPosition(playerPed, false);
+                SetCamActive(_carInteractState.AnimCam, false);
+            }
+
+            if(shouldChangeClothesNow)
+            {
+                SwapPlayerClothes(playerPed);
             }
 
             if (_timeSinceVehicleCheck < VehicleCheckIntervalSeconds)
@@ -555,7 +627,269 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                 _timeSinceVehicleCheck += deltaTime;
             }
 
-            RenderScriptCams(_enabled, true, CamTransitionTime, true, false);
+            bool isPlayingClothesChangeAnim = _carInteractState.TimeTillClothesChanged > 0f;
+            RenderScriptCams(_enabled || isPlayingClothesChangeAnim, !isPlayingClothesChangeAnim && !hasClothesTimerJustRunOut, CamTransitionTime, !isPlayingClothesChangeAnim && !hasClothesTimerJustRunOut, false);
+        }
+
+        private float GetBootDistanceMultiplierForModel(uint model)
+        {
+            switch(model)
+            {
+                case (uint)VehicleHash.Pranger:
+                case (uint)VehicleHash.Sheriff2:
+                    return 1.55f;
+                default:
+                    return 1f;
+            }
+        }
+
+        private float GetBootOffsetForModel(uint model)
+        {
+            switch(model)
+            {
+                case (uint)VehicleHash.Pranger:
+                case (uint)VehicleHash.Sheriff2:
+                    return 1.15f;
+                default:
+                    return 1f;
+            }
+        }
+
+        private static bool IsMpPedMale(int ped)
+        {
+            uint model = (uint)GetEntityModel(ped);
+            return (uint)PedHash.FreemodeMale01 == model;
+        }
+
+        private struct UndercoverClothes
+        {
+            internal struct AllowedDrawable
+            {
+                internal readonly int Drawable;
+                internal readonly int[] Textures;
+
+                internal AllowedDrawable(int drawable, params int[] textures)
+                {
+                    Drawable = drawable;
+                    Textures = textures;
+                }
+
+                internal AllowedDrawable(int drawable) : this(drawable, 0) { }
+            }
+
+            internal readonly Dictionary<int, AllowedDrawable[]> Components, Props;
+
+            internal UndercoverClothes(Dictionary<int, AllowedDrawable[]> components, Dictionary<int, AllowedDrawable[]> props = null)
+            {
+                Components = components;
+                Props = props ?? new Dictionary<int, AllowedDrawable[]>();
+            }
+        }
+
+        private static readonly UndercoverClothes FemaleUndercoverClothes = new UndercoverClothes
+        (
+            components: new Dictionary<int, UndercoverClothes.AllowedDrawable[]>
+            {
+                // Jackets
+                {
+                    (int)PedComponents.Torso2, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(8, 0, 1, 2, 12),
+                        new UndercoverClothes.AllowedDrawable(35, 4, 7, 8, 9, 11)
+                    }
+                },
+
+                // T-shirt
+                {
+                    (int)PedComponents.Special2, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(95, 0, 1, 2)
+                    }
+                },
+
+                // Runners
+                {
+                    (int)PedComponents.Shoes, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(32, 0, 1, 2, 3)
+                    }
+                },
+
+                // Torso
+                {
+                    (int)PedComponents.Torso, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(5)
+                    }
+                },
+
+                // Jeans
+                {
+                    (int)PedComponents.Legs, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(0, 0, 1, 2, 8, 10),
+                        new UndercoverClothes.AllowedDrawable(1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+                    }
+                }
+            },
+            props: new Dictionary<int, UndercoverClothes.AllowedDrawable[]>
+            {
+                {
+                    (int)PedProps.Hats, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(-1),
+                        // cap
+                        new UndercoverClothes.AllowedDrawable(155, 2, 3, 8, 9, 14, 18)
+                    }
+                },
+                {
+                    (int)PedProps.Glasses, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(-1),
+                        // aviators
+                        new UndercoverClothes.AllowedDrawable(11, 0, 1, 2, 3, 4, 5, 6, 7)
+                    }
+                }
+            }
+        );
+
+        private static readonly UndercoverClothes MaleUndercoverClothes = new UndercoverClothes
+        (
+            components: new Dictionary<int, UndercoverClothes.AllowedDrawable[]>
+            {
+                // Tee
+                {
+                    (int)PedComponents.Special2, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(0, 0, 2, 4, 5, 7, 8, 11)
+                    }
+                },
+                // Jacket
+                {
+                    (int)PedComponents.Torso2, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(387, 9, 5, 8, 12)
+                    }
+                },
+                // Jeans
+                {
+                    (int)PedComponents.Legs, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(0, 0, 1, 2, 4, 5, 6, 8, 9, 10, 12)
+                    }
+                },
+                // Shoes
+                {
+                    (int)PedComponents.Shoes, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(32, 0, 1, 2)
+                    }
+                },
+                // Torso
+                {
+                    (int)PedComponents.Torso, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(4)
+                    }
+                }
+            },
+            props: new Dictionary<int, UndercoverClothes.AllowedDrawable[]>
+            {
+                {
+                    (int)PedProps.Hats, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(-1),
+                        // cap
+                        new UndercoverClothes.AllowedDrawable(156, 2, 3, 8, 9, 14, 18)
+                    }
+                },
+                {
+                    (int)PedProps.Glasses, new UndercoverClothes.AllowedDrawable[]
+                    {
+                        new UndercoverClothes.AllowedDrawable(-1),
+                        // aviators
+                        new UndercoverClothes.AllowedDrawable(8, 0, 1, 2, 3, 4, 5, 6, 7)
+                    }
+                }
+            }
+        );
+
+        private void SwapPlayerClothes(int playerPed)
+        {
+            bool useUndercover = !IsWearingUndercover;
+
+            // Store the current clothing
+            if(_clothingToRestore == null)
+            {
+                Dictionary<PedComponents, PedVariation> comps = new Dictionary<PedComponents, PedVariation>();
+
+                for(int comp = 0; comp <= 11; comp++)
+                {
+                    int drawable = GetPedDrawableVariation(playerPed, comp);
+                    int texture = GetPedTextureVariation(playerPed, comp);
+                    comps[(PedComponents)comp] = new PedVariation { Drawable = drawable, Texture = texture };
+                }
+
+                Dictionary<PedProps, PedVariation> props = new Dictionary<PedProps, PedVariation>();
+                for (int prop = 0; prop <= 9; prop++)
+                {
+                    int drawable = GetPedPropIndex(playerPed, prop);
+                    int texture = GetPedPropTextureIndex(playerPed, prop);
+                    props[(PedProps)prop] = new PedVariation { Drawable = drawable, Texture = texture };
+                }
+
+                _clothingToRestore = new PedOutfit { ComponentsToApply = comps, PropsToApply = props };
+            }
+
+            ClearAllPedProps(playerPed);
+            if (useUndercover)
+            {
+                UndercoverClothes clothes = IsMpPedMale(playerPed) ? MaleUndercoverClothes : FemaleUndercoverClothes;
+
+                SetPedDefaultComponentVariation(playerPed);
+                PedComponents[] compsToKeep =
+                {
+                    PedComponents.Face,
+                    PedComponents.Hair
+                };
+                foreach(PedComponents comp in compsToKeep)
+                {
+                    SetPedComponentVariation(playerPed, (int)comp, _clothingToRestore.ComponentsToApply[comp].Drawable, _clothingToRestore.ComponentsToApply[comp].Texture, 0);
+                }
+
+                foreach(KeyValuePair<int, UndercoverClothes.AllowedDrawable[]> comp in clothes.Components)
+                {
+                    UndercoverClothes.AllowedDrawable randomDrawable = comp.Value[s_RNG.Next(0, comp.Value.Length)];
+                    int randomTexture = randomDrawable.Textures[s_RNG.Next(0, randomDrawable.Textures.Length)];
+                    SetPedComponentVariation(playerPed, comp.Key, randomDrawable.Drawable, randomTexture, 0);
+                }
+
+                foreach (KeyValuePair<int, UndercoverClothes.AllowedDrawable[]> prop in clothes.Props)
+                {
+                    UndercoverClothes.AllowedDrawable randomDrawable = prop.Value[s_RNG.Next(0, prop.Value.Length)];
+                    int randomTexture = randomDrawable.Textures[s_RNG.Next(0, randomDrawable.Textures.Length)];
+                    SetPedPropIndex(playerPed, prop.Key, randomDrawable.Drawable, randomTexture, true);
+                }
+            }
+            else if(_clothingToRestore != null)
+            {
+                foreach(KeyValuePair<PedComponents, PedVariation> comp in _clothingToRestore.ComponentsToApply)
+                {
+                    SetPedComponentVariation(playerPed, (int)comp.Key, comp.Value.Drawable, comp.Value.Texture, 0);
+                }
+
+                foreach(KeyValuePair<PedProps, PedVariation> prop in _clothingToRestore.PropsToApply)
+                {
+                    if (prop.Value.Drawable != -1)
+                    {
+                        SetPedPropIndex(playerPed, (int)prop.Key, prop.Value.Drawable, prop.Value.Texture, true);
+                    }
+                }
+
+                _clothingToRestore = null;
+            }
+
+            DisguiseStateChanged.Invoke(useUndercover ? Constants.DisguiseState.UndercoverCop : Constants.DisguiseState.None);
         }
 
         internal void Cleanup()
@@ -576,11 +910,20 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                     NetworkRequestControlOfEntity(handle);
                     SetEntityAsMissionEntity(handle, true, true);
                     DeleteEntity(ref handle);
+                    int blip = _currentCar.Value.Blip;
+                    RemoveBlip(ref blip);
                     _currentCar = null;
                 }
             }
 
+            if(DoesCamExist(_carInteractState.AnimCam))
+            {
+                DestroyCam(_carInteractState.AnimCam, true);
+            }
+
             ClearAllHelpMessages();
+
+            SetFocusEntity(PlayerPedId());
         }
 
         private readonly static Random s_RNG = new Random();
@@ -643,8 +986,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                         updated = true;
                     }
                 }
-
-                Debug.WriteLine($"Synced {toRemove.Count} cars");
             }
 
             return updated;
@@ -661,5 +1002,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                 _pendingCarNetIdsToScan.Add(netId);
             }
         }
+
+        public event DisguiseStateChangedEvent DisguiseStateChanged;
     }
 }

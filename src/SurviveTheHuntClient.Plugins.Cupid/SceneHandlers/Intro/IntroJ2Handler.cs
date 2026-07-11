@@ -1,6 +1,7 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
+using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
 using System;
 using static CitizenFX.Core.Native.API;
@@ -751,7 +752,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             }
         }
 
-        private const string TulipNetEntName = "CupidTulip";
+        internal const string TulipNetEntName = "CupidTulip";
 
         public override void OnNetEntityReceived(int netId, string name)
         {
@@ -859,6 +860,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                         CurrentState.Car2 = CreateVehicle((uint)_carHash2, Constants.Car2X, Constants.Car2Y, Constants.Car2Z, Constants.Car2Heading, true, true);
                         FreezeEntityPosition(CurrentState.Car2, true);
                         TriggerServerEventProxy(SurviveTheHuntShared.Events.Server.NotifyNetEntity, NetworkGetNetworkIdFromEntity(CurrentState.Car2), TulipNetEntName);
+                        CarModHelper.ApplyModsForSpecialSpawnedCar(CurrentState.Car2, (uint)_carHash2);
                     }
                 }
             }

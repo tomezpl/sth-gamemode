@@ -131,6 +131,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
             }
         }
 
+        internal TJob Get<TJob>(string id) where TJob : JobControllerBase
+        {
+            foreach (JobControllerBase job in _jobs)
+            {
+                if(job.Id == id && job is TJob)
+                {
+                    return (TJob)job;
+                }
+            }
+            return null;
+        }
+
         internal LabelledItem[] CurrentJobUI => _currentJob != null && _currentJob.IsActive ? _currentJob.CurrentUI : LabelledItem.Empty;
 
         internal void Cleanup(bool force = false)

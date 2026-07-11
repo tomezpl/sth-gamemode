@@ -47,6 +47,7 @@
     <Compile Include="Constants\AnimNames.cs" />
     <Compile Include="Constants\Clothing.cs" />
     <Compile Include="Constants\DirectedScenes.cs" />
+    <Compile Include="Constants\DisguiseState.cs" />
     <Compile Include="Constants\Heat.cs" />
     <Compile Include="Constants\Locations.cs" />
     <Compile Include="Constants\PhoneContacts.cs" />
@@ -55,6 +56,7 @@
     <Compile Include="Constants\CruisegoerSpawns.cs" />
     <Compile Include="Constants\ShipDeviceLocations.cs" />
     <Compile Include="Constants\SpecialEvent.cs" />
+    <Compile Include="Constants\VehicleHashes.cs" />
     <Compile Include="Controllers\BleedoutController.cs" />
     <Compile Include="Controllers\CopSpawnController.cs" />
     <Compile Include="Controllers\HeatController.cs" />
@@ -64,9 +66,12 @@
     <Compile Include="Controllers\Jobs\SimpleRobberyJobController.cs" />
     <Compile Include="CupidPlugin.cs" />
     <Compile Include="Helpers\AVControllerHelper.cs" />
+    <Compile Include="Helpers\CarModHelper.cs" />
     <Compile Include="Helpers\PhoneTextHelper.cs" />
     <Compile Include="Helpers\ShipPedSpawnHelper.cs" />
     <Compile Include="Helpers\UIMenuHelper.cs" />
+    <Compile Include="Interfaces\IDisguiseEmitter.cs" />
+    <Compile Include="Interfaces\IDisguiseListener.cs" />
     <Compile Include="Interfaces\INetEntityListener.cs" />
     <Compile Include="Interfaces\ISceneHandler.cs" />
     <Compile Include="Interfaces\ISpecialEventListener.cs" />
@@ -77,6 +82,7 @@
     <Compile Include="Models\CruisegoerSpawnLine.cs" />
     <Compile Include="Models\CruisegoerSpawnSingle.cs" />
     <Compile Include="Models\DeviceTracker.cs" />
+    <Compile Include="Models\DisguiseStateChangedEvent.cs" />
     <Compile Include="Models\PedNode.cs" />
     <Compile Include="Models\JobStateBase.cs" />
     <Compile Include="Models\PendingText.cs" />
