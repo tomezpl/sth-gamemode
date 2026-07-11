@@ -31,20 +31,20 @@ namespace SurviveTheHuntClient
         /// <summary>
         /// Weapon loadouts for each team.
         /// </summary>
-        public static Dictionary<string, Dictionary<Teams.Team, Weapons.WeaponAmmo[]>> WeaponLoadouts = new Dictionary<string, Dictionary<Teams.Team, Weapons.WeaponAmmo[]>>
+        public static Dictionary<string, Dictionary<Teams.Team, Weapons.WeaponAmmo[][]>> WeaponLoadouts = new Dictionary<string, Dictionary<Teams.Team, Weapons.WeaponAmmo[][]>>
         {
             {
-                "", new Dictionary<Teams.Team, Weapons.WeaponAmmo[]>
+                "", new Dictionary<Teams.Team, Weapons.WeaponAmmo[][]>
                 {
-                    {Teams.Team.Hunters, new Weapons.WeaponAmmo[0]},
-                    {Teams.Team.Hunted, new Weapons.WeaponAmmo[0]}
+                    {Teams.Team.Hunters, new Weapons.WeaponAmmo[][] {new Weapons.WeaponAmmo[0] } },
+                    {Teams.Team.Hunted, new Weapons.WeaponAmmo[][] {new Weapons.WeaponAmmo[0] } }
                 }
             }
         };
 
-        public static Dictionary<Teams.Team, Weapons.WeaponAmmo[]> GetModeWeaponLoadouts(string mode)
+        public static Dictionary<Teams.Team, Weapons.WeaponAmmo[][]> GetModeWeaponLoadouts(string mode)
         {
-            if(WeaponLoadouts.TryGetValue(mode, out Dictionary<Teams.Team, Weapons.WeaponAmmo[]> loadouts))
+            if(WeaponLoadouts.TryGetValue(mode, out Dictionary<Teams.Team, Weapons.WeaponAmmo[][]> loadouts))
             {
                 return loadouts;
             }

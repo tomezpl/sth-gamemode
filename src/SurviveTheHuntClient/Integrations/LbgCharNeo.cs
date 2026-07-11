@@ -21,7 +21,8 @@ namespace SurviveTheHuntClient
             AmmoCheckTimer += deltaTime;
             if (AmmoCheckTimer >= AmmoCheckInterval)
             {
-                Weapons.WeaponAmmo[] selectedLoadout = Constants.GetModeWeaponLoadouts(GameState.Mode)[PlayerState.Team];
+                Weapons.WeaponAmmo[][] modeLoadouts = Constants.GetModeWeaponLoadouts(GameState.Mode)[PlayerState.Team];
+                Weapons.WeaponAmmo[] selectedLoadout = modeLoadouts[Math.Min(modeLoadouts.Length - 1, PlayerState.LoadoutIndex)];
 
                 AmmoState = new Weapons.WeaponAmmo[selectedLoadout.Length];
 

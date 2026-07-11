@@ -302,5 +302,6 @@ namespace SurviveTheHuntClient.Models
         }
 
         public virtual bool IsDrivebyAllowedForPassengers => false;
+        public virtual bool IsDrivebyAllowedForDrivers => false;
     }
 }

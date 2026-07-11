@@ -54,6 +54,11 @@ namespace SurviveTheHuntClient
 
         public bool IsInSafeZone { get; set; } = false;
 
+        /// <summary>
+        /// The current weapon loadout index. You should make sure this is in valid range (and maybe even reset it to 0) when loadouts change.
+        /// </summary>
+        public byte LoadoutIndex { get; set; } = 0;
+
         public GameState GameState { get; set; }
 
         private readonly MainScript.ExecutePluginsDelegate ExecutePlugins;
@@ -128,7 +133,16 @@ namespace SurviveTheHuntClient
             // First remove the existing weapons.
             RemoveAllPedWeapons(playerPed.Handle, false);
 
-            foreach(Weapons.WeaponAmmo weapon in Constants.GetModeWeaponLoadouts(GameState.Mode)[Team])
+            Weapons.WeaponAmmo[][] availableLoadouts = Constants.GetModeWeaponLoadouts(GameState.Mode)[Team];
+            
+            // in case we forgot to reset LoadoutIndex and it's invalid, reset it here
+            if(LoadoutIndex > availableLoadouts.Length)
+            {
+                Debug.WriteLine($"{nameof(PlayerState)}.{nameof(LoadoutIndex)} of {LoadoutIndex} is invalid, because {nameof(availableLoadouts)} only has {availableLoadouts.Length} loadouts. Resetting to 0");
+                LoadoutIndex = 0;
+            }
+
+            foreach (Weapons.WeaponAmmo weapon in availableLoadouts[LoadoutIndex])
             {
                 bool equip = weapon.Hash == LastWeaponEquipped;
                 NativeHelpers.GivePedWeapon(playerPed.Handle, weapon, equip);
@@ -156,20 +170,26 @@ namespace SurviveTheHuntClient
             }
             else
             {
-                // Weapons aren't allowed in vehicles.
+                // By default, weapons aren't allowed in vehicles.
                 // However, the hunted player should be able to driveby if they're a passenger.
-                bool couldPotentiallyDriveby = Team == Teams.Team.Hunted;
-                if(!couldPotentiallyDriveby)
+                bool couldPotentiallyDrivebyAsPassenger = Team == Teams.Team.Hunted;
+                bool couldPotentiallyDrivebyAsDriver = false;
+                if(!couldPotentiallyDrivebyAsPassenger)
                 {
                     ExecutePlugins(plugin =>
                     {
-                        if(!couldPotentiallyDriveby)
+                        if(!couldPotentiallyDrivebyAsPassenger)
                         {
-                            couldPotentiallyDriveby = plugin.IsDrivebyAllowedForPassengers;
+                            couldPotentiallyDrivebyAsPassenger = plugin.IsDrivebyAllowedForPassengers;
+                        }
+
+                        if(!couldPotentiallyDrivebyAsDriver)
+                        {
+                            couldPotentiallyDrivebyAsDriver = plugin.IsDrivebyAllowedForDrivers;
                         }
                     });
                 }
-                weaponsAllowed = (!playerPed.IsGettingIntoAVehicle && !playerPed.IsInVehicle()) || (couldPotentiallyDriveby && playerPed.SeatIndex >= 0);
+                weaponsAllowed = (!playerPed.IsGettingIntoAVehicle && !playerPed.IsInVehicle()) || (playerPed.SeatIndex >= 0 ? couldPotentiallyDrivebyAsPassenger : couldPotentiallyDrivebyAsDriver);
             }
 
             // If the player has a weapon equipped, store the weapon in LastWeaponEquipped so we keep track in case we need to re-equip it.

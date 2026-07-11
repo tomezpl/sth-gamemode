@@ -1280,15 +1280,24 @@ namespace SurviveTheHuntClient
             // Event handler for gamemode config being sent by the server.
             EventHandlers[Events.Client.ReceiveConfig] += new Action<string, byte[], byte[], string>((pluginName, weaponsHunters, weaponsHunted, vehicleList) =>
             {
-                Debug.WriteLine("sth:receiveConfig received!");
+                Debug.WriteLine($"sth:receiveConfig received! plugin: {pluginName}");
+                foreach (byte character in weaponsHunters)
+                {
+                    Debug.Write($"{character} ");
+                }
+                Debug.WriteLine("");
 
-                Config.Deserialized deserialized = Config.Serialized.Deserialize(weaponsHunters, weaponsHunted, vehicleList);
+                Config.Deserialized deserialized = Config.Serialized.Deserialize(weaponsHunters, weaponsHunted, vehicleList, Debug.WriteLine);
+
 
                 Debug.WriteLine("parsed config!");
 
-                Constants.WeaponLoadouts[pluginName] = new Dictionary<Teams.Team, Weapons.WeaponAmmo[]>();
+                Constants.WeaponLoadouts[pluginName] = new Dictionary<Teams.Team, Weapons.WeaponAmmo[][]>();
                 Constants.WeaponLoadouts[pluginName][Teams.Team.Hunters] = deserialized.HuntersWeapons;
                 Constants.WeaponLoadouts[pluginName][Teams.Team.Hunted] = deserialized.HuntedWeapons;
+
+                PlayerState.LoadoutIndex = 0;
+
                 Constants.Vehicles[pluginName] = deserialized.VehicleWhitelist.Vehicles.Select((vehicleName) => (VehicleHash)GetHashKey(vehicleName)).ToArray();
             
                 // In the event the player was already given weapons, remove them so that the new loadout can be applied.

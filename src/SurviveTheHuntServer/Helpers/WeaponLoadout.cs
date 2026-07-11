@@ -111,6 +111,7 @@ namespace SurviveTheHuntServer.Helpers
             /// <remarks>In terms of size, each weapon hash is a <see cref="uint"/> and ammo count is a <see cref="ushort"/>.</remarks>
             public byte[] Serialize()
             {
+
                 // Add a byte at the start for the weapon count.
                 using (MemoryStream ms = new MemoryStream(WeaponAmmo.Count * (sizeof(uint) + sizeof(ushort)) + sizeof(byte)))
                 {

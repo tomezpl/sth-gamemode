@@ -27,5 +27,7 @@ namespace SurviveTheHuntClient.Interfaces
         /// Should the player's death be reported to the server?
         /// </summary>
         bool ReportDeathNextTick { get; set; }
+
+        byte LoadoutIndex { get; set; }
     }
 }

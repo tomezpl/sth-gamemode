@@ -296,6 +296,9 @@ namespace SurviveTheHuntServer
 
                             JoinTeam(player, isHunted ? Teams.Team.Hunted : Teams.Team.Hunters);
                         }
+
+                        // reset any plugin-specific state
+                        GameState.Hunt.PluginStates.Clear();
                     })
                 },
                 {

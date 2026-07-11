@@ -114,7 +114,7 @@ namespace SurviveTheHuntServer {
             }
 
             // TODO: for now this will just choose the first loadout for each team
-            return new Serialized(activePlugin ?? "", activeLoadouts.Hunters[0], activeLoadouts.Hunted[0], activeVehicles);
+            return new Serialized(activePlugin ?? "", activeLoadouts.Hunters, activeLoadouts.Hunted, activeVehicles);
         }
     }
 

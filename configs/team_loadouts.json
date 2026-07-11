@@ -32,6 +32,52 @@
           }
         }
       ]
+    },
+    "cupid": {
+      "hunters": [
+        // Cupid base
+        {
+          "weaponAmmo": {
+            "weapon_pistol_mk2": 180,
+            "weapon_nightstick": 1,
+            "weapon_smokegrenade": 5,
+            "weapon_sawnoffshotgun": 9,
+            "weapon_emplauncher": 30,
+            "weapon_advancedrifle": 120
+          }
+        },
+
+        // Cupid undercover
+        {
+          "weaponAmmo": {
+            "weapon_ceramicpistol": {
+              "ammo": 30,
+              "attachments": [
+                "suppressor"
+              ]
+            }
+          }
+        }
+      ],
+      "hunted": [
+        // Cupid base
+        {
+          "weaponAmmo": {
+            "weapon_revolver_mk2": 200,
+            "weapon_minismg": 450,
+            "weapon_tacticalrifle": 200,
+            "weapon_autoshotgun": 90,
+            "weapon_stickybomb": 5,
+            "weapon_grenadelauncher": 5,
+            "weapon_knife": 1
+          }
+        },
+
+        // Cupid ship party
+        {
+          "weapon_pistolxm3": 40
+        }
+      ]
     }
   },
   "hunters": [
