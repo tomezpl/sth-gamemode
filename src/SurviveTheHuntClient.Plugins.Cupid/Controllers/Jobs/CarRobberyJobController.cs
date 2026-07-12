@@ -203,8 +203,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private readonly static bool s_HasInit = InitShared();
 
-        private const int DeliveryMarkerColourR = 224, DeliveryMarkerColourG = 210, DeliveryMarkerColourB = 15, DeliveryMarkerColourA = 128;
-
         internal sealed override bool BlockOtherJobs => false;
 
         internal CarRobberyJobController(string id, JobStateRpcUpdateDelegate updateJobState, Vector3 startPos, float startHeading) : base(id, updateJobState)
@@ -545,7 +543,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                 if(isDrivingCar)
                 {
-                    DrawMarker((int)MarkerType.VerticalCylinder, Constants.Location.CarRobberyJob.DeliveryPosX, Constants.Location.CarRobberyJob.DeliveryPosY, Constants.Location.CarRobberyJob.DeliveryPosZ, 0f, 0f, 0f, 0f, 0f, 0f, Constants.Location.CarRobberyJob.DeliveryRadius, Constants.Location.CarRobberyJob.DeliveryRadius, Constants.Location.CarRobberyJob.DeliveryRadius, DeliveryMarkerColourR, DeliveryMarkerColourG, DeliveryMarkerColourB, DeliveryMarkerColourA, false, false, 2, false, null, null, false);
+                    DrawMarker((int)MarkerType.VerticalCylinder, Constants.Location.CarRobberyJob.DeliveryPosX, Constants.Location.CarRobberyJob.DeliveryPosY, Constants.Location.CarRobberyJob.DeliveryPosZ, 0f, 0f, 0f, 0f, 0f, 0f, Constants.Location.CarRobberyJob.DeliveryRadius, Constants.Location.CarRobberyJob.DeliveryRadius, Constants.Location.CarRobberyJob.DeliveryRadius, Constants.Colours.ObjectiveMarkerColourR, Constants.Colours.ObjectiveMarkerColourG, Constants.Colours.ObjectiveMarkerColourB, Constants.Colours.ObjectiveMarkerColourA, false, false, 2, false, null, null, false);
                 }
 
                 const float radiusSq = Constants.Location.CarRobberyJob.DeliveryRadius * Constants.Location.CarRobberyJob.DeliveryRadius;

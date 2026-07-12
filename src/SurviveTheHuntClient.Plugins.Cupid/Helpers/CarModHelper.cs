@@ -14,7 +14,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
             VehicleModType.Armor,
         };
 
-        private static readonly uint s_TulipHash = (uint)GetHashKey("tulip");
+        private static readonly uint s_TulipHash = Constants.TulipHashKey;
 
         internal static void ApplyModsForSpecialSpawnedCar(int vehicle, uint model)
         {
@@ -50,12 +50,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                 SetVehicleColours(vehicle, (int)VehicleColor.MetallicSunriseOrange, (int)VehicleColor.MetallicSilver);
                 SetVehicleExtraColours(vehicle, (int)VehicleColor.MetallicRaceYellow, (int)VehicleColor.MetallicBlack);
                 // livery
-                SetVehicleMod(vehicle, 48, 0, false);
+                SetVehicleMod(vehicle, 48, 1, false);
             }
         }
 
         internal static void TickSpecialVehicleProperties(int vehicle, uint model)
         {
+            bool hasExtraEnginePower = s_TulipHash == model;
+
             // SUVs and bikes need a bit extra oomph
             switch (model)
             {
@@ -63,16 +65,19 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                 case (uint)VehicleHash.Sheriff2:
                     SetVehicleEnginePowerMultiplier(vehicle, 3f);
                     SetVehicleEngineTorqueMultiplier(vehicle, 2.25f);
+                    hasExtraEnginePower = true;
                     break;
                 case (uint)VehicleHash.Policeb:
                     SetVehicleEnginePowerMultiplier(vehicle, 2.6f);
                     SetVehicleEngineTorqueMultiplier(vehicle, 2.6f);
+                    hasExtraEnginePower = true;
                     break;
                 case (uint)VehicleHash.Police:
                 case (uint)VehicleHash.Sheriff:
                 case (uint)VehicleHash.Police4:
                     SetVehicleEnginePowerMultiplier(vehicle, 2f);
                     SetVehicleEngineTorqueMultiplier(vehicle, 2.2f);
+                    hasExtraEnginePower = true;
                     break;
             }
 
@@ -84,16 +89,19 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                 SetVehicleTyreFixed(vehicle, i);
                 SetVehicleTyreBurst(vehicle, i, false, 0f);
 
-                if (model == s_TulipHash)
+                // adjust for extra speed
+                if(hasExtraEnginePower)
                 {
-                    SetVehicleWheelBrakePressure(vehicle, i, 2f);
+                    SetVehicleWheelBrakePressure(vehicle, i, 8.5f);
                 }
             }
 
+            SetDriverAbility(PlayerPedId(), 1f);
+
             if(model == s_TulipHash)
             {
-                SetVehicleEnginePowerMultiplier(vehicle, 4f);
-                SetVehicleEngineTorqueMultiplier(vehicle, 3.1f);
+                SetVehicleEnginePowerMultiplier(vehicle, 3f);
+                SetVehicleEngineTorqueMultiplier(vehicle, 5.1f);
             }
         }
     }

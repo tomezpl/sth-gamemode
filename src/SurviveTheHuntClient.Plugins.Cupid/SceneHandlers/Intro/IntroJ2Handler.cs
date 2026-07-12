@@ -13,7 +13,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
     {
         internal class SceneStageTick : SceneStageTickBaseAttribute { internal SceneStageTick(SceneStage stage) : base((int)stage) { } }
 
-        private static readonly int _carHash = GetHashKey("boor"), _carHash2 = GetHashKey("tulip");
+        private static readonly int _carHash = GetHashKey("boor"), _carHash2 = (int)Cupid.Constants.TulipHashKey;
 
         private static readonly Random s_RNG = new Random();
 

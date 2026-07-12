@@ -14,7 +14,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
 
         private JobControllerBase[] _jobs = new JobControllerBase[0];
 
-        internal static JobControllerBase[] GetDefaultJobs(TriggerEventProxyDelegate triggerEventProxy, TriggerServerEventProxyDelegate triggerServerEventProxy, JobControllerBase.JobStateRpcUpdateDelegate syncState)
+        internal static JobControllerBase[] GetDefaultJobs(ShipJobController.UpdatePlayerClothingDelegate updatePlayerClothing, TriggerEventProxyDelegate triggerEventProxy, TriggerServerEventProxyDelegate triggerServerEventProxy, JobControllerBase.JobStateRpcUpdateDelegate syncState)
         {
             return new JobControllerBase[]
             {
@@ -25,7 +25,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
                 new CarRobberyJobController("car_elysian", syncState, Constants.Location.CarRobberyJob.Elysian, Constants.Location.CarRobberyJob.ElysianHeading),
                 new CarRobberyJobController("car_delperro", syncState, Constants.Location.CarRobberyJob.DelPerro, Constants.Location.CarRobberyJob.DelPerroHeading),
 
-                new ShipJobController(triggerEventProxy, triggerServerEventProxy, syncState),
+                new ShipJobController(updatePlayerClothing, triggerEventProxy, triggerServerEventProxy, syncState),
             };
         }
 
@@ -42,11 +42,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
             jobs.CopyTo(_jobs, 0);
         }
 
-        internal JobManager(TriggerEventProxyDelegate triggerEvent, TriggerServerEventProxyDelegate triggerServerEventProxy, IPlayerState playerState, IGameState gameState, JobControllerBase[] jobs = null) : this(triggerEvent, triggerServerEventProxy, playerState, gameState)
+        internal JobManager(ShipJobController.UpdatePlayerClothingDelegate updatePlayerClothing, TriggerEventProxyDelegate triggerEvent, TriggerServerEventProxyDelegate triggerServerEventProxy, IPlayerState playerState, IGameState gameState, JobControllerBase[] jobs = null) : this(triggerEvent, triggerServerEventProxy, playerState, gameState)
         {
             if(jobs == null)
             {
-                jobs = GetDefaultJobs(triggerEvent, triggerServerEventProxy, SyncState);
+                jobs = GetDefaultJobs(updatePlayerClothing, triggerEvent, triggerServerEventProxy, SyncState);
             }
 
             _jobs = new JobControllerBase[jobs.Length];

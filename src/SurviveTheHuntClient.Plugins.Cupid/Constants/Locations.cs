@@ -170,6 +170,35 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     return -1;
                 }
             }
+
+            internal static class PartyClothesMarkers
+            {
+                private static Vector3[] _all => new Vector3[]
+                {
+                    new Vector3(117.5785f, -234.2292f, 54.55787f),
+                    new Vector3(-166.9188f, -301.3444f, 39.73333f),
+                    new Vector3(-706.3417f, -151.2523f, 37.41519f),
+                    new Vector3(-1180.578f, -763.7936f, 17.32644f),
+                    new Vector3(-3179.502f, 1033.954f, 20.86321f),
+                    new Vector3(617.4792f, 2775.442f, 42.0881f)
+                };
+
+                private static Vector3[] _cached = null;
+                internal static Vector3[] All
+                {
+                    get
+                    {
+                        if(_cached == null)
+                        {
+                            _cached = _all;
+                        }
+
+                        return _cached;
+                    }
+                }
+
+                internal const float ZOffset = -0.85f;
+            }
         }
     }
 }

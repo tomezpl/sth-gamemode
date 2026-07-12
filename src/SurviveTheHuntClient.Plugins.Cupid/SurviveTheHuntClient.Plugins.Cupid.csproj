@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="Constants\AnimNames.cs" />
     <Compile Include="Constants\Clothing.cs" />
+    <Compile Include="Constants\Colours.cs" />
     <Compile Include="Constants\DirectedScenes.cs" />
     <Compile Include="Constants\DisguiseState.cs" />
     <Compile Include="Constants\Heat.cs" />

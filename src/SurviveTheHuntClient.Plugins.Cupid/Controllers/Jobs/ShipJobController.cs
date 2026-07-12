@@ -5,9 +5,12 @@ using SurviveTheHuntClient.Models.UI;
 using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
 using SurviveTheHuntClient.Plugins.Cupid.Models;
+using SurviveTheHuntClient.Plugins.Cupid.Utils;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using static CitizenFX.Core.Native.API;
+using static SurviveTheHuntClient.Plugins.Cupid.Constants;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 {
@@ -549,6 +552,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private int? _jobBlip;
 
+        private const string PartyDisguiseBlipNameKey = "STH_CUPID_BLIP_HUNTED_DISGUISE";
+        private const string PartyDisguiseBlipNameContent = "Party disguise";
+
+        private const string PartyDisguisePickUpHelpKey = "STH_CUPID_HELP_HUNTED_DISGUISE";
+        private const string PartyDisguisePickUpHelpText = "Press ~INPUT_CONTEXT~ to put on some party clothing.";
+
         private static bool Init()
         {
             if(!s_HasDoneInit)
@@ -562,6 +571,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 AddTextEntry(TrackerPickUpHelpTextKey, TrackerPickUpHelpTextLabel);
                 AddTextEntry(CopsSpookedNotifTextKey, CopsSpookedNotifTextLabel);
                 AddTextEntry(BlipNameTextKey, BlipNameTextLabel);
+                AddTextEntry(PartyDisguiseBlipNameKey, PartyDisguiseBlipNameContent);
+                AddTextEntry(PartyDisguisePickUpHelpKey, PartyDisguisePickUpHelpText);
 
                 foreach (KeyValuePair<string, string> label in s_ObjectiveText.Values)
                 {
@@ -633,11 +644,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         public event DisguiseStateChangedEvent DisguiseStateChanged;
 
-        internal ShipJobController(TriggerEventProxyDelegate triggerEventProxy, TriggerServerEventProxyDelegate triggerServerEventProxy, JobStateRpcUpdateDelegate updateJobStateRpc) : base("ship", updateJobStateRpc)
+        private readonly int[] _clothingBlips;
+
+        internal delegate void UpdatePlayerClothingDelegate(SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType playerType, DirectedScene scene, bool strict = false);
+
+        private readonly UpdatePlayerClothingDelegate UpdatePlayerClothing;
+
+        internal ShipJobController(UpdatePlayerClothingDelegate updatePlayerClothing, TriggerEventProxyDelegate triggerEventProxy, TriggerServerEventProxyDelegate triggerServerEventProxy, JobStateRpcUpdateDelegate updateJobStateRpc) : base("ship", updateJobStateRpc)
         {
             TriggerEvent = triggerEventProxy;
             TriggerServerEvent = triggerServerEventProxy;
             PhoneTextHelper = new PhoneTextHelper(triggerEventProxy);
+            UpdatePlayerClothing = updatePlayerClothing;
 
             AnimRequests = new AnimRequestHelper(triggerServerEventProxy, this);
 
@@ -671,6 +689,27 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             _state.JHasOutfitChanged += OnJHasOutfitChanged;
             _state.LHasOutfitChanged += OnLHasOutfitChanged;
+
+            _clothingBlips = new int[Constants.Location.PartyClothesMarkers.All.Length];
+            for (int i = 0; i < Constants.Location.PartyClothesMarkers.All.Length; i++)
+            {
+                Vector3 pos = Constants.Location.PartyClothesMarkers.All[i];
+                int blip = AddBlipForCoord(pos.X, pos.Y, pos.Z + Constants.Location.PartyClothesMarkers.ZOffset);
+                _clothingBlips[i] = blip;
+                SetBlipSprite(blip, (int)BlipSprite.Clothes);
+                SetBlipNameFromTextFile(blip, PartyDisguiseBlipNameKey);
+                SetBlipDisplay(blip, 0);
+            }
+        }
+
+        private bool _clothesBlipsShowingDoNotSet = false;
+        private void SetClothesBlipsShowing(bool show = true)
+        {
+            _clothesBlipsShowingDoNotSet = show;
+            foreach(int blip in _clothingBlips)
+            {
+                SetBlipDisplay(blip, show ? 6 : 0);
+            }
         }
 
         private void OnLHasOutfitChanged(bool prev, bool current, bool canSync)
@@ -1345,9 +1384,91 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             SetEntityAsMissionEntity(handle, false, true);
         }
 
+        private bool _wasInDisguiseRangeLastTick = false;
+        private void HandleDisguise(float deltaTime)
+        {
+            if(PlayerState.Team != SurviveTheHuntShared.Core.Teams.Team.Hunted || _localPlayerDisguise != Constants.DisguiseState.None)
+            {
+                return;
+            }
+
+            Vector3? closest = null;
+            float closestSqDistance = float.MaxValue;
+            const float MaximumDistance = 30f;
+            const float MaxDistSq = MaximumDistance * MaximumDistance;
+            Vector3 playerPos = GetEntityCoords(PlayerPedId(), false);
+            Vector3[] markers = Constants.Location.PartyClothesMarkers.All;
+            for (int i = 0; i < markers.Length; i++)
+            {
+                float distSq = playerPos.DistanceToSquared(markers[i]);
+                if (distSq < closestSqDistance)
+                {
+                    closest = markers[i];
+                    closestSqDistance = distSq;
+                    if(distSq < MaxDistSq)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if(closest.HasValue)
+            {
+                const float Radius = 1.25f;
+                DrawMarker((int)MarkerType.VerticalCylinder, closest.Value.X, closest.Value.Y, closest.Value.Z + Constants.Location.PartyClothesMarkers.ZOffset, 0f, 0f, 0f, 0f, 0f, 0f, Radius, Radius, 2f, Constants.Colours.ObjectiveMarkerColourR, Constants.Colours.ObjectiveMarkerColourG, Constants.Colours.ObjectiveMarkerColourB, Constants.Colours.ObjectiveMarkerColourA, false, false, 2, false, null, null, false);
+                bool isInRange = closestSqDistance < (Radius * Radius);
+                if(_wasInDisguiseRangeLastTick != isInRange)
+                {
+                    _wasInDisguiseRangeLastTick = isInRange;
+
+                    if(isInRange)
+                    {
+                        BeginTextCommandDisplayHelp(PartyDisguisePickUpHelpKey);
+                        EndTextCommandDisplayHelp(0, true, true, -1);
+                    }
+                    else
+                    {
+                        ClearAllHelpMessages();
+                    }
+                }
+
+                if(isInRange)
+                {
+                    if(IsControlJustPressed(0, (int)Control.Context))
+                    {
+                        SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType playerType = PlayerUtils.GetPlayerType(PlayerId(), GameState.Hunt.HuntedPlayers);
+                        UpdatePlayerClothing(playerType, DirectedScene.Party, true);
+                        _wasInDisguiseRangeLastTick = false;
+                        _localPlayerDisguise = DisguiseState.Partygoer;
+                        switch(playerType)
+                        {
+                            case SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType.HuntedJ:
+                                _state.JHasOutfit = true;
+                                break;
+                            case SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType.HuntedL:
+                                _state.LHasOutfit = true;
+                                break;
+                        }
+                        ClearAllHelpMessages();
+                        SetClothesBlipsShowing(false);
+                    }
+                }
+            }
+        }
+
         private void TickAmbient(float deltaTime)
         {
             _timeSinceLastRangeCheck += deltaTime;
+
+            if(Constants.Settings.IsDebug && _localPlayerDisguise == DisguiseState.None)
+            {
+                SetClothesBlipsShowing();
+            }
+
+            if(_clothesBlipsShowingDoNotSet)
+            {
+                HandleDisguise(deltaTime);
+            }
 
             bool wasInRangeBeforeCheck = _wasPlayerInRangeLastTick;
             if(_timeSinceLastRangeCheck >= RangeCheckIntervalSeconds)
@@ -2209,6 +2330,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 int blip = _jobBlip.Value;
                 RemoveBlip(ref blip);
                 _jobBlip = null;
+            }
+
+            foreach(int blip in _clothingBlips)
+            {
+                int blipCopy = blip;
+                RemoveBlip(ref blipCopy);
             }
 
             AnimRequests.Cleanup();

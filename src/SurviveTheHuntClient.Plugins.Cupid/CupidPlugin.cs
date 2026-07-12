@@ -338,7 +338,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 JobManager.Cleanup();
             }
 
-            JobManager = new JobManager(TriggerEventProxy, TriggerServerEventProxy, playerState, gameState);
+            JobManager = new JobManager(SetPlayerClothing, TriggerEventProxy, TriggerServerEventProxy, playerState, gameState);
             JobManager.JobCompleted += OnJobCompleted;
 
             if(HeatController != null)
@@ -608,12 +608,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             JobManager.OnNetEntityReceived(netId, name);
 
-            foreach(INetEntityListener subscriber in Subscribers.NetEntity)
+            foreach (INetEntityListener subscriber in Subscribers.NetEntity)
             {
                 subscriber.OnNetEntityReceived(name, netId);
             }
 
-            if(name == IntroJ2Handler.TulipNetEntName)
+            if (name == IntroJ2Handler.TulipNetEntName)
             {
                 State.TulipNetId = netId;
             }
