@@ -65,6 +65,22 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 }
             }
 
+            internal event GenericStateChangedEvent<int> DriverNetIdChanged;
+            private int _driverNetId = 0;
+            internal int DriverNetId
+            {
+                get => _driverNetId;
+                set
+                {
+                    if(_driverNetId != value)
+                    {
+                        int old = _driverNetId;
+                        _driverNetId = Convert.ToInt32(value);
+                        DriverNetIdChanged.Invoke(old, _driverNetId, CanSync);
+                    }
+                }
+            }
+
             internal event GenericStateChangedEvent<JobStage> OnStageChanged;
             private JobStage _stage = JobStage.WaitingToStart;
             internal JobStage Stage
@@ -98,6 +114,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 CarNetId,
                 TruckNetId,
                 Stage,
+                DriverNetId,
             }
 
             internal override sealed Dictionary<int, object> Get()
@@ -107,7 +124,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     {(int)StateProp.HasCompletedBonus, Get((int)StateProp.HasCompletedBonus) },
                     {(int)StateProp.CarNetId, Get((int)StateProp.CarNetId) },
                     {(int)StateProp.TruckNetId, Get((int)StateProp.TruckNetId) },
-                    {(int)StateProp.Stage, Get((int)StateProp.Stage) }
+                    {(int)StateProp.Stage, Get((int)StateProp.Stage) },
+                    {(int)StateProp.DriverNetId, Get((int)StateProp.DriverNetId) }
                 };
             }
 
@@ -123,6 +141,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         return CarNetId;
                     case (int)StateProp.Stage:
                         return Stage;
+                    case (int)StateProp.DriverNetId:
+                        return DriverNetId;
                 }
 
                 throw new ArgumentException($"{nameof(statePropId)} is not a valid {nameof(SimpleRobberyJobController)}.{nameof(JobState)}.{nameof(StateProp)}");
@@ -143,6 +163,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         break;
                     case StateProp.Stage:
                         Stage = (JobStage)Convert.ToSByte(statePropValue);
+                        break;
+                    case StateProp.DriverNetId:
+                        DriverNetId = Convert.ToInt32(statePropValue);
                         break;
                 }
             }
@@ -201,6 +224,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private const string BonusObjectiveTextKey = "STH_CUPID_CARJOB_BONUS_OBJ";
         private const string BonusObjectiveTextString = "Deliver the car to ~y~Terminal, LS~w~ for bonus heat.";
 
+        private const uint DriverModelHash = (uint)PedHash.ArmGoon02GMY;
+
+        private int _driverPed = 0;
+
         private readonly static bool s_HasInit = InitShared();
 
         internal sealed override bool BlockOtherJobs => false;
@@ -215,6 +242,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             _state.OnCarNetIdChanged += OnCarNetIdChanged;
             _state.OnStageChanged += OnStageChanged;
             _state.OnHasCompletedBonusChanged += OnHasCompletedBonusChanged;
+            _state.DriverNetIdChanged += OnTruckDriverNetIdChanged;
+        }
+
+        private void OnTruckDriverNetIdChanged(int prev, int current, bool canSync)
+        {
+            if(canSync)
+            {
+                SyncState((int)JobState.StateProp.DriverNetId);
+            }
         }
 
         private static bool InitShared()
@@ -271,12 +307,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             if(GameState?.Hunt != null && GameState.Hunt.IsHunted(PlayerId(), out HuntPlayer? _))
             {
+                // TODO: this should only show for the passenger, or on a bike
                 if(current == JobState.JobStage.PreparingJump)
                 {
                     BeginTextCommandDisplayHelp(JumpHelpTextKey);
                     EndTextCommandDisplayHelp(0, false, true, 5000);
                 }
 
+                // TODO: this should only show if we're in the target vehicle
                 if(current == JobState.JobStage.WaitingToDriveOut)
                 {
                     BeginTextCommandDisplayHelp(DriveOutHelpTextKey);
@@ -377,11 +415,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private const float TriggerDistanceCheckInterval = .5f;
         private float _timeSinceLastTriggerDistanceCheck = 0f;
 
+        private bool _waitingToSpawnDriverPed = false;
+
         private void TickAmbient(float deltaTime)
         {
             _timeElapsedInCurrentStage += deltaTime;
 
-            if(_waitingToSpawnTruck)
+            if (_waitingToSpawnTruck)
             {
                 RequestModel(s_truckModel);
                 RequestModel(CarModel);
@@ -393,6 +433,29 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                     _state.CarNetId = VehToNet(spawnResult.CarHandle);
                     _state.TruckNetId = VehToNet(spawnResult.TruckHandle);
+                    _waitingToSpawnDriverPed = true;
+                }
+            }
+
+            if (_waitingToSpawnDriverPed)
+            {
+                RequestModel(DriverModelHash);
+                if (HasModelLoaded(DriverModelHash) && NetworkDoesEntityExistWithNetworkId(_state.TruckNetId))
+                {
+                    _waitingToSpawnDriverPed = false;
+                    int truck = NetToVeh(_state.TruckNetId);
+                    int driverPed = CreatePedInsideVehicle(truck, 0, DriverModelHash, -1, true, true);
+                    _state.DriverNetId = PedToNet(_driverPed);
+                    const int drivingStyle = 0
+                        | 4 // swerve vehicles
+                        | 16 // peds
+                        | 32 // objects
+                        | 512 // wrong way
+                        | 524288 // change laness
+                        | 16384; // adjust to road speed
+                    TaskVehicleDriveWander(driverPed, truck, 67f, drivingStyle);
+                    SetDriverAbility(driverPed, 1f);
+                    SetDriverRacingModifier(driverPed, 1f);
                 }
             }
 
@@ -714,6 +777,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 SetEntityAsMissionEntity(_truckHandle, false, true);
                 DeleteEntity(ref _truckHandle);
+            }
+
+            if(NetworkDoesNetworkIdExist(_state.DriverNetId) && NetworkDoesEntityExistWithNetworkId(_state.DriverNetId))
+            {
+                int driver = NetToPed(_state.DriverNetId);
+                DeletePed(ref driver);
             }
 
             RemoveBlip(ref _carBlip);
