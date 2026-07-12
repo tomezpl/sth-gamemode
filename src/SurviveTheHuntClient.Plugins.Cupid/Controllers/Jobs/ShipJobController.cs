@@ -822,19 +822,23 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                                 TaskShockingEventReact(ped, _gunfireEvent.Value);
                             }
                         }
+                        if(PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunters)
+                        {
+                            _pendingTexts.Add(new PendingText(4f, PhoneContacts.Police, "Shots fired", "Reports of gunfire aboard the Dignity. Proceed with caution, Lima 6-7.", 15f));
+                        }
                         break;
                 }
             }
 
             if(current == JobState.SpookedType.SpookedByCops)
             {
-                // TODO
-                bool isCop = false;
+                bool isCop = PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunters;
 
                 if (isCop)
                 {
                     BeginTextCommandThefeedPost(CopsSpookedNotifTextKey);
                     EndTextCommandThefeedPostTicker(true, true);
+                    _pendingTexts.Add(new PendingText(10f, PhoneContacts.Police, "Cover blown", "Receiving reports of a disturbance aboard the Dignity. Lima 6 can you confirm plain clothes status?", 15f));
                 }
                 else
                 {
@@ -1371,6 +1375,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         }
 
         private bool _hasWarnedAboutDisguise = false;
+        private bool _hasDispatchExplainedMission = false;
 
         protected override void OnActiveChanged(bool isActive)
         {
@@ -1399,14 +1404,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                             _shipNeedsOwner = false;
                             TryClaimShipOwnership();
                         }
+
+                        if(!_hasDispatchExplainedMission && PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunters)
+                        {
+                            _hasDispatchExplainedMission = true;
+                            _pendingTexts.Add(new PendingText(5f, PhoneContacts.Police, "Dignity target", "VIP holds top secret data on Pyre Twig TV dongle. New model looks like a hard drive.", 10f));
+                            _pendingTexts.Add(new PendingText(12.5f, PhoneContacts.Police, "Dignity target", "Your plain clothes gear includes two trackers that'll geolocate incoming connections to the dongle.", 15f));
+                        }
                     }
                     else
                     {
                         // Instruct the player to get a disguise
-                        if(!_hasWarnedAboutDisguise && _localPlayerDisguise != DisguiseState.Partygoer)
+                        if(!_hasWarnedAboutDisguise && _localPlayerDisguise == DisguiseState.None)
                         {
                             _hasWarnedAboutDisguise = true;
-                            if (PlayerUtils.GetPlayerType(PlayerId(), GameState.Hunt.HuntedPlayers) != SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType.Cop)
+                            if (PlayerState.Team != SurviveTheHuntShared.Core.Teams.Team.Hunters)
                             {
                                 _pendingTexts.Add(new PendingText(0.75f, PhoneContacts.Esther, "dress code", "hey genius didn't i tell you to doll up a bit? they won't let you in wearing these rags"));
                             }
@@ -1539,9 +1551,19 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             SetClothesBlipsShowing(needsDisguise);
             SetBlipDisplay(_jobBlip.Value, 6);
 
-            if(needsDisguise)
+            bool isHunted = PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted;
+            if (needsDisguise)
             {
-                _pendingTexts.Add(new PendingText(40f, PhoneContacts.Esther, "a job", "hey lovebirds. heard of the party at the Dignity? dress up and head there. i'll be in touch"));
+                if (isHunted)
+                {
+                    _pendingTexts.Add(new PendingText(40f, PhoneContacts.Esther, "a job", "hey lovebirds. heard of the party at the Dignity? dress up and head there. i'll be in touch"));
+                }
+            }
+
+            if(!isHunted)
+            {
+                _pendingTexts.Add(new PendingText(150f, PhoneContacts.Police, "ALL UNITS", "Be advised: assistance needed guarding VIP party at Dignity yacht. Code TRP2", 20f));
+                _pendingTexts.Add(new PendingText(165f, PhoneContacts.Police, "Plain clothes policy", "Partygoer crowd must not see officers in uniform. Use undercover gear from your service vehicle.", 20f));
             }
         }
 

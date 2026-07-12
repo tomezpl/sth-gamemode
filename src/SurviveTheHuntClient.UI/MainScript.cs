@@ -102,6 +102,7 @@ namespace SurviveTheHuntClient.UI
                 AppearanceTexture,
                 BoundsTexture,
                 Texture.Create("files/cpd_contact.png", "cupid_contact_esther"),
+                Texture.Create("files/cpd_contact2.png", "cupid_contact_police")
             };
 
             private static Dictionary<string, Texture> CreateTextureMap(Texture[] textures = null)

@@ -8,7 +8,8 @@ files {
 	'files/lslimits.png',
 	'files/bus.png',
 	'files/appearance.png',
-	'files/cpd_contact.png'
+	'files/cpd_contact.png',
+	'files/cpd_contact2.png'
 }
 
 game 'gta5'
