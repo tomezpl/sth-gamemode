@@ -196,6 +196,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     break;
             }
 
+            JobManager?.OnHeatChanged((ushort)current, current);
+
             SetPlayerClothing(State.LocalRole, State.CurrentScene, true);
         }
 

@@ -16,8 +16,19 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
 
         private static readonly uint s_TulipHash = Constants.TulipHashKey;
 
+        private static readonly uint s_DrivingAbilityName1 = (uint)GetHashKey("MP0_WHEELIE_ABILITY"), s_DrivingAbilityName2 = (uint)GetHashKey("SP0_WHEELIE_ABILITY");
+
+        private static void MaxDrivingAbility()
+        {
+            const float MaxValue = 100f;
+            StatSetFloat(s_DrivingAbilityName1, MaxValue, true);
+            StatSetFloat(s_DrivingAbilityName2, MaxValue, true);
+        }
+
         internal static void ApplyModsForSpecialSpawnedCar(int vehicle, uint model)
         {
+            MaxDrivingAbility();
+
             // everyone gets bulletproofs
             SetVehicleBodyHealth(vehicle, 1000f);
             SetVehicleEngineHealth(vehicle, 1000f);
@@ -98,7 +109,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
 
             SetDriverAbility(PlayerPedId(), 1f);
 
-            if(model == s_TulipHash)
+            if (model == s_TulipHash)
             {
                 SetVehicleEnginePowerMultiplier(vehicle, 3f);
                 SetVehicleEngineTorqueMultiplier(vehicle, 5.1f);

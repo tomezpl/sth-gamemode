@@ -4,10 +4,11 @@ using SurviveTheHuntClient.Plugins.Cupid.Models;
 using System.Collections.Generic;
 using CitizenFX.Core;
 using static CitizenFX.Core.Native.API;
+using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 {
-    internal abstract class JobControllerBase : ITickable
+    internal abstract class JobControllerBase : ITickable, IHeatListener
     {
         /// <summary>
         /// How much heat completing this job will award
@@ -36,6 +37,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private readonly JobStateRpcUpdateDelegate _updateJobState;
 
         internal readonly string Id;
+
+        protected struct HeatInfo
+        {
+            internal ushort Score;
+            internal Constants.HeatThresholds Threshold;
+        }
+
+        private HeatInfo _currentHeat = new HeatInfo { Score = 0, Threshold = Constants.HeatThresholds.Start };
+        protected HeatInfo CurrentHeat => _currentHeat;
 
         protected JobControllerBase(string jobId, JobStateRpcUpdateDelegate updateJobState)
         {
@@ -83,6 +93,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 {
                     OnActiveChanged(value);
                 }
+                // TODO: ideally this should be set before calling OnActiveChanged but now I'm worried it'll break too much
                 _isActive = value;
             }
         }
@@ -124,5 +135,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         internal virtual LabelledItem[] CurrentUI => LabelledItem.Empty;
 
         public abstract void Tick(float deltaTime);
+
+        public virtual void OnHeatChanged(ushort heatScore, Constants.HeatThresholds heatThreshold)
+        {
+            _currentHeat.Score = heatScore;
+            _currentHeat.Threshold = heatThreshold;
+        }
     }
 }

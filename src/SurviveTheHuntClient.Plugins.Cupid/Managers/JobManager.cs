@@ -3,12 +3,13 @@ using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Models.UI;
 using SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs;
+using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
 using System;
 using System.Collections.Generic;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Managers
 {
-    internal sealed class JobManager : ITickable
+    internal sealed class JobManager : ITickable, IHeatListener
     {
         private JobControllerBase _currentJob;
 
@@ -213,6 +214,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
                 JobControllerBase oldJob = _currentJob;
                 _currentJob = newCurrentJob;
                 OnCurrentJobChanged(oldJob, newCurrentJob);
+            }
+        }
+
+        public void OnHeatChanged(ushort heatScore, Constants.HeatThresholds heatThreshold)
+        {
+            foreach(JobControllerBase job in _jobs)
+            {
+                job.OnHeatChanged(heatScore, heatThreshold);
             }
         }
     }

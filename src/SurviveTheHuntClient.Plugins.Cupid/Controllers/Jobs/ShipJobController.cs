@@ -718,6 +718,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 SyncState((int)JobState.StateProp.LHasOutfit);
             }
+
+            if (current)
+            {
+                TrySendTextAboutDisguisesReady();
+            }
         }
 
         private void OnJHasOutfitChanged(bool prev, bool current, bool canSync)
@@ -726,6 +731,29 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 SyncState((int)JobState.StateProp.JHasOutfit);
             }
+
+            if (current)
+            {
+                TrySendTextAboutDisguisesReady();
+            }
+        }
+
+        private bool _hasSentTextAboutDisguisesReady = false;
+        private bool TrySendTextAboutDisguisesReady()
+        {
+            if(_hasSentTextAboutDisguisesReady)
+            {
+                return false;
+            }
+
+            bool canSend = _state.JHasOutfit && _state.LHasOutfit;
+            if (canSend)
+            {
+                _hasSentTextAboutDisguisesReady = true;
+                _pendingTexts.Add(new PendingText(2.5f, PhoneContacts.Esther, "nice threads", "Aw don't you two look cute! Now get your asses over to the yacht. I'll explain later.", 12));
+            }
+
+            return canSend;
         }
 
         private bool _shipNeedsOwner = true;
@@ -1342,26 +1370,53 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        private bool _hasWarnedAboutDisguise = false;
+
         protected override void OnActiveChanged(bool isActive)
         {
             base.OnActiveChanged(isActive);
 
             if(isActive)
             {
-                if(_state.Stage == JobState.JobStage.WaitingToStart)
+                bool isAllowed = _jobUnlocked && _state.LHasOutfit && _state.JHasOutfit;
+                // Don't allow starting until it's unlocked
+                if (_jobUnlocked)
                 {
-                    _state.Stage++;
+                    if (isAllowed)
+                    {
+                        if (_state.Stage == JobState.JobStage.WaitingToStart)
+                        {
+                            _state.Stage++;
+                        }
+
+                        if (_state.Stage == JobState.JobStage.LeaveArea)
+                        {
+                            _state.Stage = JobState.JobStage.Completed;
+                        }
+
+                        if (_shipNeedsOwner)
+                        {
+                            _shipNeedsOwner = false;
+                            TryClaimShipOwnership();
+                        }
+                    }
+                    else
+                    {
+                        // Instruct the player to get a disguise
+                        if(!_hasWarnedAboutDisguise && _localPlayerDisguise != DisguiseState.Partygoer)
+                        {
+                            _hasWarnedAboutDisguise = true;
+                            if (PlayerUtils.GetPlayerType(PlayerId(), GameState.Hunt.HuntedPlayers) != SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType.Cop)
+                            {
+                                _pendingTexts.Add(new PendingText(0.75f, PhoneContacts.Esther, "dress code", "hey genius didn't i tell you to doll up a bit? they won't let you in wearing these rags"));
+                            }
+                        }
+                    }
                 }
 
-                if(_state.Stage == JobState.JobStage.LeaveArea)
+                if (isActive != isAllowed)
                 {
-                    _state.Stage = JobState.JobStage.Completed;
-                }
-
-                if(_shipNeedsOwner)
-                {
-                    _shipNeedsOwner = false;
-                    TryClaimShipOwnership();
+                    IsActive = isAllowed;
                 }
             }
         }
@@ -1434,6 +1489,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
                 if(isInRange)
                 {
+                    // Apply the hunted's partygoer disguise
                     if(IsControlJustPressed(0, (int)Control.Context))
                     {
                         SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType playerType = PlayerUtils.GetPlayerType(PlayerId(), GameState.Hunt.HuntedPlayers);
@@ -1451,19 +1507,47 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         }
                         ClearAllHelpMessages();
                         SetClothesBlipsShowing(false);
+                        PlayerState.LoadoutIndex = 1;
+                        PlayerState.TakeAwayWeapons(PlayerPedId());
                     }
                 }
+            }
+        }
+
+        private bool _jobUnlocked = false;
+
+        public override sealed void OnHeatChanged(ushort heatScore, HeatThresholds heatThreshold)
+        {
+            base.OnHeatChanged(heatScore, heatThreshold);
+
+            // Unlock the job after heat level 2
+            if (heatThreshold >= HeatThresholds.Heat2)
+            {
+                UnlockJob();
+            }
+        }
+
+        private void UnlockJob()
+        {
+            if(_jobUnlocked)
+            {
+                return;
+            }
+
+            _jobUnlocked = true;
+            bool needsDisguise = _localPlayerDisguise == DisguiseState.None;
+            SetClothesBlipsShowing(needsDisguise);
+            SetBlipDisplay(_jobBlip.Value, 6);
+
+            if(needsDisguise)
+            {
+                _pendingTexts.Add(new PendingText(40f, PhoneContacts.Esther, "a job", "hey lovebirds. heard of the party at the Dignity? dress up and head there. i'll be in touch"));
             }
         }
 
         private void TickAmbient(float deltaTime)
         {
             _timeSinceLastRangeCheck += deltaTime;
-
-            if(Constants.Settings.IsDebug && _localPlayerDisguise == DisguiseState.None)
-            {
-                SetClothesBlipsShowing();
-            }
 
             if(_clothesBlipsShowingDoNotSet)
             {
@@ -1607,7 +1691,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 _jobBlip = AddBlipForCoord(Origin.X, Origin.Y, Origin.Z);
                 SetBlipSprite(_jobBlip.Value, 455);
-                SetBlipDisplay(_jobBlip.Value, 6);
+                SetBlipDisplay(_jobBlip.Value, _jobUnlocked ? 6 : 0);
                 SetBlipColour(_jobBlip.Value, (int)BlipColor.Yellow);
                 SetBlipNameFromTextFile(_jobBlip.Value, BlipNameTextKey);
             }

@@ -73,6 +73,7 @@
     <Compile Include="Helpers\UIMenuHelper.cs" />
     <Compile Include="Interfaces\IDisguiseEmitter.cs" />
     <Compile Include="Interfaces\IDisguiseListener.cs" />
+    <Compile Include="Interfaces\IHeatListener.cs" />
     <Compile Include="Interfaces\INetEntityListener.cs" />
     <Compile Include="Interfaces\ISceneHandler.cs" />
     <Compile Include="Interfaces\ISpecialEventListener.cs" />
