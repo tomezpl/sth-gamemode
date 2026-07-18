@@ -5,6 +5,7 @@ using SurviveTheHuntClient.Plugins.Cupid.Models;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
@@ -226,11 +227,19 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private const uint DriverModelHash = (uint)PedHash.ArmGoon02GMY;
 
-        private int _driverPed = 0;
-
         private readonly static bool s_HasInit = InitShared();
 
         internal sealed override bool BlockOtherJobs => false;
+
+        private enum JumpAnimStage
+        {
+            None,
+            Prep,
+            Jumping,
+            WaitingForJumpEnd
+        }
+
+        private static JumpAnimStage s_JumpAnimStage = JumpAnimStage.None;
 
         internal CarRobberyJobController(string id, JobStateRpcUpdateDelegate updateJobState, Vector3 startPos, float startHeading) : base(id, updateJobState)
         {
@@ -287,6 +296,35 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             _isPendingCarTruckSync = true;
         }
 
+        private enum JumpCapability
+        {
+            None,
+            CarBonnet,
+            Bike
+        }
+
+        private JumpCapability GetJumpCapability()
+        {
+            int playerPed = PlayerPedId();
+
+            if(IsPedOnAnyBike(playerPed))
+            {
+                // Only allow jumping off bike if we're the driver
+                return GetPedInVehicleSeat(GetVehiclePedIsIn(playerPed, false), -1) == playerPed ? JumpCapability.Bike : JumpCapability.None;
+            }
+            else
+            {
+                int vehicle = GetVehiclePedIsIn(playerPed, false);
+                uint model = (uint)GetEntityModel(vehicle);
+                if(IsThisModelACar(model))
+                {
+                    return GetPedInVehicleSeat(vehicle, -1) != playerPed ? JumpCapability.CarBonnet : JumpCapability.None;
+                }
+            }
+
+            return JumpCapability.None;
+        }
+
         private void OnStageChanged(JobState.JobStage prev, JobState.JobStage current, bool canSync)
         {
             _timeElapsedInCurrentStage = 0f;
@@ -307,15 +345,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             if(GameState?.Hunt != null && GameState.Hunt.IsHunted(PlayerId(), out HuntPlayer? _))
             {
-                // TODO: this should only show for the passenger, or on a bike
-                if(current == JobState.JobStage.PreparingJump)
-                {
-                    BeginTextCommandDisplayHelp(JumpHelpTextKey);
-                    EndTextCommandDisplayHelp(0, false, true, 5000);
-                }
-
-                // TODO: this should only show if we're in the target vehicle
-                if(current == JobState.JobStage.WaitingToDriveOut)
+                // Only trigger "Press S to drive out" if we're in the target vehicle
+                if(current == JobState.JobStage.WaitingToDriveOut && NetworkDoesEntityExistWithNetworkId(_state.CarNetId) && GetPedInVehicleSeat(NetToVeh(_state.CarNetId), -1) == PlayerPedId())
                 {
                     BeginTextCommandDisplayHelp(DriveOutHelpTextKey);
                     EndTextCommandDisplayHelp(0, true, true, 0);
@@ -412,6 +443,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             TickActive(deltaTime);
         }
 
+        const float JumpTimeSeconds = 2f;
+
         private const float TriggerDistanceCheckInterval = .5f;
         private float _timeSinceLastTriggerDistanceCheck = 0f;
 
@@ -445,7 +478,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     _waitingToSpawnDriverPed = false;
                     int truck = NetToVeh(_state.TruckNetId);
                     int driverPed = CreatePedInsideVehicle(truck, 0, DriverModelHash, -1, true, true);
-                    _state.DriverNetId = PedToNet(_driverPed);
+                    _state.DriverNetId = PedToNet(driverPed);
                     const int drivingStyle = 0
                         | 4 // swerve vehicles
                         | 16 // peds
@@ -459,6 +492,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 }
             }
 
+            int playerPed = PlayerPedId();
+
             _timeSinceLastTriggerDistanceCheck += deltaTime;
             if(_timeSinceLastTriggerDistanceCheck >= TriggerDistanceCheckInterval)
             {
@@ -467,7 +502,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 int playerId = PlayerId();
                 if (CarTruckSpawned && GameState?.Hunt != null && GameState.Hunt.IsHunted(playerId, out HuntPlayer? _))
                 {
-                    Vector3 playerPos = GetEntityCoords(GetPlayerPed(playerId), false);
+                    Vector3 playerPos = GetEntityCoords(playerPed, false);
                     float distSq = playerPos.DistanceToSquared(GetEntityCoords(_carHandle, false));
 
                     _isInArea = distSq < ActiveRadiusSq;
@@ -492,6 +527,139 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 {
                     _isPendingCarTruckSync = false;
                     OnCarTruckSpawned();
+                }
+            }
+
+            if (_state.Stage == JobState.JobStage.Jumping)
+            {
+                if (_timeElapsedInCurrentStage >= JumpTimeSeconds && _playerInitiatedJump)
+                {
+                    _state.Stage = JobState.JobStage.Jumping + 1;
+                    SetPedIntoVehicle(playerPed, NetToVeh(_state.CarNetId), -1);
+                }
+            }
+
+            //if (Constants.Settings.IsDebug && s_JumpAnimStage == JumpAnimStage.None && IsControlJustPressed(0, (int)Control.Context))
+            //{
+            //    s_JumpAnimStage = JumpAnimStage.Prep;
+            //}
+
+            HandleJumpAnim(deltaTime);
+        }
+
+        private const string JumpAnimDict = "missfam1_yachtbattleincar01_";
+        private const string JumpPrepAnimClip = "franklinonbonnet_jumpprep";
+        private const string JumpLeapAnimClip = "franklinonbonnet_yachtjump_fail";
+        private static int s_CarBonnetBoneIndex = -1;
+        private static int s_AttachedCar = 0;
+        private static bool s_StartedLeap = false;
+        private static int s_Camera = 0;
+        private static void HandleJumpAnim(float deltaTime)
+        {
+            bool hasLoadedAnim = HasAnimDictLoaded(JumpAnimDict);
+            if (!hasLoadedAnim)
+            {
+                RequestAnimDict(JumpAnimDict);
+            }
+
+            if(s_Camera == 0)
+            {
+                s_Camera = CreateCam("DEFAULT_SCRIPTED_CAMERA", false);
+            }
+
+            SetCamActive(s_Camera, s_JumpAnimStage != JumpAnimStage.None);
+
+            if (hasLoadedAnim)
+            {
+                if (s_JumpAnimStage != JumpAnimStage.None)
+                {
+                    int playerPed = PlayerPedId();
+
+                    bool isPlayingJumpAnim = IsEntityPlayingAnim(playerPed, JumpAnimDict, JumpPrepAnimClip, 3);
+                    bool isPlayingLeapAnim = IsEntityPlayingAnim(playerPed, JumpAnimDict, JumpLeapAnimClip, 3);
+
+                    const int animFlags = 4 | 67108864 | 33554432 | 262144 | 65536 | 8 | 512 | 1024 | 2048;
+                    const float Offset = 1.1f;
+                    const float UpOffset = 0.8f;
+
+                    if (s_AttachedCar != 0 && (isPlayingJumpAnim || isPlayingLeapAnim))
+                    {
+                        Vector3 forwardVec = GetEntityForwardVector(s_AttachedCar);
+                        forwardVec *= Offset;
+                        //AttachEntityToEntity(playerPed, _attachedCar, _carBonnetBoneIndex, forwardVec.X, forwardVec.Y + UpOffset, forwardVec.Z, 0f, 0f, 0f, false, false, false, false, 2, false);
+                        Vector3 velocity = GetEntityVelocity(s_AttachedCar);
+                        const float Speed = 25f;
+                        velocity += forwardVec * Speed;
+                        Vector3 pos = GetEntityCoords(playerPed, false);
+                        Vector3 origin = GetWorldPositionOfEntityBone(s_AttachedCar, s_CarBonnetBoneIndex);
+                        pos += velocity * deltaTime;
+                        Vector3 relative = pos - origin;
+                        //AttachEntityToEntity(playerPed, s_AttachedCar, s_CarBonnetBoneIndex, relative.X, relative.Y, relative.Z, 0f, 0f, 0f, false, false, false, false, 2, false);
+                        //SetEntityVelocity(playerPed, velocity.X, velocity.Y, velocity.Z);
+                        //SetEntityCoords(s_DummyObj, pos.X, pos.Y, pos.Z, false, false, false, false);
+                    }
+
+                    if (s_JumpAnimStage == JumpAnimStage.WaitingForJumpEnd)
+                    {
+                        if (!isPlayingLeapAnim)
+                        {
+                            s_JumpAnimStage = JumpAnimStage.None;
+                            SetEntityInvincible(playerPed, false);
+                            SetPedCanRagdoll(playerPed, true);
+                            SetEntityVelocity(playerPed, 0f, 0f, 0f);
+                            s_StartedLeap = false;
+                            RenderScriptCams(false, false, 0, false, false);
+                            return;
+                        }
+                    }
+
+                    RenderScriptCams(true, false, 0, false, false);
+
+                    if (s_JumpAnimStage == JumpAnimStage.Jumping)
+                    {
+                        if (!isPlayingJumpAnim && !s_StartedLeap)
+                        {
+                            //DetachEntity(playerPed, false, true);
+                            //DetachEntity(playerPed, true, true);
+                            Vector3 forwardVec = GetEntityForwardVector(s_AttachedCar);
+                            Vector3 carPos = GetEntityCoords(s_AttachedCar, false);
+                            Debug.WriteLine($"vehicle {s_AttachedCar} pos: {carPos}");
+                            Vector3 bonnetPos = GetWorldPositionOfEntityBone(s_AttachedCar, s_CarBonnetBoneIndex);
+                            Debug.WriteLine($"bonnet pos: {bonnetPos}");
+                            SetEntityCoords(playerPed, bonnetPos.X + (forwardVec.X * Offset), bonnetPos.Y + (forwardVec.Y * Offset), bonnetPos.Z + (forwardVec.Z * Offset) + UpOffset, false, false, false, false);
+                            AttachEntityToEntity(playerPed, s_AttachedCar, s_CarBonnetBoneIndex, 0f, Offset, UpOffset, 0f, 0f, 0f, false, false, false, true, 2, true);
+                            TaskPlayAnim(playerPed, JumpAnimDict, JumpLeapAnimClip, 8f, 8f, 1750, animFlags | 2, 0f, false, false, false);
+                            s_JumpAnimStage++;
+                            s_StartedLeap = true;
+                        }
+                        /*const float Speed = 5f;
+                        Vector3 velocity = GetEntityVelocity(playerPed);
+                        velocity += fwdVec * Speed;
+                        SetEntityVelocity(playerPed, velocity.X, velocity.Y, velocity.Z);*/
+                    }
+
+                    SetEntityInvincible(playerPed, true);
+                    SetPedCanRagdoll(playerPed, false);
+
+                    if (s_JumpAnimStage == JumpAnimStage.Prep)
+                    {
+                        Vector3 forwardVec = GetEntityForwardVector(playerPed);
+                        forwardVec *= Offset;
+                        Vector3 pos = GetEntityCoords(playerPed, false);
+                        int vehicle = GetVehiclePedIsIn(playerPed, true);
+                        Debug.WriteLine($"Ped is in vehicle {vehicle}");
+                        s_AttachedCar = vehicle;
+                        SetCamRot(s_Camera, 0f, 0f, GetEntityHeading(vehicle), 2);
+                        AttachCamToEntity(s_Camera, vehicle, 0f, -2.2f, 0.8f, true);
+                        s_CarBonnetBoneIndex = GetEntityBoneIndexByName(vehicle, "bonnet");
+                        SetEntityCoords(playerPed, pos.X + forwardVec.X, pos.Y + forwardVec.Y, pos.Z + forwardVec.Z + UpOffset, false, false, false, false);
+                        Vector3 bonnetPos = GetWorldPositionOfEntityBone(vehicle, s_CarBonnetBoneIndex);
+                        AttachEntityToEntity(playerPed, s_AttachedCar, s_CarBonnetBoneIndex, 0f, Offset, UpOffset, 0f, 0f, 0f, false, false, false, true, 2, true);
+                        TaskPlayAnim(playerPed, JumpAnimDict, JumpPrepAnimClip, 8f, 1f, -1, animFlags, 0f, false, false, false);
+                        //DetachEntity(playerPed, true, false);
+
+                        s_JumpAnimStage = JumpAnimStage.Jumping;
+                    }
                 }
             }
         }
@@ -570,6 +738,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private void OnCarEnteredOrExited(bool entered)
         {
+            s_JumpAnimStage = JumpAnimStage.None;
+
+            Debug.WriteLine($"{(entered ? "entered" : "exited")} car");
+            _playerInitiatedJump = false;
+            DetachEntity(PlayerPedId(), true, false);
+
             if (!_state.HasCompletedBonus)
             {
                 SetBlipDisplay(_carBlip, entered ? 0 : 6);
@@ -590,13 +764,29 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        private JumpCapability _lastJumpCapability = JumpCapability.None;
         private void TickActive(float deltaTime)
         {
             int playerPed = PlayerPedId();
 
-            if(_state.Stage == JobState.JobStage.WaitingToDeliver && !_state.HasCompletedBonus)
+            if (PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted && _state.Stage == JobState.JobStage.PreparingJump)
             {
-                bool isDrivingCar = GetVehiclePedIsIn(playerPed, false) == _carHandle;
+                JumpCapability jumpCapability = GetJumpCapability();
+                if(jumpCapability != _lastJumpCapability)
+                {
+                    ClearAllHelpMessages();
+
+                    if (jumpCapability != JumpCapability.None)
+                    {
+                        BeginTextCommandDisplayHelp(JumpHelpTextKey);
+                        EndTextCommandDisplayHelp(0, false, true, 5000);
+                    }
+                }
+            }
+
+            if (_state.Stage == JobState.JobStage.WaitingToDeliver && !_state.HasCompletedBonus)
+            {
+                bool isDrivingCar = GetVehiclePedIsIn(playerPed, false) == NetToVeh(_state.CarNetId);
 
                 if(isDrivingCar != _wasDrivingCarLastTick)
                 {
@@ -651,17 +841,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     SetEntityNoCollisionEntity(_carHandle, _truckHandle, true);
                     SetEntityCompletelyDisableCollision(_carHandle, true, true);
                     _state.Stage = JobState.JobStage.WaitingToDriveOut + 1;
-                }
-            }
-
-            const float JumpTimeSeconds = 2f;
-
-            if(_state.Stage == JobState.JobStage.Jumping)
-            {
-                if (_timeElapsedInCurrentStage >= JumpTimeSeconds && _playerInitiatedJump)
-                {
-                    _state.Stage = JobState.JobStage.Jumping + 1;
-                    SetPedIntoVehicle(playerPed, _carHandle, -2);
                 }
             }
 
@@ -722,6 +901,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     ClearAllHelpMessages();
                     _playerInitiatedJump = true;
                     _state.Stage = JobState.JobStage.Jumping;
+                    s_JumpAnimStage = JumpAnimStage.Prep;
                 }
             }
 
