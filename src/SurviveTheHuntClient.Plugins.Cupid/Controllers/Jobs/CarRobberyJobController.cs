@@ -401,6 +401,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             SetBlipDisplay(blip, 6);
             // radar_export_vehicle
             SetBlipSprite(blip, 794);
+            SetBlipColour(blip, (int)BlipColor.Green);
 
             return blip;
         }
@@ -411,6 +412,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             SetBlipSprite(blip, CarDestinationBlipSprite);
             SetBlipDisplay(blip, 0);
+            SetBlipColour(blip, (int)BlipColor.Yellow);
 
             return blip;
         }
