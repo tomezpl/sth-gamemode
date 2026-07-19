@@ -514,6 +514,8 @@ namespace SurviveTheHuntClient
                 }
             }
 
+            int localPlayerId = PlayerId();
+
             // Display player names on blips (in bigmap).
             N_0x82cedc33687e1f50(true);
 
@@ -538,7 +540,9 @@ namespace SurviveTheHuntClient
                     isHunted = playerId == gameState.Hunt.HuntedPlayers[i].PlayerHandle;
                 }
 
-                if(gameState.Hunt.IsStarted && ((!isHunted && playerState.Team == Team.Hunted) || isHunted) && !GameState.IsPedTooFar(new Ped(ped), BoundsTracker))
+                bool shouldHideBlip = gameState.Hunt.IsStarted && ((!isHunted && playerState.Team == Team.Hunted) || (isHunted && (playerId == localPlayerId || playerState.Team == Team.Hunters))) && !GameState.IsPedTooFar(new Ped(ped), BoundsTracker);
+
+                if (shouldHideBlip)
                 {
                     // Hide the blip if it's within the play area bounds and the player is on the opposite team.
                     Blip blip = PlayerBlips[ped].blip;
