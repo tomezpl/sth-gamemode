@@ -174,7 +174,7 @@ namespace SurviveTheHuntClient
                 // However, the hunted player should be able to driveby if they're a passenger.
                 bool couldPotentiallyDrivebyAsPassenger = Team == Teams.Team.Hunted;
                 bool couldPotentiallyDrivebyAsDriver = false;
-                if(!couldPotentiallyDrivebyAsPassenger)
+                if(!couldPotentiallyDrivebyAsPassenger || !couldPotentiallyDrivebyAsDriver)
                 {
                     ExecutePlugins(plugin =>
                     {
