@@ -61,7 +61,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                 SetVehicleColours(vehicle, (int)VehicleColor.MetallicSunriseOrange, (int)VehicleColor.MetallicSilver);
                 SetVehicleExtraColours(vehicle, (int)VehicleColor.MetallicRaceYellow, (int)VehicleColor.MetallicBlack);
                 // livery
-                SetVehicleMod(vehicle, 48, 1, false);
+                SetVehicleMod(vehicle, 48, 3, false);
             }
         }
 
@@ -104,6 +104,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                 if(hasExtraEnginePower)
                 {
                     SetVehicleWheelBrakePressure(vehicle, i, 8.5f);
+                    SetVehicleWheelPower(vehicle, i, 10f);
                 }
             }
 
@@ -111,8 +112,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
 
             if (model == s_TulipHash)
             {
-                SetVehicleEnginePowerMultiplier(vehicle, 3f);
-                SetVehicleEngineTorqueMultiplier(vehicle, 5.1f);
+                SetVehicleEnginePowerMultiplier(vehicle, 1.3f);
+                SetVehicleEngineTorqueMultiplier(vehicle, 4.1f);
             }
         }
     }
