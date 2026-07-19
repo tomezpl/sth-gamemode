@@ -75,6 +75,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             internal bool HasRunPostIntro = false;
 
             internal int TulipNetId = 0;
+
+            internal int TulipBlip = 0;
         }
 
         private int ScriptCamera;
@@ -106,6 +108,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         }
 
         private readonly DirectedScene _lastScene;
+
+        private const string PersonalVehicleBlipNameKey = "STH_CUPID_BLIP_PERSONALVEH";
+        private const string PersonalVehicleBlipNameContent = "Personal Vehicle";
+
+        private static bool Init()
+        {
+            if(!s_HasInit)
+            {
+                AddTextEntry(PersonalVehicleBlipNameKey, PersonalVehicleBlipNameContent);
+            }
+
+            return true;
+        }
+
+        private readonly static bool s_HasInit = Init();
 
         /// <summary>
         /// Constructor for the valentines plugin (except we're so fucking late for valentines...)
@@ -412,6 +429,19 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 CopSpawnController.Cleanup();
                 CopSpawnController = null;
             }
+
+            if(State.TulipBlip != 0 && DoesBlipExist(State.TulipBlip))
+            {
+                RemoveBlip(ref State.TulipBlip);
+            }
+            State.TulipBlip = 0;
+
+            if(State.TulipNetId != 0 && NetworkDoesEntityExistWithNetworkId(State.TulipNetId))
+            {
+                int veh = NetToVeh(State.TulipNetId);
+                DeleteVehicle(ref veh);
+            }
+            State.TulipNetId = 0;
 
             UIMenuHelper.SetItemBlocked(SurviveTheHuntShared.Models.UI.BlockedItem.Appearance, false);
         }
@@ -749,6 +779,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 int tulip = NetToVeh(State.TulipNetId);
                 CarModHelper.TickSpecialVehicleProperties(tulip, Constants.TulipHashKey);
+
+                if(State.TulipBlip == 0 && State.LocalRole != PlayerType.Cop)
+                {
+                    State.TulipBlip = AddBlipForEntity(tulip);
+                    SetBlipSprite(State.TulipBlip, (int)BlipSprite.PersonalVehicleCar);
+                    SetBlipNameFromTextFile(State.TulipBlip, PersonalVehicleBlipNameKey);
+                }
+
+                if(State.TulipBlip != 0)
+                {
+                    SetBlipDisplay(State.TulipBlip, IsPedInVehicle(PlayerPedId(), tulip, true) ? 0 : 6);
+                }
             }
         }
 
