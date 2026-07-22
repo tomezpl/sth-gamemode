@@ -36,6 +36,14 @@ namespace SurviveTheHuntClient
 
             public HuntPlayer[] HuntedPlayers { get; set; } = new HuntPlayer[0];
 
+            public static readonly HuntSettings DefaultHuntSettings = new HuntSettings
+            {
+                TeamsAllowedOutOfSafeZoneDuringPrep = HuntSettings.GetTeamsBitset(Teams.Team.Hunted),
+                SafeZoneRadius = SharedConstants.DefaultSpawnSafeZoneRadius
+            };
+
+            public HuntSettings Settings { get; set; } = DefaultHuntSettings;
+
             public bool IsHunted(int playerHandle, out HuntPlayer? huntPlayerInfo)
             {
                 for(int i = 0; i < HuntedPlayers.Length; i++)

@@ -815,7 +815,9 @@ namespace SurviveTheHuntClient
             FixCarsInSpawn();
 
             CfxVector3 spawnPos = new CfxVector3(SharedConstants.DockSpawn.X, SharedConstants.DockSpawn.Y, SharedConstants.DockSpawn.Z);
-            float safeZoneRadiusSqr = (SharedConstants.DefaultSpawnSafeZoneRadius * SharedConstants.DefaultSpawnSafeZoneRadius);
+            HuntSettings huntSettings = GameState.Hunt != null ? GameState.Hunt.Settings : GameState.HuntDetails.DefaultHuntSettings;
+            float safeZoneRadius = huntSettings.SafeZoneRadius;
+            float safeZoneRadiusSqr = safeZoneRadius * safeZoneRadius;
 
             // Apply spawn safe zone protections if the prep phase hasn't ended yet.
             bool inSafeZone = Player.Local?.Character?.Position != null
@@ -826,12 +828,14 @@ namespace SurviveTheHuntClient
 
             PlayerState.IsInSafeZone = inSafeZone;
 
-            if (wasHuntStartedLastFrame && !inSafeZone)
+            bool isPlayersTeamPermittedToLeaveSafeZoneDuringPrepPhase = HuntSettings.IsTeamInBitset(huntSettings.TeamsAllowedOutOfSafeZoneDuringPrep, PlayerState?.Team ?? Teams.Team.Hunted);
+
+            if (wasHuntStartedLastFrame && !inSafeZone && !isPlayersTeamPermittedToLeaveSafeZoneDuringPrepPhase)
             {
                 PlayerState.WaitingToTeleportToSpawn = true;
             }
 
-            bool canLeaveSpawn = (!isPrepPhase || PlayerState.Team == Teams.Team.Hunted) && !PlayerState.WaitingToTeleportToSpawn;
+            bool canLeaveSpawn = isPlayersTeamPermittedToLeaveSafeZoneDuringPrepPhase || ((!isPrepPhase || PlayerState.Team == Teams.Team.Hunted) && !PlayerState.WaitingToTeleportToSpawn);
 
             bool anyPluginRequiresInvincibility = false;
             ExecutePlugins(plugin =>
@@ -1092,6 +1096,9 @@ namespace SurviveTheHuntClient
             }
 
             ExecutePlugins(p => p.OnHuntStarted(GameState, PlayerState));
+            HuntSettings settings = GameState.HuntDetails.DefaultHuntSettings;
+            ExecutePlugins(p => p.InjectHuntSettings(ref settings));
+            GameState.Hunt.Settings = settings;
         }
 
         /// <summary>

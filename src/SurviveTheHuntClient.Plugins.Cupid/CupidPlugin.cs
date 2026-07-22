@@ -805,5 +805,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         public sealed override bool IsDrivebyAllowedForPassengers => true;
 
         public sealed override bool IsDrivebyAllowedForDrivers => IsPedOnAnyBike(PlayerPedId());
+
+        public sealed override void InjectHuntSettings(ref HuntSettings settings)
+        {
+            base.InjectHuntSettings(ref settings);
+
+            Debug.WriteLine($"{nameof(CupidPlugin)}.{nameof(InjectHuntSettings)}: allowing both teams to leave safe zone during prep");
+            settings.TeamsAllowedOutOfSafeZoneDuringPrep = HuntSettings.GetTeamsBitset(Teams.Team.Hunted, Teams.Team.Hunters);
+            Debug.WriteLine($"{nameof(CupidPlugin)}.{nameof(InjectHuntSettings)}: reducing safe zone radius");
+            settings.SafeZoneRadius = float.MinValue;
+        }
     }
 }

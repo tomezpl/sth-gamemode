@@ -303,5 +303,10 @@ namespace SurviveTheHuntClient.Models
 
         public virtual bool IsDrivebyAllowedForPassengers => false;
         public virtual bool IsDrivebyAllowedForDrivers => false;
+
+        public virtual void InjectHuntSettings(ref HuntSettings settings)
+        {
+
+        }
     }
 }

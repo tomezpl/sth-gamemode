@@ -75,5 +75,7 @@ namespace SurviveTheHuntClient.Interfaces
         /// Time when the prep phase is already over.
         /// </summary>
         DateTime PrepPhaseEndTime { get; set; }
+
+        HuntSettings Settings { get; set; }
     }
 }
