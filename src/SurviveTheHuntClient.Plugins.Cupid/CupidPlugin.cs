@@ -206,11 +206,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         private void OnHeatTierChanged(HeatThresholds prev, HeatThresholds current)
         {
             Debug.WriteLine($"Heat tier changed to {current}");
-            switch(current)
+            HeatThresholds[] allThresholds = { HeatThresholds.Start, HeatThresholds.Heat1, HeatThresholds.Heat2, HeatThresholds.Target };
+            foreach (HeatThresholds threshold in allThresholds)
             {
-                case HeatThresholds.Heat1:
-                    State.CurrentScene = DirectedScene.Default2;
-                    break;
+                if (threshold > prev && threshold <= current)
+                {
+                    switch (threshold)
+                    {
+                        case HeatThresholds.Heat1:
+                            State.CurrentScene = DirectedScene.Default2;
+                            break;
+                    }
+                }
             }
 
             JobManager?.OnHeatChanged((ushort)current, current);

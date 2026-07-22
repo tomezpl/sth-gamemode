@@ -168,7 +168,7 @@ props: {
             {
                 ComponentsToApply = new Dictionary<PedComponents, PedVariation>
                 {
-                    { PedComponents.Torso, new PedVariation { Drawable = 3, Texture = 0} },
+                    { PedComponents.Torso, new PedVariation { Drawable = 5, Texture = 0} },
                     { PedComponents.Legs, new PedVariation { Drawable = 0, Texture = 1} },
                     {PedComponents.Shoes, new PedVariation { Drawable = 48, Texture = 0} },
                     {PedComponents.Torso2, new PedVariation { Drawable  = 5, Texture = 2} },
@@ -746,14 +746,14 @@ props: {
             {
                 ComponentsToApply = new Dictionary<PedComponents, PedVariation>
                 {
-                    {PedComponents.Torso, new PedVariation {Drawable = 161, Texture = 0 } },
-                    {PedComponents.Legs, new PedVariation {Drawable = 80, Texture = 2} },
+                    {PedComponents.Torso, new PedVariation {Drawable = 4, Texture = 0 } },
+                    {PedComponents.Legs, new PedVariation {Drawable = 25, Texture = 2} },
                     {PedComponents.Shoes, new PedVariation {Drawable = 118, Texture = 12} },
                     {PedComponents.Special1, PedVariation.Default },
                     {PedComponents.Special2, new PedVariation{Drawable = 3, Texture = 0} },
                     {PedComponents.Special3, PedVariation.Default },
                     {PedComponents.Textures, PedVariation.Default },
-                    {PedComponents.Torso2, new PedVariation { Drawable = 168, Texture = 3} },
+                    {PedComponents.Torso2, new PedVariation { Drawable = 74, Texture = 1} },
                 },
                 PropsToApply = PedOutfit.RemoveProps,
 
@@ -1037,15 +1037,15 @@ props: {
                 PropsToApply = PedOutfit.RemoveProps,
             };
 
-            private static PedOutfit LuMaleWhiteTankShorts => new PedOutfit
+            private static PedOutfit LuMaleBlackTankDenimShorts => new PedOutfit
             {
                 ComponentsToApply = new Dictionary<PedComponents, PedVariation>
                 {
                     {PedComponents.Torso, new PedVariation { Drawable = 5, Texture = 0} },
-                    {PedComponents.Legs, new PedVariation { Drawable = 42, Texture = 4} },
-                    {PedComponents.Shoes, new PedVariation { Drawable = 12, Texture = 7} },
+                    {PedComponents.Legs, new PedVariation { Drawable = 144, Texture = 11} },
+                    {PedComponents.Shoes, new PedVariation { Drawable = 12, Texture = 5} },
                     {PedComponents.Special2, new PedVariation { Drawable = 15, Texture = 0} },
-                    {PedComponents.Torso2, new PedVariation { Drawable = 5, Texture = 9} },
+                    {PedComponents.Torso2, new PedVariation { Drawable = 5, Texture = 2} },
                     {PedComponents.Special1, PedVariation.Default },
                     {PedComponents.Special3, PedVariation.Default },
                     {PedComponents.Textures, PedVariation.Default },
@@ -1085,7 +1085,7 @@ props: {
                     new OutfitPair
                     {
                         Female = LuFemaleDefault,
-                        Male = LuMaleWhiteTankShorts,
+                        Male = LuMaleBlackTankDenimShorts,
                     }
                 },
 
