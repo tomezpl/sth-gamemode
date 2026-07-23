@@ -51,7 +51,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
         internal class State : SceneHandlerBaseState
         {
-            internal int Car, Car2;
+            internal int Car, Car2, Car2NetId;
             internal int Lady;
             internal int LadyCar;
             internal int PopSphereId;
@@ -86,6 +86,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             {
                 Car = 0;
                 Car2 = 0;
+                Car2NetId = 0;
                 LadyCar = 0;
                 Lady = 0;
                 PopSphereId = 0;
@@ -634,7 +635,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     if (playerType != PlayerType.Cop)
                     {
                         SetEntityCoords(state.Car2, Constants.Car2X, Constants.Car2Y, Constants.Car2Z, false, false, false, true);
-                        SetPedIntoVehicle(playerPed, state.Car2, playerType == PlayerType.HuntedJ ? -1 : 0);
+                        Debug.WriteLine($"{nameof(IntroJ2Handler)}.{nameof(Tickers)}.{nameof(DriveTogether)}: setting local player {playerType} into seat. car handle is {state.Car2}, exists: {DoesEntityExist(state.Car2)}, is vehicle: {IsEntityAVehicle(state.Car2)}");
+                        // prevent shuffling into driver seat
+                        SetPedConfigFlag(playerPed, 184, true);
+                        SetPedIntoVehicle(playerPed, state.Car2, state.LocalPlayerType == PlayerType.HuntedJ ? -1 : 0);
                         SetVehicleRadioEnabled(state.Car2, false);
                         FreezeEntityPosition(state.Car2, false);
                         
@@ -758,9 +762,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
         {
             base.OnNetEntityReceived(netId, name);
 
-            if(CurrentState.Car2 == 0 && name == TulipNetEntName)
+            if(CurrentState.Car2NetId == 0 && name == TulipNetEntName)
             {
-                CurrentState.Car2 = NetworkGetEntityFromNetworkId(netId);
+                if (NetworkDoesEntityExistWithNetworkId(netId))
+                {
+                    CurrentState.Car2 = NetToVeh(netId);
+                }
+                CurrentState.Car2NetId = netId;
             }
         }
 
@@ -863,6 +871,35 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                         CarModHelper.ApplyModsForSpecialSpawnedCar(CurrentState.Car2, (uint)_carHash2);
                     }
                 }
+            }
+
+            if(CurrentState.Car2NetId != 0 && CurrentState.Car2 == 0)
+            {
+                if (NetworkDoesEntityExistWithNetworkId(CurrentState.Car2NetId))
+                {
+                    CurrentState.Car2 = NetToVeh(CurrentState.Car2NetId);
+
+                    if (CurrentState.LocalPlayerType != PlayerType.Cop)
+                    {
+                        // prevent shuffling into driver seat
+                        SetPedConfigFlag(PlayerPedId(), 184, true);
+
+                        if (GetPedInVehicleSeat(CurrentState.Car2, CurrentState.LocalPlayerType == PlayerType.HuntedJ ? -1 : 0) != PlayerPedId())
+                        {
+                            if (CurrentState.LocalPlayerType == PlayerType.HuntedJ || (GetPedInVehicleSeat(CurrentState.Car2, -1) != 0))
+                            {
+                                Debug.WriteLine("setting into tulip");
+                                SetPedIntoVehicle(PlayerPedId(), CurrentState.Car2, CurrentState.LocalPlayerType == PlayerType.HuntedJ ? -1 : 0);
+                            }
+                        }
+                     }
+                }
+            }
+
+            if(CurrentState.Car2 != 0)
+            {
+                // prevent shuffling into driver seat
+                SetPedConfigFlag(PlayerPedId(), 184, true);
             }
 
             RenderScriptCams(!CurrentState.ForceDisableCamera && CurrentStage < s_LastStage, CurrentStage == s_LastStage, 1500, true, false);

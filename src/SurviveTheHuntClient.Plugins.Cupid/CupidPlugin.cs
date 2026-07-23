@@ -798,6 +798,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 {
                     SetBlipDisplay(State.TulipBlip, IsPedInVehicle(PlayerPedId(), tulip, true) ? 0 : 6);
                 }
+
+
+                if (State.LocalRole != PlayerType.Cop)
+                {
+                    // prevent shuffling into driver seat
+                    SetPedConfigFlag(PlayerPedId(), 184, !isIntroOver);
+                }
             }
         }
 
