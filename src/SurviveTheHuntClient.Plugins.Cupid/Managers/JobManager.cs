@@ -19,12 +19,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
         {
             return new JobControllerBase[]
             {
-                new SimpleRobberyJobController("fleeca_legion", syncState, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaLegion, Constants.Location.RobberyJob.FleecaLegion),
-                new SimpleRobberyJobController("fleeca_rockford", syncState, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaRockford, Constants.Location.RobberyJob.FleecaRockfordObjective),
-                new SimpleRobberyJobController("fleeca_chumash", syncState, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaChumash, Constants.Location.RobberyJob.FleecaChumash),
+                new SimpleRobberyJobController("fleeca_legion", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaLegion, Constants.Location.RobberyJob.FleecaLegion),
+                new SimpleRobberyJobController("fleeca_rockford", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaRockford, Constants.Location.RobberyJob.FleecaRockfordObjective),
+                new SimpleRobberyJobController("fleeca_chumash", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaChumash, Constants.Location.RobberyJob.FleecaChumash),
 
-                new CarRobberyJobController("car_elysian", syncState, Constants.Location.CarRobberyJob.Elysian, Constants.Location.CarRobberyJob.ElysianHeading),
-                new CarRobberyJobController("car_delperro", syncState, Constants.Location.CarRobberyJob.DelPerro, Constants.Location.CarRobberyJob.DelPerroHeading),
+                new CarRobberyJobController("car_elysian", syncState, Constants.Location.CarRobberyJob.Elysian, Constants.Location.CarRobberyJob.ElysianHeading, triggerEventProxy),
+                new CarRobberyJobController("car_delperro", syncState, Constants.Location.CarRobberyJob.DelPerro, Constants.Location.CarRobberyJob.DelPerroHeading,  triggerEventProxy),
 
                 new ShipJobController(updatePlayerClothing, triggerEventProxy, triggerServerEventProxy, syncState),
             };

@@ -1,11 +1,11 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
+using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 using SurviveTheHuntClient.Plugins.Cupid.Models;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
@@ -225,7 +225,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private const string BonusObjectiveTextKey = "STH_CUPID_CARJOB_BONUS_OBJ";
         private const string BonusObjectiveTextString = "Deliver the car to ~y~Terminal, LS~w~ for bonus heat.";
 
-        private const uint DriverModelHash = (uint)PedHash.ArmGoon02GMY;
+        private const string OpenDoorObjectiveTextKey = "STH_CUPID_CARJOB_OPEN_OBJ";
+        private const string OpenDoorObjectiveTextString = "Shoot the transporter's doors to open the vehicle hold.";
+
+        private const string ClimbTruckObjectiveTextKey = "STH_CUPID_CARJOB_CLIMB_OBJ";
+        private const string ClimbTruckObjectiveTextString = "Climb onto the truck and enter the vehicle.";
+
+        private const string JumpToCarObjectiveTextKey = "STH_CUPID_CARJOB_JUMP_OBJ";
+        private const string JumpToCarObjectiveTextString = "Jump onto the truck.";
+
+        private const uint DriverModelHash = (uint)PedHash.ArmGoon01GMM;
 
         private readonly static bool s_HasInit = InitShared();
 
@@ -241,7 +250,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private static JumpAnimStage s_JumpAnimStage = JumpAnimStage.None;
 
-        internal CarRobberyJobController(string id, JobStateRpcUpdateDelegate updateJobState, Vector3 startPos, float startHeading) : base(id, updateJobState)
+        private readonly PhoneTextHelper PhoneTextHelper;
+
+        internal CarRobberyJobController(string id, JobStateRpcUpdateDelegate updateJobState, Vector3 startPos, float startHeading, TriggerEventProxyDelegate triggerEvent) : base(id, updateJobState)
         {
             _spawnPos = startPos;
             _spawnHeading = startHeading;
@@ -252,6 +263,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             _state.OnStageChanged += OnStageChanged;
             _state.OnHasCompletedBonusChanged += OnHasCompletedBonusChanged;
             _state.DriverNetIdChanged += OnTruckDriverNetIdChanged;
+            PhoneTextHelper = new PhoneTextHelper(triggerEvent);
         }
 
         private void OnTruckDriverNetIdChanged(int prev, int current, bool canSync)
@@ -269,6 +281,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 AddTextEntry(JumpHelpTextKey, JumpHelpTextString);
                 AddTextEntry(DriveOutHelpTextKey, DriveOutHelpTextString);
                 AddTextEntry(BonusObjectiveTextKey, BonusObjectiveTextString);
+                AddTextEntry(JumpToCarObjectiveTextKey, JumpToCarObjectiveTextString);
+                AddTextEntry(OpenDoorObjectiveTextKey, OpenDoorObjectiveTextString);
+                AddTextEntry(ClimbTruckObjectiveTextKey, ClimbTruckObjectiveTextString);
 
                 return true;
             }
@@ -341,6 +356,23 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 {
                     SetVehicleDoorOpen(_truckHandle, (int)doorIndex, false, false);
                 }
+
+                if(PlayerState?.Team == SurviveTheHuntShared.Core.Teams.Team.Hunters)
+                {
+                    const string Subject = "Assault in progress";
+                    SetBlipDisplay(_carBlip, 6);
+                    SetBlipFlashTimer(_carBlip, 7500);
+                    Vector3 coords = GetBlipCoords(_carBlip);
+                    uint streetNameHash = 0, crossingRoadHash = 0;
+                    GetStreetNameAtCoord(coords.X, coords.Y, coords.Z, ref streetNameHash, ref crossingRoadHash);
+                    string streetName = null;
+                    if(streetNameHash != 0)
+                    {
+                        streetName = GetStreetNameFromHashKey(streetNameHash);
+                    }
+                    string message = $"Receiving reports of shots fired at a vehicle transporter{(streetNameHash != 0 ? $" on {streetName}" : "")}. Location marked.";
+                    PhoneTextHelper.SendText(Constants.PhoneContacts.Police, Subject, message, 15f);
+                }
             }
 
             if(GameState?.Hunt != null && GameState.Hunt.IsHunted(PlayerId(), out HuntPlayer? _))
@@ -359,6 +391,39 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 OnJobFinished();
 
                 _state.Stage = JobState.JobStage.InitialObjectiveDone + 1;
+
+                if(PlayerState?.Team == SurviveTheHuntShared.Core.Teams.Team.Hunters)
+                {
+                    Vector3 coords = GetBlipCoords(_carBlip);
+                    uint streetNameHash = 0, crossingRoadHash = 0;
+                    GetStreetNameAtCoord(coords.X, coords.Y, coords.Z, ref streetNameHash, ref crossingRoadHash);
+                    string streetName = null;
+                    if (streetNameHash != 0)
+                    {
+                        streetName = GetStreetNameFromHashKey(streetNameHash);
+                    }
+                    int entity = GetBlipInfoIdEntityIndex(_carBlip);
+                    string carName = null, manufacturerName = null;
+                    if(entity != 0 && IsEntityAVehicle(entity))
+                    {
+                        uint model = (uint)GetEntityModel(entity);
+                        carName = GetDisplayNameFromVehicleModel(model);
+                        manufacturerName = GetMakeNameFromVehicleModel(model);
+                        if (carName == "CARNOTFOUND")
+                        {
+                            carName = null;
+                        }
+                        else
+                        {
+                            carName = GetLabelText(carName);
+                            manufacturerName = GetLabelText(manufacturerName);
+                        }
+                    }
+                    // Signal lost, hide blip
+                    SetBlipDisplay(_carBlip, 0);
+                    string message = $"Transported vehicle last seen{(streetNameHash != 0 ? $" on {streetName}" : "")}.{(carName != null ? $" Vehicle is a {manufacturerName} {carName}." : "")}";
+                    PhoneTextHelper.SendText(Constants.PhoneContacts.Police, "Tracker signal lost", message, 15f);
+                }
             }
         }
 
@@ -391,14 +456,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
         private void OnCarTruckSpawned()
         {
-            _carBlip = CreateCarBlip(_carHandle);
+            _carBlip = CreateCarBlip(_carHandle, PlayerState?.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted);
         }
 
-        private static int CreateCarBlip(int carHandle)
+        private static int CreateCarBlip(int carHandle, bool show = true)
         {
             int blip = AddBlipForEntity(carHandle);
 
-            SetBlipDisplay(blip, 6);
+            SetBlipDisplay(blip, show ? 6 : 0);
             // radar_export_vehicle
             SetBlipSprite(blip, 794);
             SetBlipColour(blip, (int)BlipColor.Green);
@@ -486,7 +551,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         | 16 // peds
                         | 32 // objects
                         | 512 // wrong way
-                        | 524288 // change laness
+                        | 524288 // change lanes
                         | 16384; // adjust to road speed
                     TaskVehicleDriveWander(driverPed, truck, 67f, drivingStyle);
                     SetDriverAbility(driverPed, 1f);
@@ -547,6 +612,25 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             //}
 
             HandleJumpAnim(deltaTime);
+
+            if (_state.Stage < JobState.JobStage.InitialObjectiveDone)
+            {
+                Objective objToDisplay = Objective.None;
+                if (IsActive)
+                {
+                    switch (_state.Stage)
+                    {
+                        case JobState.JobStage.WaitingToStart:
+                        case JobState.JobStage.ShootingDoors:
+                            objToDisplay = Objective.OpenDoor;
+                            break;
+                        case JobState.JobStage.PreparingJump:
+                            objToDisplay = GetJumpCapability() != JumpCapability.None ? Objective.JumpToCar : Objective.ClimbBackOfTruck;
+                            break;
+                    }
+                }
+                DisplayObjective(objToDisplay);
+            }
         }
 
         private const string JumpAnimDict = "missfam1_yachtbattleincar01_";
@@ -755,14 +839,60 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 {
                     SetBlipFlashTimer(_carDeliveryBlip, 4000);
 
-                    BeginTextCommandPrint(BonusObjectiveTextKey);
-                    EndTextCommandPrint((int)(GameState.Hunt.ActualEndTime - DateTime.UtcNow).TotalMilliseconds, true);
+                    FlashMinimapDisplayWithColor(5);
+                    DisplayObjective(Objective.DeliverToDocks);
                 }
             }
 
             if(!entered)
             {
+                DisplayObjective(Objective.None);
+            }
+        }
+
+        private enum Objective
+        {
+            None,
+            OpenDoor,
+            JumpToCar,
+            ClimbBackOfTruck,
+            DeliverToDocks
+        }
+
+        private static readonly Dictionary<Objective, string> s_ObjectiveTextKeys = new Dictionary<Objective, string>
+        {
+            { Objective.None, null },
+            { Objective.OpenDoor, OpenDoorObjectiveTextKey },
+            { Objective.JumpToCar, JumpToCarObjectiveTextKey },
+            { Objective.ClimbBackOfTruck, ClimbTruckObjectiveTextKey },
+            { Objective.DeliverToDocks, BonusObjectiveTextKey }
+        };
+
+        private Objective _currentObjective = Objective.None;
+
+        private void DisplayObjective(Objective objective = Objective.None)
+        {
+            if(objective == _currentObjective)
+            {
+                return;
+            }
+
+            _currentObjective = objective;
+
+            string key = null;
+            if(!s_ObjectiveTextKeys.TryGetValue(objective, out key))
+            {
+                key = null;
+            }
+
+           if(key == null)
+            {
                 HUDUtils.ClearObjective();
+            }
+           else
+            {
+                BeginTextCommandPrint(key);
+                EndTextCommandPrint(GameState?.Hunt != null ? (int)(GameState.Hunt.ActualEndTime - DateTime.UtcNow).TotalMilliseconds : int.MaxValue, true);
             }
         }
 
@@ -771,11 +901,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         {
             int playerPed = PlayerPedId();
 
+            JumpCapability jumpCapability = JumpCapability.None;
             if (PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted && _state.Stage == JobState.JobStage.PreparingJump)
             {
-                JumpCapability jumpCapability = GetJumpCapability();
+                jumpCapability = GetJumpCapability();
                 if(jumpCapability != _lastJumpCapability)
                 {
+                    _lastJumpCapability = jumpCapability;
+                    Debug.WriteLine($"{nameof(jumpCapability)} changed to {jumpCapability}");
                     ClearAllHelpMessages();
 
                     if (jumpCapability != JumpCapability.None)
@@ -838,7 +971,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     }
                 }
 
-                if (_timeElapsedInCurrentStage >= 1f && !IsEntityAttached(_carHandle))
+                bool isCarFixedToTruck = IsEntityAttached(_carHandle);
+                if (isCarFixedToTruck && IsPedInVehicle(playerPed, _carHandle, true))
+                {
+                    // Prevent from exiting car before driving out
+                    DisableControlAction(0, (int)Control.VehicleExit, true);
+                }
+
+                if (_timeElapsedInCurrentStage >= 1f && !isCarFixedToTruck)
                 {
                     SetEntityNoCollisionEntity(_carHandle, _truckHandle, true);
                     SetEntityCompletelyDisableCollision(_carHandle, true, true);
@@ -898,7 +1038,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             if(_state.Stage == JobState.JobStage.PreparingJump)
             {
-                if(!_playerInitiatedJump && IsPedInAnyVehicle(PlayerPedId(), false) && IsControlJustPressed(0, (int)Control.Context))
+                if(!_playerInitiatedJump && jumpCapability != JumpCapability.None && IsControlJustPressed(0, (int)Control.Context))
                 {
                     ClearAllHelpMessages();
                     _playerInitiatedJump = true;

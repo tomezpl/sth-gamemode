@@ -112,8 +112,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             string heatAmount = (HeatValue / 100f).ToString(HeatValue % 100 == 0 ? "0" : "0.00");
             const string key = "STH_CUPID_HEAT_AWARD";
             AddTextEntry(key, $"Job complete. You have been awarded {heatAmount} Heat.");
-            BeginTextCommandDisplayHelp(key);
-            EndTextCommandDisplayHelp(0, false, true, 10 * 1000);
+
+            if (PlayerState?.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
+            {
+                BeginTextCommandDisplayHelp(key);
+                EndTextCommandDisplayHelp(0, false, true, 10 * 1000);
+            }
 
             // Award the heat value
             OnComplete.Invoke(HeatValue);

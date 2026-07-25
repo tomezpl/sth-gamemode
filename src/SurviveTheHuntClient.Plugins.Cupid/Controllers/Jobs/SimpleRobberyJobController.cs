@@ -2,6 +2,7 @@
 using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Models.UI;
+using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 using SurviveTheHuntClient.Plugins.Cupid.Models;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
 using System;
@@ -285,7 +286,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             internal const string LeaveKey = "BM_LVE_AREA";
         }
 
-        internal SimpleRobberyJobController(string jobId, JobStateRpcUpdateDelegate updateState, RobberyType type, in Vector3 startPos, in Vector3 objectivePos, float radius = DefaultStartTriggerRadius) : base(jobId, updateState)
+        private readonly PhoneTextHelper PhoneTextHelper;
+
+        internal SimpleRobberyJobController(string jobId, JobStateRpcUpdateDelegate updateState, TriggerEventProxyDelegate triggerEvent, RobberyType type, in Vector3 startPos, in Vector3 objectivePos, float radius = DefaultStartTriggerRadius) : base(jobId, updateState)
         {
             _startTriggerPos = startPos;
             StartTriggerRadiusSq = radius * radius;
@@ -298,6 +301,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             _state.StageChanged += OnStageChanged;
             _state.GrabProgressChanged += OnGrabProgressChanged;
             _state.IsOverChanged += OnIsOverChanged;
+
+            PhoneTextHelper = new PhoneTextHelper(triggerEvent);
 
             RegisterStrings();
         }
@@ -340,10 +345,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        float _timeTillCopsDispatched = float.MaxValue;
+        const float MaxTimeTillCopsDispatchedAfterAlarm = 10f;
+        const float MinAlarmDelay = 3.5f;
+        private static readonly Random s_RNG = new Random();
+
         private void OnStageChanged(Stage prev, Stage current, bool canSync)
         {
             Debug.WriteLine($"{nameof(SimpleRobberyJobController)}.{nameof(OnStageChanged)}({nameof(prev)}: {prev}, {nameof(current)}: {current})");
-
+            
             if (canSync)
             {
                 SyncState();
@@ -351,7 +361,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             if (current == Stage.TakingMoney)
             {
-                SetBlipDisplay(_objectiveBlipId, 6);
+                // show the actual cash blip only to the hunted player(s)
+                if (PlayerState?.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
+                {
+                    SetBlipDisplay(_objectiveBlipId, 6);
+                }
+
+                _timeTillCopsDispatched = MinAlarmDelay + ((float)s_RNG.NextDouble() * (MaxTimeTillCopsDispatchedAfterAlarm - MinAlarmDelay));
+                Debug.WriteLine($"Waiting {_timeTillCopsDispatched}s before dispatching cops");
             }
             else
             {
@@ -363,7 +380,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 _state.Synced(() => _state.IsOver = true);
             }
 
-            DisplayStageObjective(current);
+            if (PlayerState?.Team != SurviveTheHuntShared.Core.Teams.Team.Hunters)
+            {
+                DisplayStageObjective(current);
+            }
         }
 
         private void DisplayStageObjective(Stage stage)
@@ -404,6 +424,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         protected override void OnJobFinished()
         {
             base.OnJobFinished();
+
+            SetBlipFlashes(_startBlipId, false);
+            SetBlipColour(_startBlipId, 39);
         }
 
         protected override void OnActiveChanged(bool isActive)
@@ -417,18 +440,26 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             _uiState.IsStartHelpTextShowing = false;
 
-            // Hide the job blip when it's active, unhide when inactive
-            SetBlipDisplay(_startBlipId, isActive || _state.IsOver ? 0 : 6);
-
-            // Only show the objective blip during the TakingMoney stage.
-            SetBlipDisplay(_objectiveBlipId, isActive && _state.JobStage == Stage.TakingMoney ? 6 : 0);
-
-            if(isActive && !_state.IsOver)
+            if (PlayerState?.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
             {
-                DisplayStageObjective(_state.JobStage);
-            } else
+                // Hide the job blip when it's active, unhide when inactive
+                SetBlipDisplay(_startBlipId, isActive || _state.IsOver ? 0 : 6);
+
+                // Only show the objective blip during the TakingMoney stage.
+                SetBlipDisplay(_objectiveBlipId, isActive && _state.JobStage == Stage.TakingMoney ? 6 : 0);
+            }
+
+            // Don't bother with objective text for hunters
+            if (PlayerState?.Team != SurviveTheHuntShared.Core.Teams.Team.Hunters)
             {
-                HUDUtils.ClearObjective();
+                if (isActive && !_state.IsOver)
+                {
+                    DisplayStageObjective(_state.JobStage);
+                }
+                else
+                {
+                    HUDUtils.ClearObjective();
+                }
             }
         }
 
@@ -458,7 +489,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             AddTextComponentString("Robbery");
             EndTextCommandSetBlipName(_startBlipId);
             //SetBlipAlpha(_blipId, 64);
-            SetBlipDisplay(_startBlipId, 6);
+            SetBlipDisplay(_startBlipId, PlayerState?.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted ? 6 : 0);
             //SetBlipColour(_blipId, (int)BlipColor.White);
 
             _objectiveBlipId = AddBlipForCoord(_targetGrabTriggerPos.X, _targetGrabTriggerPos.Y, _targetGrabTriggerPos.Z);
@@ -508,6 +539,25 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
         }
 
+        private void OnCopsDispatched()
+        {
+            if (PlayerState?.Team == SurviveTheHuntShared.Core.Teams.Team.Hunters)
+            {
+                Vector3 coords = GetBlipCoords(_startBlipId);
+                uint streetNameHash = 0, crossingRoadHash = 0;
+                GetStreetNameAtCoord(coords.X, coords.Y, coords.Z, ref streetNameHash, ref crossingRoadHash);
+                string streetName = null;
+                if (streetNameHash != 0)
+                {
+                    streetName = GetStreetNameFromHashKey(streetNameHash);
+                }
+                // TODO: blips should remain hidden at first, and then this should make them blip forever until the robbery is over
+                SetBlipDisplay(_startBlipId, 6);
+                SetBlipFlashes(_startBlipId, true);
+                PhoneTextHelper.SendText(Constants.PhoneContacts.Police, "Robbery", $"We've got reports of a robbery at a Fleeca branch{(streetNameHash != 0 ? $" at {streetName}" : "")}. Location marked.");
+            }
+        }
+
 
         private const float AmbientLeavingAreaCheckIntervalSeconds = 1f;
         private float _timeSinceAmbientLeavingAreaCheck = 0f;
@@ -517,9 +567,20 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         /// <param name="deltaTime"></param>
         private void TickAmbient(float deltaTime)
         {
-            if (_state.JobStage <= SimpleRobberyJobState.Stage.WaitForStart)
+            if (_state.JobStage <= SimpleRobberyJobState.Stage.WaitForStart && PlayerState?.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
             {
                 DrawMarker((int)MarkerType.VerticalCylinder, _startTriggerPos.X, _startTriggerPos.Y, _startTriggerPos.Z, 0, 0, 0, 0, 0, 0, 1f, 1f, 1f, 255, 255, 255, 128, false, false, 2, false, null, null, false);
+            }
+
+            if(_timeTillCopsDispatched != float.MaxValue)
+            {
+                _timeTillCopsDispatched -= deltaTime;
+            }
+
+            if (_timeTillCopsDispatched <= 0f)
+            {
+                _timeTillCopsDispatched = float.MaxValue;
+                OnCopsDispatched();
             }
 
             /*_timeSinceAmbientLeavingAreaCheck += deltaTime;
