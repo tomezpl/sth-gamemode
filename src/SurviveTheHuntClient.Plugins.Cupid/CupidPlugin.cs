@@ -21,7 +21,7 @@ using PlayerType = SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType;
 
 namespace SurviveTheHuntClient.Plugins.Cupid
 {
-    public class CupidPlugin : Plugin<CupidPlugin.Events>, ITickable
+    public sealed class CupidPlugin : Plugin<CupidPlugin.Events>, ITickable
     {
         public override string GameModeTitle => "Valentines";
         public override string GameModeDescription => "TODO";
@@ -820,7 +820,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             Debug.WriteLine($"{nameof(CupidPlugin)}.{nameof(InjectHuntSettings)}: allowing both teams to leave safe zone during prep");
             settings.TeamsAllowedOutOfSafeZoneDuringPrep = HuntSettings.GetTeamsBitset(Teams.Team.Hunted, Teams.Team.Hunters);
             Debug.WriteLine($"{nameof(CupidPlugin)}.{nameof(InjectHuntSettings)}: reducing safe zone radius");
-            settings.SafeZoneRadius = float.MinValue;
+            settings.SafeZoneRadius = float.Epsilon;
         }
     }
 }
