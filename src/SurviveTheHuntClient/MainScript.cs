@@ -276,6 +276,21 @@ namespace SurviveTheHuntClient
             }
         }
 
+        private static int CreateSafeZoneRadiusBlip(Vector3 safeZoneOrigin = null, float radius = SharedConstants.DefaultSpawnSafeZoneRadius)
+        {
+            if (safeZoneOrigin == null)
+            {
+                safeZoneOrigin = SharedConstants.DockSpawn;
+            }
+
+            int blip = AddBlipForRadius(safeZoneOrigin.X, safeZoneOrigin.Y, safeZoneOrigin.Z, radius);
+            SetBlipColour(blip, 69);
+            SetBlipAlpha(blip, 128);
+            SetBlipDisplay(blip, 6);
+
+            return blip;
+        }
+
         private void OnClientResourceStart(string resource)
         {
             // This event is fired for every client resource started.
@@ -336,10 +351,7 @@ namespace SurviveTheHuntClient
                 // Notify the server this client has started so the config can be sent down. This is needed for resource restarts etc.
                 TriggerServerEvent(Events.Server.ClientStarted);
 
-                SafeZoneRadiusBlipHandle = AddBlipForRadius(SharedConstants.DockSpawn.X, SharedConstants.DockSpawn.Y, SharedConstants.DockSpawn.Z, SharedConstants.DefaultSpawnSafeZoneRadius);
-                SetBlipColour(SafeZoneRadiusBlipHandle, 69);
-                SetBlipAlpha(SafeZoneRadiusBlipHandle, 128);
-                SetBlipDisplay(SafeZoneRadiusBlipHandle, 6);
+                SafeZoneRadiusBlipHandle = CreateSafeZoneRadiusBlip();
 
                 BoundsTracker.Init();
 
@@ -1099,6 +1111,12 @@ namespace SurviveTheHuntClient
             HuntSettings settings = GameState.HuntDetails.DefaultHuntSettings;
             ExecutePlugins(p => p.InjectHuntSettings(ref settings));
             GameState.Hunt.Settings = settings;
+
+            if(SafeZoneRadiusBlipHandle != 0 && DoesBlipExist(SafeZoneRadiusBlipHandle))
+            {
+                RemoveBlip(ref SafeZoneRadiusBlipHandle);
+                SafeZoneRadiusBlipHandle = CreateSafeZoneRadiusBlip(radius: settings.SafeZoneRadius);
+            }
         }
 
         /// <summary>
