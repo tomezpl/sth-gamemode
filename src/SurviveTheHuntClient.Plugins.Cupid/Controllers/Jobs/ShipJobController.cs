@@ -530,6 +530,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {JobState.JobStage.LeaveArea, new KeyValuePair<string, string>(LeaveObjectiveTextKey, LeaveObjectiveTextLabel) },
         };
 
+        private const string HunterObjectiveTextKey = "STH_CUPID_YACHT_JOB_HUNTER_OBJ";
+        private const string HunterObjectiveTextLabel = "Suspects are attempting to extract Righteous Slaughter dev data using a Pyre Twig TV dongle. Blend in and place trackers to locate them.";
+
         private static readonly int PyreTwigModel = GetHashKey("reh_prop_reh_harddisk_01a");
 
         private int? _pyreTwigProp = null;
@@ -573,6 +576,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 AddTextEntry(BlipNameTextKey, BlipNameTextLabel);
                 AddTextEntry(PartyDisguiseBlipNameKey, PartyDisguiseBlipNameContent);
                 AddTextEntry(PartyDisguisePickUpHelpKey, PartyDisguisePickUpHelpText);
+                AddTextEntry(HunterObjectiveTextKey, HunterObjectiveTextLabel);
 
                 foreach (KeyValuePair<string, string> label in s_ObjectiveText.Values)
                 {
@@ -587,14 +591,28 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         {
             if (GameState?.Hunt != null)
             {
-                string textKey = "STRING";
-                if (s_ObjectiveText.TryGetValue(stage, out KeyValuePair<string, string> text))
+                string textKey = null;
+                if (PlayerState?.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
                 {
-                    textKey = text.Key;
+                    if (s_ObjectiveText.TryGetValue(stage, out KeyValuePair<string, string> text))
+                    {
+                        textKey = text.Key;
+                    }
+                }
+                else
+                {
+                    textKey = HunterObjectiveTextKey;
                 }
 
-                BeginTextCommandPrint(textKey);
-                EndTextCommandPrint((int)(GameState.Hunt.InitialEndTime - DateTime.UtcNow).TotalMilliseconds, true);
+                if (textKey != null)
+                {
+                    BeginTextCommandPrint(textKey);
+                    EndTextCommandPrint((int)(GameState.Hunt.InitialEndTime - DateTime.UtcNow).TotalMilliseconds, true);
+                }
+                else
+                {
+                    HUDUtils.ClearObjective();
+                }
             }
         }
 
@@ -992,13 +1010,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             }
             else if(current == JobState.JobStage.SurviveHack)
             {
-                _currentUI = BuildCurrentUI(); 
+                _currentUI = BuildCurrentUI();
 
-                if(PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
+
+                if (prev != JobState.JobStage.RepairSignal)
                 {
-                    if(prev != JobState.JobStage.RepairSignal)
+                    if (PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
                     {
                         _pendingTexts.Add(new PendingText(7.5f + (float)s_RNG.NextDouble() * 20f, Constants.PhoneContacts.Esther, "jammers", "oh btw. LSPD probs headed your way. watch out for signal trackers"));
+                    }
+                    else
+                    {
+                        _pendingTexts.Add(new PendingText(10f, PhoneContacts.Police, "URGENT", "VIP reported network intrusion. Suspects may be exfiltrating data as we speak.", 15f));
                     }
                 }
             }
@@ -1381,9 +1404,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         {
             base.OnActiveChanged(isActive);
 
-            if(isActive)
+            bool isAllowed = _jobUnlocked && (_state.LHasOutfit || Constants.Settings.IsDebug) && _state.JHasOutfit;
+            if (isActive)
             {
-                bool isAllowed = _jobUnlocked && _state.LHasOutfit && _state.JHasOutfit;
                 // Don't allow starting until it's unlocked
                 if (_jobUnlocked)
                 {
@@ -1426,10 +1449,19 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     }
                 }
 
+                if(isAllowed)
+                {
+                    DisplayTextForObjective(_state.Stage);
+                }
+
                 if (isActive != isAllowed)
                 {
                     IsActive = isAllowed;
                 }
+            }
+            else if(isAllowed)
+            {
+                HUDUtils.ClearObjective();
             }
         }
 
@@ -1830,6 +1862,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                     }
                 }
                 else
+                {
+                    _canInteractWithDevice = false;
+                }
+
+                // Prevent hunters from being able to start the hack...
+                if(_canInteractWithDevice && PlayerState?.Team == SurviveTheHuntShared.Core.Teams.Team.Hunters)
                 {
                     _canInteractWithDevice = false;
                 }
