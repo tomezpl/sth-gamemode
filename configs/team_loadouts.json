@@ -75,7 +75,9 @@
 
         // Cupid ship party
         {
-          "weapon_pistolxm3": 40
+          "weaponAmmo": {
+            "weapon_pistolxm3": 40
+          }
         }
       ]
     }
