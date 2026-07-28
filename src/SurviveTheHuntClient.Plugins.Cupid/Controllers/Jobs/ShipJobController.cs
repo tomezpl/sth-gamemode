@@ -1580,7 +1580,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
 
             _jobUnlocked = true;
             bool needsDisguise = _localPlayerDisguise == DisguiseState.None;
-            SetClothesBlipsShowing(needsDisguise);
+            SetClothesBlipsShowing(needsDisguise && PlayerState?.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted);
             SetBlipDisplay(_jobBlip.Value, 6);
 
             bool isHunted = PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted;
