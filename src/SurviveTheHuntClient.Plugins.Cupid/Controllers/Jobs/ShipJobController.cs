@@ -1565,7 +1565,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             base.OnHeatChanged(heatScore, heatThreshold);
 
             // Unlock the job after heat level 2
-            if (heatThreshold >= HeatThresholds.Heat2)
+            if (heatThreshold >= HeatThresholds.Heat2 && !_jobUnlocked)
             {
                 UnlockJob();
             }

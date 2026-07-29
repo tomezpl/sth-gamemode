@@ -51,6 +51,7 @@
     <Compile Include="HuntSettings.cs" />
     <Compile Include="Interfaces\IGameState.cs" />
     <Compile Include="Interfaces\IHuntDetails.cs" />
+    <Compile Include="Interfaces\IHuntLifecycleListener.cs" />
     <Compile Include="Interfaces\IHuntUI.cs" />
     <Compile Include="Interfaces\IPlayerState.cs" />
     <Compile Include="Interfaces\IPlugin.cs" />

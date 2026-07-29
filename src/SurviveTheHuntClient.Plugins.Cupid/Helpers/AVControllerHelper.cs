@@ -55,13 +55,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
         internal string CurrentStation
         {
             get => _currentStation;
-            set
+        }
+
+        private bool _isCurrentStationBlocked = false;
+        internal bool IsCurrentStationBlocked => _isCurrentStationBlocked;
+
+        internal void SetCurrentStation(string stationName, bool blocked = false, bool force = false)
+        {
+            if (_currentStation != stationName || _isCurrentStationBlocked != blocked || force)
             {
-                if (_currentStation != value)
-                {
-                    _currentStation = value;
-                    TriggerEventProxy(BuildEventName(EventName.ShowStation), _currentStation);
-                }
+                _currentStation = stationName;
+                _isCurrentStationBlocked = blocked;
+                TriggerEventProxy(BuildEventName(EventName.ShowStation), _currentStation, _isCurrentStationBlocked);
             }
         }
 

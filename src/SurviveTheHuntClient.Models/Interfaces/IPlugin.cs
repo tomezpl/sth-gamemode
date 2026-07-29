@@ -4,7 +4,7 @@ using System;
 
 namespace SurviveTheHuntClient.Interfaces
 {
-    public interface IPlugin
+    public interface IPlugin : IHuntLifecycleListener
     {
         string Name { get; }
         bool IsActive { get; set; }
@@ -23,9 +23,6 @@ namespace SurviveTheHuntClient.Interfaces
         /// The description to use for this plugin if it is a gamemode (see <see cref="IsGameMode"/>)
         /// </summary>
         string GameModeDescription { get; }
-
-        void OnHuntStarted(IGameState gameState, IPlayerState playerState);
-        void OnHuntEnded(IGameState gameState, IPlayerState playerState);
 
         /// <summary>
         /// This should always be called, regardless of whether the plugin is active or not.

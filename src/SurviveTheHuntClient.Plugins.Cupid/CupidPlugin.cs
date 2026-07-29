@@ -1,5 +1,4 @@
 ﻿using CitizenFX.Core;
-using CitizenFX.Core.UI;
 using SurviveTheHuntClient.Attributes;
 using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
@@ -16,7 +15,6 @@ using System;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 using static SurviveTheHuntClient.Plugins.Cupid.Constants;
-using static SurviveTheHuntShared.Plugins.Cupid.Constants;
 using PlayerType = SurviveTheHuntShared.Plugins.Cupid.Constants.PlayerType;
 
 namespace SurviveTheHuntClient.Plugins.Cupid
@@ -43,6 +41,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         {
             internal readonly List<INetEntityListener> NetEntity = new List<INetEntityListener>();
             internal readonly List<ISpecialEventListener> SpecialEvent = new List<ISpecialEventListener>();
+            internal readonly List<IHuntLifecycleListener> HuntLifecycle = new List<IHuntLifecycleListener>();
+            internal readonly List<IHeatListener> Heat = new List<IHeatListener>();
         }
 
         private SubscriberState Subscribers = new SubscriberState();
@@ -178,11 +178,17 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             if(old != null)
             {
                 Subscribers.NetEntity.Remove(old);
+                Subscribers.HuntLifecycle.Remove(old);
+                Subscribers.Heat.Remove(old);
+                Subscribers.SpecialEvent.Remove(old);
             }
 
             CopSpawnController newInstance = new CopSpawnController(new AVControllerHelper(TriggerEventProxy), TriggerServerEventProxy);
 
             Subscribers.NetEntity.Add(newInstance);
+            Subscribers.HuntLifecycle.Add(newInstance);
+            Subscribers.Heat.Add(newInstance);
+            Subscribers.SpecialEvent.Add(newInstance);
             newInstance.DisguiseStateChanged += OnCopDisguiseStateChanged;
             
             return newInstance;
@@ -374,10 +380,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             HeatController = new HeatController();
             HeatController.HeatTierChanged += OnHeatTierChanged;
+            HeatController.HeatChanged += OnHeatChanged;
 
             UIMenuHelper.SetItemBlocked(SurviveTheHuntShared.Models.UI.BlockedItem.Appearance);
 
             CopSpawnController = CreateCopSpawnController(CopSpawnController);
+
+            foreach(IHuntLifecycleListener huntLifecycleListener in Subscribers.HuntLifecycle)
+            {
+                huntLifecycleListener.OnHuntStarted(gameState, playerState);
+            }
         }
 
         private void OnJobCompleted(ushort heatValue)
@@ -422,6 +434,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             foreach(ISceneHandler handler in SceneHandlers.Values)
             {
                 handler.Cleanup();
+            }
+
+            foreach(IHuntLifecycleListener huntLifecycleListener in Subscribers.HuntLifecycle)
+            {
+                huntLifecycleListener.OnHuntEnded(gameState, playerState);
             }
 
             if(JobManager != null)
@@ -821,6 +838,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             settings.TeamsAllowedOutOfSafeZoneDuringPrep = HuntSettings.GetTeamsBitset(Teams.Team.Hunted, Teams.Team.Hunters);
             Debug.WriteLine($"{nameof(CupidPlugin)}.{nameof(InjectHuntSettings)}: reducing safe zone radius");
             settings.SafeZoneRadius = float.Epsilon;
+        }
+
+        internal void OnHeatChanged(ushort old, ushort current)
+        {
+            foreach (IHeatListener heatListener in Subscribers.Heat)
+            {
+                heatListener?.OnHeatChanged(current, HeatController.GetTier(current));
+            }
         }
     }
 }

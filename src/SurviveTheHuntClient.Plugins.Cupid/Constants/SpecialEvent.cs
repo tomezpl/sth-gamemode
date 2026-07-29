@@ -7,6 +7,7 @@
             RemoteAnimRequest,
             BlockCopCarSpawn,
             FreeCopCarSpawn,
+            SetInvisible
         }
     }
 }

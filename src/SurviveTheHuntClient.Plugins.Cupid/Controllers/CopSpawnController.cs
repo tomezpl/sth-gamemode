@@ -10,7 +10,7 @@ using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 {
-    internal class CopSpawnController : ITickable, INetEntityListener, IDisguiseEmitter
+    internal class CopSpawnController : ITickable, INetEntityListener, IDisguiseEmitter, IHeatListener, IHuntLifecycleListener, ISpecialEventListener
     {
         private bool _enabled = false;
 
@@ -35,10 +35,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
         {
             internal readonly byte Index;
             internal CopSpawnInfo SpawnInfo;
-            internal SelectedSpawn(CopSpawnInfo spawnInfo, byte index)
+            internal readonly bool Blocked;
+            internal SelectedSpawn(CopSpawnInfo spawnInfo, byte index, bool blocked = false)
             {
                 Index = index;
                 SpawnInfo = spawnInfo;
+                Blocked = blocked;
             }
         }
 
@@ -72,6 +74,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
         {
             AVControllerHelper = avControllerHelper;
             TriggerServerEvent = triggerServerEvent;
+
+            State.VinewoodSpawnUnlocked += OnVinewoodSpawnUnlocked;
         }
 
         private void EnsureCamera()
@@ -172,6 +176,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                     bool needsToFreeOnServer = !_currentCar.Value.HasLeftSpawn;
                     _currentCar = null;
 
+                    TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidBroadcastSpecialEvent, Constants.SpecialEvent.SetInvisible, PedToNet(PlayerPedId()), true);
+
                     if (needsToFreeOnServer)
                     {
                         TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidCopCarLeftSpawn, station, slot);
@@ -189,13 +195,47 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 
             if(!current)
             {
-                AVControllerHelper.CurrentStation = null;
+                AVControllerHelper.SetCurrentStation(null);
             }
+            else
+            {
+                AVControllerHelper.SetCurrentStation(_selectedSpawn.SpawnInfo.Name, _selectedSpawn.Blocked, true);
+            }
+        }
+
+        /// <summary>
+        /// Number of seconds after the hunt starts before the Vinewood station is unlocked.
+        /// </summary>
+        internal const float SecondsBeforeVinewoodSpawnUnlocked = 60f * 2f;
+
+        private CopSpawnInfo[] GetAllowedSpawns()
+        {
+            if(State.HaveHuntedCompletedJob)
+            {
+                return new List<CopSpawnInfo>(Constants.Location.CopSpawn.All).ToArray();
+            }
+
+            if(State.VinewoodSpawnUnlockTimer < SecondsBeforeVinewoodSpawnUnlocked)
+            {
+                List<CopSpawnInfo> allowed = new List<CopSpawnInfo>(s_SpawnsToAllowBeforeHuntedCompletedJob.Length);
+
+                foreach(CopSpawnInfo potentiallyAllowed in s_SpawnsToAllowBeforeHuntedCompletedJob)
+                {
+                    if(potentiallyAllowed != Constants.Location.CopSpawn.Vinewood)
+                    {
+                        allowed.Add(potentiallyAllowed);
+                    }
+                }
+
+                return allowed.ToArray();
+            }
+
+            return s_SpawnsToAllowBeforeHuntedCompletedJob;
         }
 
         private void SelectNearestSpawn()
         {
-            CopSpawnInfo nearest = Constants.Location.CopSpawn.FindNearest(GetEntityCoords(PlayerPedId(), false));
+            CopSpawnInfo nearest = Constants.Location.CopSpawn.FindNearest(GetEntityCoords(PlayerPedId(), false), GetAllowedSpawns());
             sbyte index = Constants.Location.CopSpawn.FindIndex(nearest);
             if(index == -1)
             {
@@ -203,12 +243,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             }
 
             CopSpawnInfo old = _selectedSpawn.SpawnInfo;
-            _selectedSpawn = new SelectedSpawn(nearest, (byte)index);
+            SelectedSpawn newSpawn = new SelectedSpawn(nearest, (byte)index, !IsSpawnAllowed(nearest));
 
-            if(old != nearest)
-            {
-                OnSelectedSpawnChanged(old, nearest);
-            }
+            SelectedSpawn oldSpawn = _selectedSpawn;
+            _selectedSpawn = newSpawn;
+            OnSelectedSpawnChanged(oldSpawn, newSpawn);
         }
 
         private int? _playerCopCar = null;
@@ -218,9 +257,27 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             Debug.WriteLine($"Cycling selected spawn {nameof(up)}: {up}");
 
             int nextIndex = (_selectedSpawn.Index + Constants.Location.CopSpawn.Count + (up ? -1 : 1)) % Constants.Location.CopSpawn.Count;
-            CopSpawnInfo old = _selectedSpawn.SpawnInfo;
-            _selectedSpawn = new SelectedSpawn(Constants.Location.CopSpawn.FromIndex((byte)nextIndex), (byte)nextIndex);
-            OnSelectedSpawnChanged(old, _selectedSpawn.SpawnInfo);
+            SelectedSpawn oldSpawn = _selectedSpawn;
+            CopSpawnInfo nextSpawn = Constants.Location.CopSpawn.FromIndex((byte)nextIndex);
+            _selectedSpawn = new SelectedSpawn(nextSpawn, (byte)nextIndex, !IsSpawnAllowed(nextSpawn));
+            OnSelectedSpawnChanged(oldSpawn, _selectedSpawn);
+        }
+
+        private bool IsSpawnAllowed(CopSpawnInfo station)
+        {
+            if(!State.HaveHuntedCompletedJob)
+            {
+                foreach(CopSpawnInfo allowed in GetAllowedSpawns())
+                {
+                    if(station == allowed)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            return true;
         }
 
         private bool GetCurrentCamera(out int cam)
@@ -247,12 +304,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             return true;
         }
 
-        private void OnSelectedSpawnChanged(CopSpawnInfo prev, CopSpawnInfo current)
+        private static readonly CopSpawnInfo[] s_SpawnsToAllowBeforeHuntedCompletedJob =
+        {
+            Constants.Location.CopSpawn.Paleto,
+            Constants.Location.CopSpawn.Vinewood
+        };
+
+        private void OnSelectedSpawnChanged(in SelectedSpawn prev, in SelectedSpawn current)
         {
             if(GetOtherCamera(out int newCam))
             {
-                SetCamCoord(newCam, current.Camera.Pos.X, current.Camera.Pos.Y, current.Camera.Pos.Z);
-                SetCamRot(newCam, current.Camera.Rot.X, current.Camera.Rot.Y, current.Camera.Rot.Z, 2);
+                SetCamCoord(newCam, current.SpawnInfo.Camera.Pos.X, current.SpawnInfo.Camera.Pos.Y, current.SpawnInfo.Camera.Pos.Z);
+                SetCamRot(newCam, current.SpawnInfo.Camera.Rot.X, current.SpawnInfo.Camera.Rot.Y, current.SpawnInfo.Camera.Rot.Z, 2);
                 SwitchCams();
 
                 // TODO: get screen space pos of spawn and send to av controller
@@ -260,7 +323,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 
             if(_camera.HasValue)
             {
-                AVControllerHelper.CurrentStation = current.Name;
+                AVControllerHelper.SetCurrentStation(current.SpawnInfo.Name, current.Blocked);
             }
         }
 
@@ -309,6 +372,20 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
         private CarSpawnRequest? _currentCarSpawnRequest = null;
         private void ConfirmSelectedSpawn()
         {
+            if(_selectedSpawn.Blocked)
+            {
+                PlaySoundFrontend(-1, "Click_Fail", "DLC_Biker_Computer_Sounds", true);
+                return;
+            }
+            else
+            {
+                PlaySoundFrontend(-1, "CONTINUE", "HUD_FRONTEND_DEFAULT_SOUNDSET", true);
+            }
+
+            FreezeEntityPosition(PlayerPedId(), false);
+            TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidBroadcastSpecialEvent, Constants.SpecialEvent.SetInvisible, PedToNet(PlayerPedId()), false);
+            SetPlayerInvincible(PlayerId(), false);
+
             _isSpawning = true;
             _timeTillTransitionEnd = CamTransitionTimeSeconds;
 
@@ -367,6 +444,17 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
         {
             EnsureCamera();
 
+            foreach(int netId in State.InvisibleNetIds)
+            {
+                if(NetworkDoesNetworkIdExist(netId) && NetworkDoesEntityExistWithNetworkId(netId))
+                {
+                    int entityHandle = NetToEnt(netId);
+                    SetEntityLocallyInvisible(entityHandle);
+                }
+            }
+
+            State.VinewoodSpawnUnlockTimer += deltaTime;
+
             if (_timeTillTransitionEnd > 0f) 
             {
                 float prevTimeTillTransitionEnd = _timeTillTransitionEnd;
@@ -381,7 +469,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             {
                 SetFocusArea(_selectedSpawn.SpawnInfo.Camera.Pos.X, _selectedSpawn.SpawnInfo.Camera.Pos.Y, _selectedSpawn.SpawnInfo.Camera.Pos.Z, 0f, 0f, 0f);
 
-                if(IsControlJustPressed(0, (int)Control.FrontendUp))
+                FreezeEntityPosition(PlayerPedId(), true);
+
+                SetPlayerInvincible(PlayerId(), true);
+
+                if (IsControlJustPressed(0, (int)Control.FrontendUp))
                 {
                     CycleSelectedSpawn(up: false);
                 } else if(IsControlJustPressed(0, (int)Control.FrontendDown))
@@ -924,6 +1016,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             ClearAllHelpMessages();
 
             SetFocusEntity(PlayerPedId());
+
+            AVControllerHelper.SetCurrentStation(null);
         }
 
         private readonly static Random s_RNG = new Random();
@@ -1001,6 +1095,108 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                 Debug.WriteLine("This is a police car so we will store it for scanning");
                 _pendingCarNetIdsToScan.Add(netId);
             }
+        }
+
+        public void OnHeatChanged(ushort heatScore, Constants.HeatThresholds heatThreshold)
+        {
+            State.HaveHuntedCompletedJob = true;
+            // Unlock all spawns once hunted completed a job
+            _selectedSpawn = new SelectedSpawn(_selectedSpawn.SpawnInfo, _selectedSpawn.Index, false);
+
+            if(Enabled)
+            {
+                RefreshStationUI();
+            }
+        }
+
+        private void RefreshStationUI()
+        {
+            AVControllerHelper.SetCurrentStation(_selectedSpawn.SpawnInfo.Name, _selectedSpawn.Blocked, force: true);
+        }
+
+        public void OnHuntStarted(IGameState gameState, IPlayerState playerState)
+        {
+            if(State != null)
+            {
+                State.VinewoodSpawnUnlocked -= OnVinewoodSpawnUnlocked;
+            }
+
+            State = new HuntState();
+            State.VinewoodSpawnUnlocked += OnVinewoodSpawnUnlocked;
+        }
+
+        private void OnVinewoodSpawnUnlocked(object sender, EventArgs e)
+        {
+            Debug.WriteLine($"{nameof(OnVinewoodSpawnUnlocked)}");
+            if(Enabled && _selectedSpawn.SpawnInfo == Constants.Location.CopSpawn.Vinewood && _selectedSpawn.Blocked)
+            {
+                _selectedSpawn = new SelectedSpawn(_selectedSpawn.SpawnInfo, _selectedSpawn.Index, false);
+                AVControllerHelper.SetCurrentStation(_selectedSpawn.SpawnInfo.Name, _selectedSpawn.Blocked, force: true);
+            }
+        }
+
+        public void OnHuntEnded(IGameState gameState, IPlayerState playerState)
+        {
+            State.VinewoodSpawnUnlocked -= OnVinewoodSpawnUnlocked;
+        }
+
+        public void OnSpecialEvent(Constants.SpecialEvent specialEvent, object[] args)
+        {
+            switch(specialEvent)
+            {
+                case Constants.SpecialEvent.SetInvisible:
+                    int entityNetId = Convert.ToInt32(args[0]);
+                    bool invisible = Convert.ToBoolean(args[1]);
+                    RegisterEntityVisibilityOverride(entityNetId, !invisible);
+                    break;
+            }
+        }
+
+        private void RegisterEntityVisibilityOverride(int entityNetId, bool visible)
+        {
+            bool isAlreadyInvisible = State.InvisibleNetIds.Contains(entityNetId);
+
+            if (!visible && !isAlreadyInvisible)
+            {
+                Debug.WriteLine($"Marking net ID {entityNetId} invisible");
+                State.InvisibleNetIds.Add(entityNetId);
+            }
+
+            if(visible && isAlreadyInvisible)
+            {
+                Debug.WriteLine($"Marking net ID {entityNetId} visible");
+                while(State.InvisibleNetIds.Remove(entityNetId)) { }
+            }
+        }
+
+        private HuntState State = new HuntState();
+
+        private class HuntState
+        {
+            internal bool HaveHuntedCompletedJob = false;
+
+            internal readonly List<int> InvisibleNetIds = new List<int>();
+
+            private float _vinewoodSpawnUnlockTimer = 0f;
+            internal float VinewoodSpawnUnlockTimer
+            {
+                get => _vinewoodSpawnUnlockTimer;
+                set
+                {
+                    bool wasPreviouslyNotFinished = _vinewoodSpawnUnlockTimer < SecondsBeforeVinewoodSpawnUnlocked;
+                    if (wasPreviouslyNotFinished)
+                    {
+                        _vinewoodSpawnUnlockTimer = value;
+                    }
+
+                    if (wasPreviouslyNotFinished && _vinewoodSpawnUnlockTimer >= SecondsBeforeVinewoodSpawnUnlocked)
+                    {
+                        VinewoodSpawnUnlocked.Invoke(this, new EventArgs());
+                    }
+                }
+            }
+
+            internal event EventHandler VinewoodSpawnUnlocked;
         }
 
         public event DisguiseStateChangedEvent DisguiseStateChanged;

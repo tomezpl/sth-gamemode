@@ -120,11 +120,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
                 internal static byte Count => (byte)_all.Length;
 
-                internal static CopSpawnInfo FindNearest(Vector3 pos)
+                internal static CopSpawnInfo FindNearest(Vector3 pos, CopSpawnInfo[] candidates = null)
                 {
+                    if(candidates == null)
+                    {
+                        candidates = _all;
+                    }
+
                     float shortestDistanceSq = float.MaxValue;
                     CopSpawnInfo closest = null;
-                    foreach(CopSpawnInfo copSpawn in _all)
+                    foreach(CopSpawnInfo copSpawn in candidates)
                     {
                         float a = pos.X - copSpawn.Spawn.Pos.X;
                         float b = pos.Y - copSpawn.Spawn.Pos.Y;
