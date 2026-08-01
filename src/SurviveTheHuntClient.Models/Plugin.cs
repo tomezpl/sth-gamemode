@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace SurviveTheHuntClient.Attributes
 {
@@ -307,6 +308,11 @@ namespace SurviveTheHuntClient.Models
         public virtual void InjectHuntSettings(ref HuntSettings settings)
         {
 
+        }
+
+        public virtual bool CanPedBlipBeDeleted(int pedHandle)
+        {
+            return true;
         }
     }
 }

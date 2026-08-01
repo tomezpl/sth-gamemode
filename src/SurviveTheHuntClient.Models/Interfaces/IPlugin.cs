@@ -54,5 +54,7 @@ namespace SurviveTheHuntClient.Interfaces
         bool IsDrivebyAllowedForDrivers { get; }
 
         void InjectHuntSettings(ref HuntSettings settings);
+
+        bool CanPedBlipBeDeleted(int pedHandle);
     }
 }

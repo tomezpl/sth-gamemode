@@ -27,6 +27,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             get => _enabled;
             set
             {
+                // Prevent auto respawn while enabled
                 ChangeGameModeSetting(GameModeSetting.AllowAutoRespawn, !value);
 
                 _enabled = value;
@@ -46,6 +47,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
         internal const float SecondsToRevive = 2.5f;
 
         private Dictionary<int, float> RevivableTimeRemaining = new Dictionary<int, float>();
+        private Dictionary<int, int> RevivableOriginalBlipSprite = new Dictionary<int, int>();
         private List<int> PausedBleedout = new List<int>();
 
         internal float ReviveProgress => _reviveSecondsElapsed / SecondsToRevive;
@@ -121,12 +123,34 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             if(RevivableTimeRemaining.ContainsKey(pedId) && !revivable)
             {
                 RevivableTimeRemaining.Remove(pedId);
+
+                int blip = GetBlipFromEntity(pedId);
+                if (blip != 0 && DoesBlipExist(blip) && GetBlipInfoIdDisplay(blip) != 0)
+                {
+                    if(RevivableOriginalBlipSprite.TryGetValue(pedId, out int blipSprite))
+                    {
+                        SetBlipSprite(blip, blipSprite);
+                        SetBlipFlashes(blip, false);
+                    }
+                }
+                RevivableOriginalBlipSprite.Remove(pedId);
                 Debug.WriteLine($"{nameof(BleedoutController)}.{nameof(SetRevivable)}(): removing {pedId} from revivables");
             }
             else
             {
                 RevivableTimeRemaining[pedId] = MaxBleedoutTimeSeconds;
                 Debug.WriteLine($"{nameof(BleedoutController)}.{nameof(SetRevivable)}(): adding {pedId} to revivables");
+
+                int blip = GetBlipFromEntity(pedId);
+                if(blip != 0 && DoesBlipExist(blip) && GetBlipInfoIdDisplay(blip) != 0)
+                {
+                    RevivableOriginalBlipSprite[pedId] = GetBlipSprite(blip);
+                    int colour = GetBlipColour(blip);
+                    // radar_weapon_health
+                    SetBlipSprite(blip, 153);
+                    SetBlipFlashes(blip, true);
+                    SetBlipColour(blip, colour);
+                }
             }
 
             if(pedId == PlayerPedId())
@@ -159,6 +183,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
         internal void OnRevive(int revivedPed)
         {
             RevivableTimeRemaining.Remove(revivedPed);
+            int blip = GetBlipFromEntity(revivedPed);
+            if (blip != 0 && DoesBlipExist(blip) && RevivableOriginalBlipSprite.TryGetValue(revivedPed, out int blipSprite))
+            {
+                SetBlipSprite(blip, blipSprite);
+                SetBlipFlashes(blip, false);
+            }
+            RevivableOriginalBlipSprite.Remove(revivedPed);
 
             bool isReviveTargetLocal = revivedPed == PlayerPedId();
 
@@ -250,6 +281,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             foreach(int bledOutPed in _bledOutPeds)
             {
                 RevivableTimeRemaining.Remove(bledOutPed);
+                RevivableOriginalBlipSprite.Remove(bledOutPed);
             }
 
             _bledOutPeds.Clear();
@@ -371,6 +403,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             {
                 _reviveSecondsElapsed += deltaTime;
             }
+        }
+
+        internal bool IsRevivable(int pedHandle)
+        {
+            return RevivableTimeRemaining.ContainsKey(pedHandle);
         }
     }
 }

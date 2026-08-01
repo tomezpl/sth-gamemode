@@ -847,5 +847,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 heatListener?.OnHeatChanged(current, HeatController.GetTier(current));
             }
         }
+
+        public override bool CanPedBlipBeDeleted(int pedHandle)
+        {
+            if(BleedoutController.IsRevivable(pedHandle))
+            {
+                return false;
+            }
+
+            return base.CanPedBlipBeDeleted(pedHandle);
+        }
     }
 }

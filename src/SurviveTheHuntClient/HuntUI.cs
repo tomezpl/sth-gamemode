@@ -565,12 +565,24 @@ namespace SurviveTheHuntClient
             // Delete inactive peds.
             foreach(int ped in pedsToDelete)
             {
-                Blip blip = PlayerBlips[ped].blip;
-                blip.Delete();
-                int id = PlayerBlips[ped].id;
-                //Debug.WriteLine($"Removing GamerTag from {new Player(id).Name}");
-                RemoveMpGamerTag(id);
-                PlayerBlips.Remove(ped);
+                bool anyPluginBlocksDeletingPed = false;
+                ExecutePlugins(p =>
+                {
+                    if (!anyPluginBlocksDeletingPed)
+                    {
+                        anyPluginBlocksDeletingPed = !p.CanPedBlipBeDeleted(ped);
+                    }
+                });
+
+                if (!anyPluginBlocksDeletingPed)
+                {
+                    Blip blip = PlayerBlips[ped].blip;
+                    blip.Delete();
+                    int id = PlayerBlips[ped].id;
+                    //Debug.WriteLine($"Removing GamerTag from {new Player(id).Name}");
+                    RemoveMpGamerTag(id);
+                    PlayerBlips.Remove(ped);
+                }
             }
 
             ActivePeds.Clear();
