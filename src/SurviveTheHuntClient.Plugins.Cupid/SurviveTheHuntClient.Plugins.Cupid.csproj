@@ -65,6 +65,7 @@
     <Compile Include="Controllers\Jobs\JobControllerBase.cs" />
     <Compile Include="Controllers\Jobs\ShipJobController.cs" />
     <Compile Include="Controllers\Jobs\SimpleRobberyJobController.cs" />
+    <Compile Include="Controllers\RepairShopController.cs" />
     <Compile Include="CupidPlugin.cs" />
     <Compile Include="Helpers\AVControllerHelper.cs" />
     <Compile Include="Helpers\CarModHelper.cs" />
@@ -78,6 +79,7 @@
     <Compile Include="Interfaces\ISceneHandler.cs" />
     <Compile Include="Interfaces\ISpecialEventListener.cs" />
     <Compile Include="Managers\JobManager.cs" />
+    <Compile Include="Managers\RepairShopManager.cs" />
     <Compile Include="Models\CopSpawnInfo.cs" />
     <Compile Include="Models\CruisegoerSpawnBase.cs" />
     <Compile Include="Models\CruisegoerSpawnCluster.cs" />

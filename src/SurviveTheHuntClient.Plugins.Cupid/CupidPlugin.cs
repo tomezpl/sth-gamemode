@@ -112,6 +112,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         private const string PersonalVehicleBlipNameKey = "STH_CUPID_BLIP_PERSONALVEH";
         private const string PersonalVehicleBlipNameContent = "Personal Vehicle";
 
+        private readonly RepairShopManager RepairShopManager = new RepairShopManager();
+
         private static bool Init()
         {
             if(!s_HasInit)
@@ -159,6 +161,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             UIMenuHelper = new UIMenuHelper(context.TriggerEventProxy);
 
             CopSpawnController = CreateCopSpawnController(CopSpawnController);
+
+            Subscribers.HuntLifecycle.Add(RepairShopManager);
         }
 
         private void OnIntroOutroReached()
@@ -798,6 +802,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             JobManager?.Tick(deltaTime);
             HeatController?.Tick(deltaTime);
             CopSpawnController?.Tick(deltaTime);
+            RepairShopManager.Tick(deltaTime);
 
             if(NetworkDoesNetworkIdExist(State.TulipNetId) && NetworkDoesEntityExistWithNetworkId(State.TulipNetId))
             {
