@@ -59,6 +59,7 @@
     <Compile Include="Constants\SpecialEvent.cs" />
     <Compile Include="Constants\VehicleHashes.cs" />
     <Compile Include="Controllers\BleedoutController.cs" />
+    <Compile Include="Controllers\CellTowerPingController.cs" />
     <Compile Include="Controllers\CopSpawnController.cs" />
     <Compile Include="Controllers\HeatController.cs" />
     <Compile Include="Controllers\Jobs\CarRobberyJobController.cs" />
@@ -69,6 +70,7 @@
     <Compile Include="CupidPlugin.cs" />
     <Compile Include="Helpers\AVControllerHelper.cs" />
     <Compile Include="Helpers\CarModHelper.cs" />
+    <Compile Include="Helpers\MinimapHelper.cs" />
     <Compile Include="Helpers\PhoneTextHelper.cs" />
     <Compile Include="Helpers\ShipPedSpawnHelper.cs" />
     <Compile Include="Helpers\UIMenuHelper.cs" />

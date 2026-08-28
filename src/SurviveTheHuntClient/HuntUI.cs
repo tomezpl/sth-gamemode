@@ -306,6 +306,17 @@ namespace SurviveTheHuntClient
         /// <param name="playerState"></param>
         public void CreateRadiusBlipForPlayer(Player player, float radius, float offsetX, float offsetY, DateTime creationTime, ref PlayerState playerState)
         {
+            bool anyPluginBlocking = false;
+            ExecutePlugins(p =>
+            {
+                anyPluginBlocking = anyPluginBlocking || !p.CanPingShow(player.Handle).CanShowRadiusBlip;
+            });
+
+            if(anyPluginBlocking)
+            {
+                return;
+            }
+
             Vector3 position = GetEntityCoords(player.Character.Handle, false);
 
             float blipX = position.X + offsetX;
@@ -419,7 +430,13 @@ namespace SurviveTheHuntClient
         /// <param name="gameState">Most up-to-date game state.</param>
         public void NotifyAboutHuntedZone(Player player, Vector3 position, ref GameState gameState)
         {
-            if (position != null)
+            bool anyPluginBlocking = false;
+            ExecutePlugins(p =>
+            {
+                anyPluginBlocking = anyPluginBlocking || !p.CanPingShow(player.Handle).CanNotifyWithArea;
+            });
+
+            if (!anyPluginBlocking && position != null)
             {
                 string playerName = "The Hunted";
 

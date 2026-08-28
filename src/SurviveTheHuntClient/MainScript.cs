@@ -1246,14 +1246,8 @@ namespace SurviveTheHuntClient
                 {
                     Events.Client.ShowPingOnMap.EventName(), new Action<dynamic>(data =>
                     {
-                        bool shouldShowPing = true;
-                        ExecutePlugins(plugin =>
-                        {
-                            if(shouldShowPing && !plugin.CanPingShow)
-                            {
-                                shouldShowPing = false;
-                            }
-                        });
+                        // TODO: remove
+                        const bool shouldShowPing = true;
 
                         List<object> playerServerIds = data.PlayerServerIds;
 

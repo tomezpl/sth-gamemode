@@ -114,6 +114,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         private readonly RepairShopManager RepairShopManager = new RepairShopManager();
 
+        private CellTowerPingController CellTowerPingController = null;
+
         private static bool Init()
         {
             if(!s_HasInit)
@@ -210,6 +212,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 PlayerState.LoadoutIndex = (byte)(disguise == DisguiseState.UndercoverCop ? 1 : 0);
                 PlayerState.TakeAwayWeapons(PlayerPedId());
+            }
+
+            if(disguise == DisguiseState.UndercoverCop)
+            {
+                SetPedHelmet(PlayerPedId(), true);
+            }
+            
+            if(disguise == DisguiseState.None && PlayerUtils.GetPlayerType(PlayerId(), GameState.Hunt.HuntedPlayers) == PlayerType.Cop)
+            {
+                SetPedHelmet(PlayerPedId(), false);
             }
         }
 
@@ -347,6 +359,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             JobManager?.Cleanup(true);
 
             CopSpawnController?.Cleanup();
+
+            CellTowerPingController?.Cleanup();
+            CellTowerPingController = null;
         }
 
         public override void OnHuntStarted(IGameState gameState, IPlayerState playerState)
@@ -389,6 +404,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             UIMenuHelper.SetItemBlocked(SurviveTheHuntShared.Models.UI.BlockedItem.Appearance);
 
             CopSpawnController = CreateCopSpawnController(CopSpawnController);
+
+            // Create a ping controller for HuntedL - though for testing purposes allow HuntedJ to be considered too
+            CellTowerPingController = new CellTowerPingController(GameState.Hunt.HuntedPlayers[Math.Min(GameState.Hunt.HuntedPlayers.Length - 1, 1)].PlayerHandle);
 
             foreach(IHuntLifecycleListener huntLifecycleListener in Subscribers.HuntLifecycle)
             {
@@ -472,6 +490,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             State.TulipNetId = 0;
 
             UIMenuHelper.SetItemBlocked(SurviveTheHuntShared.Models.UI.BlockedItem.Appearance, false);
+
+            CellTowerPingController?.Cleanup();
+            CellTowerPingController = null;
         }
 
         public override void OnPlayerSpawned()
@@ -735,6 +756,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         {
             Debug.WriteLine($"{nameof(CupidPlugin)}: intro ended, setting scene from {State.CurrentScene} to {DirectedScene.Default1}");
             State.CurrentScene = DirectedScene.Default1;
+
+            CellTowerPingController.Start();
         }
 
         public void Tick(float deltaTime)
@@ -803,6 +826,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             HeatController?.Tick(deltaTime);
             CopSpawnController?.Tick(deltaTime);
             RepairShopManager.Tick(deltaTime);
+            CellTowerPingController?.Tick(deltaTime);
 
             if(NetworkDoesNetworkIdExist(State.TulipNetId) && NetworkDoesEntityExistWithNetworkId(State.TulipNetId))
             {
@@ -861,6 +885,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
 
             return base.CanPedBlipBeDeleted(pedHandle);
+        }
+
+        public sealed override PlayerPingConfig CanPingShow(int playerHandle)
+        {
+            // only L gets pinged
+            if(GameState?.Hunt != null)
+            {
+                HuntPlayer[] huntedPlayers = GameState.Hunt.HuntedPlayers;
+                bool canShowArea = PlayerUtils.GetPlayerType(playerHandle, in huntedPlayers) == PlayerType.HuntedL;
+
+                // leave radius blip to custom radius blip for this plugin
+                return new PlayerPingConfig { CanNotifyWithArea = canShowArea, CanShowRadiusBlip = false };
+            }
+
+            return base.CanPingShow(playerHandle);
         }
     }
 }

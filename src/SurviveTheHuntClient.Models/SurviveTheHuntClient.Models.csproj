@@ -56,6 +56,7 @@
     <Compile Include="Interfaces\IPlayerState.cs" />
     <Compile Include="Interfaces\IPlugin.cs" />
     <Compile Include="Interfaces\ITickable.cs" />
+    <Compile Include="PlayerPingConfig.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Texture.cs" />

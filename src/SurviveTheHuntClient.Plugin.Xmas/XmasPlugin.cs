@@ -205,28 +205,30 @@ namespace SurviveTheHuntClient.Plugins.Xmas
         /// <summary>
         /// Hide the ping if santa is not currently using a sleigh
         /// </summary>
-        public override bool CanPingShow
+        private bool CanPingShowImpl(int playerHandle)
         {
-            get
+            bool anyPresentsRemaining = false;
+            foreach (PrezzieState present in _presentsToDeliver)
             {
-                bool anyPresentsRemaining = false;
-                foreach (PrezzieState present in _presentsToDeliver)
+                if (!present.HasPlaced)
                 {
-                    if (!present.HasPlaced)
-                    {
-                        anyPresentsRemaining = true;
-                        break;
-                    }
+                    anyPresentsRemaining = true;
+                    break;
                 }
-
-                int huntedPlayerPed = GetPlayerPed(_huntedPlayerId);
-                if (!DoesEntityExist(huntedPlayerPed))
-                {
-                    return true;
-                }
-
-                return !anyPresentsRemaining || _sleighOppressors.Contains(VehToNet(GetVehiclePedIsIn(GetPlayerPed(_huntedPlayerId), false)));
             }
+
+            int huntedPlayerPed = GetPlayerPed(_huntedPlayerId);
+            if (!DoesEntityExist(huntedPlayerPed))
+            {
+                return true;
+            }
+
+            return !anyPresentsRemaining || _sleighOppressors.Contains(VehToNet(GetVehiclePedIsIn(GetPlayerPed(_huntedPlayerId), false)));
+        }
+
+        public sealed override PlayerPingConfig CanPingShow(int playerHandle)
+        {
+            return new PlayerPingConfig { CanNotifyWithArea = true, CanShowRadiusBlip = CanPingShowImpl(playerHandle) };
         }
 
         public override string CustomWastedText

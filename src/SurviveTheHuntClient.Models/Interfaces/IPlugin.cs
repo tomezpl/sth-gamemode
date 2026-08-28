@@ -35,7 +35,7 @@ namespace SurviveTheHuntClient.Interfaces
         void OnResourceStopping();
         bool DoesPlayerNeedInvincibility { get; }
         void OnClockReceived(int hours, int minutes, int seconds);
-        bool CanPingShow { get; }
+        PlayerPingConfig CanPingShow(int playerHandle);
         SurviveTheHuntShared.Core.Teams.Team? WinningTeamOverride { get; }
         string CustomWastedText { get; }
         bool SkipAddingPlayerNameInObjective { get; }

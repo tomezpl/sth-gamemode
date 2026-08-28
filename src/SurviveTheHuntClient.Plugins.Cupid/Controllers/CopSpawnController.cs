@@ -386,6 +386,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidBroadcastSpecialEvent, Constants.SpecialEvent.SetInvisible, PedToNet(PlayerPedId()), false);
             SetPlayerInvincible(PlayerId(), false);
 
+            // Prevent cops from putting on helmet on bikes
+            SetPedHelmet(PlayerPedId(), false);
+
             _isSpawning = true;
             _timeTillTransitionEnd = CamTransitionTimeSeconds;
 
@@ -1018,6 +1021,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             SetFocusEntity(PlayerPedId());
 
             AVControllerHelper.SetCurrentStation(null);
+            SetPedHelmet(PlayerPedId(), true);
         }
 
         private readonly static Random s_RNG = new Random();

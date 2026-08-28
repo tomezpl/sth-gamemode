@@ -222,7 +222,16 @@ namespace SurviveTheHuntClient.Models
 
         }
 
-        public virtual bool CanPingShow { get { return true; } }
+        private static readonly PlayerPingConfig s_DefaultPlayerPingConfig = new PlayerPingConfig
+        {
+            CanNotifyWithArea = true,
+            CanShowRadiusBlip = true,
+        };
+
+        public virtual PlayerPingConfig CanPingShow(int playerHandle)
+        {
+            return s_DefaultPlayerPingConfig;
+        }
 
         public virtual SurviveTheHuntShared.Core.Teams.Team? WinningTeamOverride => null;
 
