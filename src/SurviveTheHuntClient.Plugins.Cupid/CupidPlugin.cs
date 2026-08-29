@@ -406,7 +406,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             CopSpawnController = CreateCopSpawnController(CopSpawnController);
 
             // Create a ping controller for HuntedL - though for testing purposes allow HuntedJ to be considered too
-            CellTowerPingController = new CellTowerPingController(GameState.Hunt.HuntedPlayers[Math.Min(GameState.Hunt.HuntedPlayers.Length - 1, 1)].PlayerHandle);
+            CellTowerPingController = new CellTowerPingController(GameState.Hunt.HuntedPlayers[Math.Min(GameState.Hunt.HuntedPlayers.Length - 1, 1)].PlayerHandle, TriggerServerEventProxy);
+            Subscribers.SpecialEvent.Add(CellTowerPingController);
 
             foreach(IHuntLifecycleListener huntLifecycleListener in Subscribers.HuntLifecycle)
             {

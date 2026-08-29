@@ -161,7 +161,7 @@ namespace SurviveTheHuntClient.Models
 
             public void Invoke(params object[] args)
             {
-                Debug.WriteLine($"Invoking {_method.Name} with {args.Length} params");
+                //Debug.WriteLine($"Invoking {_method.Name} with {args.Length} params");
                 _method.Invoke(_target, args);
 
                 //return null;

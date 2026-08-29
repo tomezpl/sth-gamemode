@@ -1,13 +1,15 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Interfaces;
+using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Plugins.Cupid.Helpers;
+using SurviveTheHuntClient.Plugins.Cupid.Interfaces;
 using System;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 {
-    internal sealed class CellTowerPingController : ITickable
+    internal sealed class CellTowerPingController : ITickable, ISpecialEventListener
     {
         private int _targetPlayer;
 
@@ -118,9 +120,15 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             return true;
         }
 
-        internal CellTowerPingController(int targetPlayer)
+        internal readonly bool IsTargetPlayerLocal;
+
+        private readonly TriggerServerEventProxyDelegate TriggerServerEvent;
+
+        internal CellTowerPingController(int targetPlayer, TriggerServerEventProxyDelegate triggerServerEvent)
         {
             _targetPlayer = targetPlayer;
+            IsTargetPlayerLocal = targetPlayer == PlayerId();
+            TriggerServerEvent = triggerServerEvent;
 
             Debug.WriteLine($"{nameof(CellTowerPingController)}: creating blip pool ({_blipPool?.Length} blips)");
             for(int i = 0; i < _blipPool.Length; i++)
@@ -145,6 +153,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
         {
             if (!_hasStarted)
             {
+                _hasReceivedRemoteTargetPos = false;
                 _hasStarted = true;
 
                 _radiusBlips = new RadiusBlip[BlipCount];
@@ -228,12 +237,34 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             }
         }
 
+        private bool _hasReceivedRemoteTargetPos = false, _acknowledgedLastSync = true;
+        private Vector3 _lastInterpolatedRemoteTargetPos = Vector3.Zero;
+
+        private float _secondsSinceRemoteTargetSync = 0f;
+        private Vector3 _lastSyncedRemoteTargetPos = Vector3.Zero, _lastRemoteTargetVelocity = Vector3.Zero;
+
+        private const float RemoteTargetSyncIntervalSeconds = 1.35f;
+
+        private Vector3 InterpolateRemoteTargetPosition()
+        {
+            return _lastSyncedRemoteTargetPos + _lastRemoteTargetVelocity * _secondsSinceRemoteTargetSync;
+        }
+
+        private Vector3 GetTargetPosition(bool isTarget)
+        {
+            if(isTarget)
+            {
+                return GetEntityCoords(PlayerPedId(), false);
+            }
+
+            return _lastInterpolatedRemoteTargetPos;
+        }
+
         private Vector3? _targetPlayerPrevPos = null;
         public void Tick(float deltaTime)
         {
             if(_hasStarted)
             {
-
                 _timeSinceBlipUpdateSeconds += deltaTime;
 
                 if(_timeSinceBlipUpdateSeconds >= BlipUpdateIntervalSeconds)
@@ -242,9 +273,39 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                     UpdateBlips();
                 }
 
-                Vector3 localPlayerPos = GetEntityCoords(PlayerPedId(), false);
+                if (!IsTargetPlayerLocal && _hasReceivedRemoteTargetPos)
+                {
+                    _lastInterpolatedRemoteTargetPos = InterpolateRemoteTargetPosition();
+                }
 
-                Vector3 targetPlayerPos = GetEntityCoords(GetPlayerPed(_targetPlayer), false);
+                Vector3 targetPlayerPos = GetTargetPosition(IsTargetPlayerLocal);
+
+                if (IsTargetPlayerLocal)
+                {
+                    if(_secondsSinceRemoteTargetSync >= RemoteTargetSyncIntervalSeconds)
+                    {
+                        // TODO: to fix jittery blip sync on other clients, we'll need to periodically send our position here,
+                        // then remote clients will need to derive constant velocity from that and the previous position they received,
+                        // so they can then interpolate between syncs.
+                        _secondsSinceRemoteTargetSync = 0f;
+                        float velX = 0f, velY = 0f, velZ = 0f;
+                        if(_targetPlayerPrevPos.HasValue)
+                        {
+                            velX = (targetPlayerPos.X - _targetPlayerPrevPos.Value.X) / deltaTime;
+                            velY = (targetPlayerPos.Y - _targetPlayerPrevPos.Value.Y) / deltaTime;
+                            velZ = (targetPlayerPos.Z - _targetPlayerPrevPos.Value.Z) / deltaTime;
+                        }
+                        _acknowledgedLastSync = false;
+                        TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidBroadcastSpecialEvent, (int)Constants.SpecialEvent.SyncHuntedTargetPos, targetPlayerPos.X, targetPlayerPos.Y, targetPlayerPos.Z, velX, velY, velZ);
+                    }
+                }
+
+                Vector3 localPlayerPos = IsTargetPlayerLocal ? targetPlayerPos : GetEntityCoords(PlayerPedId(), false);
+
+                if (_acknowledgedLastSync)
+                {
+                    _secondsSinceRemoteTargetSync += deltaTime;
+                }
 
                 if(!_targetPlayerPrevPos.HasValue)
                 {
@@ -257,7 +318,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                 //      actually no nvm
                 float frameDisplacementSq = (offsetX * offsetX + offsetY * offsetY);
                 float frameDisplacment = (float)Math.Sqrt(frameDisplacementSq);
-                float speed = frameDisplacment / deltaTime;
+                float speed = IsTargetPlayerLocal ?  frameDisplacment / deltaTime : ((float)Math.Sqrt(_lastRemoteTargetVelocity.X * _lastRemoteTargetVelocity.X + _lastRemoteTargetVelocity.Y * _lastRemoteTargetVelocity.Y));
                 //TrackAverageSpeed(frameDisplacment, deltaTime);
 
                 const float MaxSpeed = 155f;
@@ -306,7 +367,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                         SetBlipScale(_blipPool[i].RadiusBlipId, newRadius);
                         int alphaInt = (int)Math.Floor(MaxRadiusBlipAlpha * _blipPool[i].Alpha * (1f - progress));
                         SetBlipAlpha(_blipPool[i].RadiusBlipId, alphaInt);
-                        SetBlipAlpha(_blipPool[i].BlipId, MinimapHelper.IsCoordInRadarBounds(newX, newY, localPlayerPos.X, localPlayerPos.Y) ? 0 : alphaInt);
+                        SetBlipAlpha(_blipPool[i].BlipId, MinimapHelper.IsCoordInRadarBounds(newX, newY, localPlayerPos.X, localPlayerPos.Y, true) ? 0 : alphaInt);
                     }
 
                     if(timeSpent >= BlipFocusTimeSeconds || progress >= MaxFocus)
@@ -522,6 +583,31 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
                 RemoveBlip(ref blipRef);
                 blipRef = blip.BlipId;
                 RemoveBlip(ref blipRef);
+            }
+        }
+
+        public void OnSpecialEvent(Constants.SpecialEvent specialEvent, object[] args)
+        {
+            // Sync with the remote player's latest position and derive velocity
+            if(specialEvent == Constants.SpecialEvent.SyncHuntedTargetPos)
+            {
+                _acknowledgedLastSync = true;
+                if (!IsTargetPlayerLocal)
+                {
+                    float x = Convert.ToSingle(args[0]), y = Convert.ToSingle(args[1]), z = Convert.ToSingle(args[2]), velX = Convert.ToSingle(args[3]), velY = Convert.ToSingle(args[4]), velZ = Convert.ToSingle(args[5]);
+                    Vector3 newPos = new Vector3(x, y, z);
+                    if (_hasReceivedRemoteTargetPos)
+                    {
+                        // average the velocity
+                        // _lastRemoteTargetVelocity = (_lastRemoteTargetVelocity + new Vector3(velX, velY, velZ)) * .5f;
+                        // TODO: we should track like, 4-6 last velocities and average them - i think that's the only way we can make it smooth for remote clients
+                        _lastRemoteTargetVelocity = new Vector3(velX, velY, velZ);
+                    }
+                    _lastSyncedRemoteTargetPos = newPos;
+                    _lastInterpolatedRemoteTargetPos = newPos;
+                }
+                _secondsSinceRemoteTargetSync = 0f;
+                _hasReceivedRemoteTargetPos = true;
             }
         }
     }

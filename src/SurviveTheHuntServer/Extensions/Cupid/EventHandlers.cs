@@ -83,7 +83,10 @@ namespace SurviveTheHuntServer
             {
                 //Debug.WriteLine($"{nameof(arg)}[{++counter}]: {arg}");
             }
-            TriggerLatentClientEvent(SurviveTheHuntShared.Events.Client.CupidReceiveSpecialEvent, 128, specialEventType, args);
+            // const int bytesPerSecond = 128;
+            // most we'll need is the six floats we need to send for hunted position sync, + int32 for the event ID, so
+            const int bytesPerSecond = sizeof(float) * 7;
+            TriggerLatentClientEvent(SurviveTheHuntShared.Events.Client.CupidReceiveSpecialEvent, bytesPerSecond, specialEventType, args);
         }
 
         [EventHandler(SurviveTheHuntShared.Events.Server.CupidCopSpawning)]

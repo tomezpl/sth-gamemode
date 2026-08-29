@@ -7,7 +7,8 @@
             RemoteAnimRequest,
             BlockCopCarSpawn,
             FreeCopCarSpawn,
-            SetInvisible
+            SetInvisible,
+            SyncHuntedTargetPos
         }
     }
 }
