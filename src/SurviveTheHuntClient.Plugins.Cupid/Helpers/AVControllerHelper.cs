@@ -31,12 +31,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
             return $"{ResourceName}:{eventNameKebab}";
         }
 
-        internal void StartStage(string stage)
+        internal void StartStage(string stage, object param = null)
         {
             string eventName = BuildEventName(EventName.StartStage);
             //Debug.WriteLine($"Sending event {eventName} with {stage}");
 
-            TriggerEventProxy(eventName, stage, Constants.Settings.ApplySpoilerGuard);
+            TriggerEventProxy(eventName, stage, Constants.Settings.ApplySpoilerGuard, param);
 
             _isInStage = true;
         }

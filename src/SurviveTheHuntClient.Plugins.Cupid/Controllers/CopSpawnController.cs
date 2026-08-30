@@ -1139,7 +1139,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             }
         }
 
-        public void OnHuntEnded(IGameState gameState, IPlayerState playerState)
+        public void OnHuntEnded(SurviveTheHuntShared.Core.Teams.Team localPlayerTeam, IGameState gameState, IPlayerState playerState)
         {
             State.VinewoodSpawnUnlocked -= OnVinewoodSpawnUnlocked;
         }

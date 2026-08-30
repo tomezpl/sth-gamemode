@@ -449,9 +449,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
         }
 
-        public override void OnHuntEnded(IGameState gameState, IPlayerState playerState)
+        public override void OnHuntEnded(Teams.Team localPlayerTeam, IGameState gameState, IPlayerState playerState)
         {
-            base.OnHuntEnded(gameState, playerState);
+            base.OnHuntEnded(localPlayerTeam, gameState, playerState);
 
             DestroyCam(ScriptCamera, true);
             ScriptCamera = default;
@@ -463,7 +463,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             foreach(IHuntLifecycleListener huntLifecycleListener in Subscribers.HuntLifecycle)
             {
-                huntLifecycleListener.OnHuntEnded(gameState, playerState);
+                huntLifecycleListener.OnHuntEnded(localPlayerTeam, gameState, playerState);
             }
 
             if(JobManager != null)
@@ -501,7 +501,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             switch(gameState.Hunt.WinningTeam)
             {
                 case Teams.Team.Hunted:
-                    PostGameScene = new SceneHandlers.Outro.OutroHuntedWinSceneHandler(gameState.Hunt.HuntedPlayers, TriggerEventProxy, TriggerServerEventProxy);
+                    PostGameScene = new SceneHandlers.Outro.OutroHuntedWinSceneHandler(gameState.Hunt.WinningTeam == localPlayerTeam, gameState.Hunt.HuntedPlayers, TriggerEventProxy, TriggerServerEventProxy);
                     PostGameScene.StartScene(gameState, -1);
                     break;
             }

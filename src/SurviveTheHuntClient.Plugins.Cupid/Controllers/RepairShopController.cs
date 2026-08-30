@@ -215,7 +215,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             SetBlipNameFromTextFile(_blipId, BlipGxtEntryName);
         }
 
-        public void OnHuntEnded(IGameState gameState, IPlayerState playerState)
+        public void OnHuntEnded(SurviveTheHuntShared.Core.Teams.Team localPlayerTeam, IGameState gameState, IPlayerState playerState)
         {
             CurrentSharedState = null;
 

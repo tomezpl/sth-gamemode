@@ -141,7 +141,7 @@ namespace SurviveTheHuntClient.Models
 
         }
 
-        public virtual void OnHuntEnded(IGameState gameState, IPlayerState playerState)
+        public virtual void OnHuntEnded(SurviveTheHuntShared.Core.Teams.Team localPlayerTeam, IGameState gameState, IPlayerState playerState)
         {
 
         }

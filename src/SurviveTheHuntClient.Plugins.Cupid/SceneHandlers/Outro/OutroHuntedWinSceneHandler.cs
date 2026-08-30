@@ -1,5 +1,6 @@
 ﻿using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
+using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
 using System;
 using static CitizenFX.Core.Native.API;
@@ -8,13 +9,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Outro
 {
     internal class OutroHuntedWinSceneHandler : SceneHandlerBase<OutroHuntedWinSceneHandler.SceneStage, OutroHuntedWinSceneHandler.Tickers, OutroHuntedWinSceneHandler.State>
     {
-        internal OutroHuntedWinSceneHandler(HuntPlayer[] huntedPlayers, TriggerEventProxyDelegate triggerEventProxyDelegate, TriggerServerEventProxyDelegate triggerServerEventProxyDelegate) : base(triggerEventProxyDelegate, triggerServerEventProxyDelegate)
+        internal OutroHuntedWinSceneHandler(bool isWinner, HuntPlayer[] huntedPlayers, TriggerEventProxyDelegate triggerEventProxyDelegate, TriggerServerEventProxyDelegate triggerServerEventProxyDelegate) : base(triggerEventProxyDelegate, triggerServerEventProxyDelegate)
         {
             CurrentState.JPlayer = huntedPlayers[0].PlayerHandle;
             if(huntedPlayers.Length >= 2)
             {
                 CurrentState.LPlayer = huntedPlayers[1].PlayerHandle;
             }
+
+            CurrentState.AVControllerHelper = AVControllerHelper;
+            CurrentState.Winner = isWinner;
         }
 
         internal enum SceneStage
@@ -37,7 +41,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Outro
                 case SceneStage.Drive:
                     return DriveStageDurationSeconds;
                 case SceneStage.End:
-                    return 1.5f;
+                    return 20f;
             }
 
             return base.GetStageDuration(stage);
@@ -61,6 +65,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Outro
 
                     state.Cam = CreateCam("DEFAULT_SCRIPTED_CAMERA", true);
                     SetFocusEntity(state.JPed);
+                    state.AVControllerHelper.StartStage("Outro", state.Winner ? "WINNER" : "LOSER");
+
+                    // sunset
+                    SetClockTime(17, 30, 0);
+                    NetworkOverrideClockTime(17, 30, 0);
+                    SetOverrideWeather("EXTRASUNNY");
                 }
 
                 RequestCollisionAtCoord(DrivingStartX, DrivingStartY, DrivingStartZ);
@@ -104,9 +114,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Outro
                 float posRate = baseRate * 0.47f, rotRate = baseRate * 0.4f, fovRate = baseRate * 0.2f;
 
                 float zMultiplier = 0.4f;
+                float xMultiplier = 0.35f;
+                float yMultiplier = 1.2f;
 
-                state.CamX += CamDisplacementX * posRate;
-                state.CamY += CamDisplacementY * posRate;
+                state.CamX += CamDisplacementX * posRate * xMultiplier;
+                state.CamY += CamDisplacementY * posRate * yMultiplier;
                 state.CamZ += CamDisplacementZ * posRate * zMultiplier;
                 state.CamRotX += CamAngDisplacementX * rotRate;
                 state.CamRotY += CamAngDisplacementY * rotRate;
@@ -116,6 +128,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Outro
                 SetCamCoord(state.Cam, state.CamX, state.CamY, state.CamZ);
                 SetCamRot(state.Cam, state.CamRotX, state.CamRotY, state.CamRotZ, 2);
                 SetCamFov(state.Cam, state.CamFov);
+                SetCamShakeAmplitude(state.Cam, 1f);
+                ShakeCam(state.Cam, "HAND_SHAKE", 0.67f);
             }
 
             [SceneStageTick(SceneStage.End)]
@@ -175,6 +189,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Outro
             internal const float EndCamX = -1132.16552734375f, EndCamY = -971.915771484375f, EndCamZ = 23.105695724487305f,
                 EndCamRotX = -3.650254011154175f, EndCamRotY = 0.0030085048638284206f, EndCamRotZ = -113.09675598144531f,
                 EndCamFov = 42.21721267700195f;
+
+            internal AVControllerHelper AVControllerHelper = null;
+            internal bool Winner = false;
         }
     }
 }

@@ -1013,13 +1013,15 @@ namespace SurviveTheHuntClient
                 return;
             }
 
+            Teams.Team localPlayerTeam = PlayerState.Team;
+
             if (GameState.Hunt.ActualEndTime <= Utility.CurrentTime)
             {
                 ((GameState.HuntDetails)GameState.Hunt).End(ref PlayerState);
                 GameState.CurrentObjective = "";
             }
 
-            ExecutePlugins(plugin => plugin.OnHuntEnded(GameState, PlayerState));
+            ExecutePlugins(plugin => plugin.OnHuntEnded(localPlayerTeam, GameState, PlayerState));
         }
 
         /// <summary>

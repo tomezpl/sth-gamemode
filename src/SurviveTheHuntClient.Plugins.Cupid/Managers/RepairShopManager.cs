@@ -21,11 +21,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
 
         private RepairShopController _currentFocus = null;
 
-        public void OnHuntEnded(IGameState gameState, IPlayerState playerState)
+        public void OnHuntEnded(SurviveTheHuntShared.Core.Teams.Team localPlayerTeam, IGameState gameState, IPlayerState playerState)
         {
             foreach(RepairShopController controller in _all)
             {
-                controller.OnHuntEnded(gameState, playerState);
+                controller.OnHuntEnded(localPlayerTeam, gameState, playerState);
             }
         }
 

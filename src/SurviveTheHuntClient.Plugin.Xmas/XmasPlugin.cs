@@ -734,9 +734,9 @@ namespace SurviveTheHuntClient.Plugins.Xmas
             };
         }
 
-        public override void OnHuntEnded(IGameState gameState, IPlayerState playerState)
+        public override void OnHuntEnded(SurviveTheHuntShared.Core.Teams.Team localPlayerTeam, IGameState gameState, IPlayerState playerState)
         {
-            base.OnHuntEnded(gameState, playerState);
+            base.OnHuntEnded(localPlayerTeam, gameState, playerState);
 
             Cleanup();
         }
