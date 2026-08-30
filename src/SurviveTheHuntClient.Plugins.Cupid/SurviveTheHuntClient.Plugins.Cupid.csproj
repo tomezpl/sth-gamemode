@@ -96,6 +96,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SceneHandlers\Intro\IntroJ1Handler.cs" />
     <Compile Include="SceneHandlers\Intro\IntroJ2Handler.cs" />
+    <Compile Include="SceneHandlers\Outro\OutroHuntedWinSceneHandler.cs" />
     <Compile Include="SceneHandlers\SceneHandlerBase.cs" />
     <Compile Include="Utils\CamUtils.cs" />
     <Compile Include="Utils\HUDUtils.cs" />

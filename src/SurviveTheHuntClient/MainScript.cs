@@ -404,7 +404,9 @@ namespace SurviveTheHuntClient
                 {
                     PluginInfo info = new PluginInfo(plugin);
                     string nameAndTitle = $"{info.Name}\n{info.Title}";
-                    gameModeInfo.Add(string.IsNullOrWhiteSpace(info.Description) ? nameAndTitle : $"{nameAndTitle}\n{info.Description}");
+                    string serialised = string.IsNullOrWhiteSpace(info.Description) ? nameAndTitle : $"{nameAndTitle}\n{info.Description}";
+                    serialised = $"{Convert.ToInt32(plugin.HuntDurationOverride.TotalSeconds)}\n{serialised}";
+                    gameModeInfo.Add(serialised);
                 }
             }, true);
 
@@ -1218,6 +1220,7 @@ namespace SurviveTheHuntClient
                         }
 
                         GameState.Hunt.IsOver = true;
+                        ((GameState.HuntDetails)GameState.Hunt).WinningTeam = (Teams.Team)winningTeam;
                         if((Teams.Team)winningTeam == PlayerState.Team)
                         {
                             GameState.CurrentObjective = "You've won the hunt!";

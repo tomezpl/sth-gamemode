@@ -34,6 +34,8 @@ namespace SurviveTheHuntClient
 
             public bool IsPrepPhase { get { return Utility.CurrentTime < PrepPhaseEndTime; } }
 
+            public Teams.Team WinningTeam { get; set; } = Teams.Team.Hunted;
+
             public HuntPlayer[] HuntedPlayers { get; set; } = new HuntPlayer[0];
 
             public static readonly HuntSettings DefaultHuntSettings = new HuntSettings

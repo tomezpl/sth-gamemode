@@ -279,6 +279,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
             EnsureSimeon();
 
+            if (CurrentState.JasPed != 0)
+            {
+                SetFocusEntity(CurrentState.JasPed);
+            }
+
             RenderScriptCams(true, false, 0, false, false);
         }
 

@@ -1,5 +1,6 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Models;
+using SurviveTheHuntShared.Core;
 using System;
 
 namespace SurviveTheHuntClient.Interfaces
@@ -77,5 +78,7 @@ namespace SurviveTheHuntClient.Interfaces
         DateTime PrepPhaseEndTime { get; set; }
 
         HuntSettings Settings { get; set; }
+
+        Teams.Team WinningTeam { get; }
     }
 }

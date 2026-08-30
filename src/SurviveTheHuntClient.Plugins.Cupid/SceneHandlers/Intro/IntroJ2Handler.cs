@@ -3,6 +3,7 @@ using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
+using SurviveTheHuntShared.Core;
 using System;
 using static CitizenFX.Core.Native.API;
 using static SurviveTheHuntShared.Plugins.Cupid.Constants;
@@ -246,6 +247,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
             [SceneStageTick(SceneStage.Driving)]
             public static void Ticker(float deltaTime, ref State state)
             {
+                if(state.StageJustSwitched)
+                {
+                    CupidPlugin.SetPlayerClothing(state.JasPed, PlayerType.HuntedJ, Cupid.Constants.DirectedScene.JasonDrivingHood);
+                }
+
                 if (state.Car == 0)
                 {
                     RequestModel((uint)_carHash);
@@ -902,7 +908,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 SetPedConfigFlag(PlayerPedId(), 184, true);
             }
 
-            RenderScriptCams(!CurrentState.ForceDisableCamera && CurrentStage < s_LastStage, CurrentStage == s_LastStage, 1500, true, false);
+            if (!(CurrentState.LocalPlayerType == PlayerType.Cop && CurrentStage >= SceneStage.DriveTogether))
+            {
+                RenderScriptCams(!CurrentState.ForceDisableCamera && CurrentStage < s_LastStage, CurrentStage == s_LastStage, 1500, true, false);
+            }
         }
 
         public sealed override bool CanShowHud => CurrentStage >= s_LastStage && CurrentState.CurrentStageTime > 4.5;

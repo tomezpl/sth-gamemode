@@ -87,6 +87,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         private Dictionary<DirectedScene, ISceneHandler> SceneHandlers;
 
+        private ISceneHandler PostGameScene = null;
+
         private static DirectedScene[] GetAllHandledScenes(Dictionary<DirectedScene, ISceneHandler> sceneHandlers)
         {
             Array allValues = Enum.GetValues(typeof(DirectedScene));
@@ -494,6 +496,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             CellTowerPingController?.Cleanup();
             CellTowerPingController = null;
+
+            // Start the outro scene
+            switch(gameState.Hunt.WinningTeam)
+            {
+                case Teams.Team.Hunted:
+                    PostGameScene = new SceneHandlers.Outro.OutroHuntedWinSceneHandler(gameState.Hunt.HuntedPlayers, TriggerEventProxy, TriggerServerEventProxy);
+                    PostGameScene.StartScene(gameState, -1);
+                    break;
+            }
+
+            // CopSpawnController may have us frozen
+            FreezeEntityPosition(PlayerPedId(), false);
         }
 
         public override void OnPlayerSpawned()
@@ -737,6 +751,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         {
             get
             {
+                // FIXME: REMOVEE!!!!!!!!!!!!!!!!!!!
+                return Teams.Team.Hunted;
+
                 if(IsActive && GameState != null)
                 {
                     bool anyHuntedDead = false;
@@ -853,6 +870,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     SetPedConfigFlag(PlayerPedId(), 184, !isIntroOver);
                 }
             }
+
+            if(PostGameScene != null)
+            {
+                PostGameScene.Tick(deltaTime);
+                if(PostGameScene.IsOver)
+                {
+                    PostGameScene.Cleanup();
+                    PostGameScene = null;
+                }
+            }
         }
 
         // Allow a driver and a gunner
@@ -901,6 +928,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
 
             return base.CanPingShow(playerHandle);
+        }
+
+        public sealed override TimeSpan HuntDurationOverride
+        {
+            get => TimeSpan.FromSeconds(75);
         }
     }
 }

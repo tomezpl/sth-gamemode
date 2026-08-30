@@ -56,5 +56,7 @@ namespace SurviveTheHuntClient.Interfaces
         void InjectHuntSettings(ref HuntSettings settings);
 
         bool CanPedBlipBeDeleted(int pedHandle);
+
+        TimeSpan HuntDurationOverride { get; }
     }
 }

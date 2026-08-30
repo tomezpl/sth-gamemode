@@ -207,6 +207,8 @@ namespace SurviveTheHuntServer
                             mode = "";
                         }
 
+                        int huntDurationSeconds = Convert.ToInt32(data.HuntDurationSeconds);
+
                         // Reset the hunted ping radius for the default mode.
                         if(Utils.Mode.IsDefaultMode(mode))
                         {
@@ -274,7 +276,7 @@ namespace SurviveTheHuntServer
 
                         SetConvarReplicated(SharedConstants.CharCreatorBlockCreatorConvar, "true");
 
-                        GameState.Hunt.Begin(randomPlayers, prepPhaseSeconds);
+                        GameState.Hunt.Begin(randomPlayers, TimeSpan.FromSeconds(huntDurationSeconds), prepPhaseSeconds);
 
                         TriggerClientEvent(Events.Client.HuntStartedByServer, new 
                         { 

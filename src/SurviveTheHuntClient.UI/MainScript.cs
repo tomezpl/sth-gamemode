@@ -30,6 +30,7 @@ namespace SurviveTheHuntClient.UI
         private Dictionary<string, string> ModeDescriptions = new Dictionary<string, string>();
         private List<string> GameModeNames = new List<string> { "" };
         private List<string> GameModeTitles = new List<string> { "Default" };
+        private Dictionary<string, TimeSpan> GameModeDuration = new Dictionary<string, TimeSpan>();
         private NativeListItem<string> SelectPlayerItem;
         private NativeItem StartHuntButton;
 
@@ -472,13 +473,18 @@ namespace SurviveTheHuntClient.UI
         {
             string modeName = GameModeNames[SelectModeItem.SelectedIndex];
 
+            if(!GameModeDuration.TryGetValue(modeName, out TimeSpan huntDuration))
+            {
+                huntDuration = Constants.HuntDuration;
+            }
+
             if (SelectPlayerItem.SelectedIndex != 0)
             {
-                TriggerServerEvent(Events.Server.RequestStartHunt, new { Player = GetPlayerServerId(SelectablePlayerHandles[SelectPlayerItem.SelectedIndex]), Mode = modeName });
+                TriggerServerEvent(Events.Server.RequestStartHunt, new { Player = GetPlayerServerId(SelectablePlayerHandles[SelectPlayerItem.SelectedIndex]), Mode = modeName, HuntDurationSeconds = Convert.ToInt32(huntDuration.TotalSeconds) });
             }
             else
             {
-                TriggerServerEvent(Events.Server.RequestStartHunt, new { Mode = modeName } );
+                TriggerServerEvent(Events.Server.RequestStartHunt, new { Mode = modeName, HuntDurationSeconds = Convert.ToInt32(huntDuration.TotalSeconds) } );
             }
             MainMenu.Visible = false;
             StartHuntMenu.Visible = false;
@@ -543,14 +549,20 @@ namespace SurviveTheHuntClient.UI
             Debug.WriteLine($"info count: {info.Count}");
             foreach (string gameModeSerialized in info)
             {
-                string gameModeName = gameModeSerialized.Substring(0, gameModeSerialized.IndexOf('\n'));
-                string titleAndDesc = gameModeSerialized.Substring(gameModeName.Length + 1);
+                Debug.WriteLine(gameModeSerialized);
+                string serializedInfo = gameModeSerialized;
+
+                string huntDurationSecondsString = serializedInfo.Substring(0, serializedInfo.IndexOf('\n'));
+                serializedInfo = serializedInfo.Substring(huntDurationSecondsString.Length + 1);
+                string gameModeName = serializedInfo.Substring(0, serializedInfo.IndexOf('\n'));
+                string titleAndDesc = serializedInfo.Substring(gameModeName.Length + 1);
                 int newlineIndex = titleAndDesc.IndexOf('\n');
                 string gameModeTitle = newlineIndex == -1 ? titleAndDesc : titleAndDesc.Substring(0, newlineIndex);
-                string gameModeDescription = newlineIndex == -1 ? "" : gameModeSerialized.Substring(newlineIndex + 1);
+                string gameModeDescription = newlineIndex == -1 ? "" : serializedInfo.Substring(newlineIndex + 1);
 
                 GameModeNames.Add(gameModeName);
                 GameModeTitles.Add(gameModeTitle);
+                GameModeDuration[gameModeName] = TimeSpan.FromSeconds(Convert.ToInt32(huntDurationSecondsString));
                 ModeDescriptions[gameModeName] = gameModeDescription;
             }
 

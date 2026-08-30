@@ -323,5 +323,10 @@ namespace SurviveTheHuntClient.Models
         {
             return true;
         }
+
+        public virtual TimeSpan HuntDurationOverride
+        {
+            get => SurviveTheHuntShared.Constants.HuntDuration;
+        }
     }
 }

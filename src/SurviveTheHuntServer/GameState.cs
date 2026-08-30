@@ -5,6 +5,7 @@ using SurviveTheHuntShared.Interfaces;
 using SurviveTheHuntShared.Plugins;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using SharedConstants = SurviveTheHuntShared.Constants;
 
 namespace SurviveTheHuntServer
@@ -45,10 +46,14 @@ namespace SurviveTheHuntServer
             /// </summary>
             public DateTime StartTime { get; set; } = DateTime.UtcNow;
 
+            private TimeSpan _huntDuration = SharedConstants.HuntDuration;
+
+            public TimeSpan HuntDuration { get => _huntDuration; }
+
             /// <summary>
             /// UTC time when the hunt session should end (it could end before that).
             /// </summary>
-            public DateTime EndTime { get { return StartTime + SharedConstants.HuntDuration + EndTimeOffset; } }
+            public DateTime EndTime { get { return StartTime + HuntDuration + EndTimeOffset; } }
 
             /// <summary>
             /// UTC time when the next hunt can be started (this is to induce a cooldown so client scripts can catch up - yes it's gash but otherwise wrong weapon loadouts can be given out)
@@ -98,8 +103,13 @@ namespace SurviveTheHuntServer
             /// Starts the hunt for a given player.
             /// </summary>
             /// <param name="huntedPlayers"></param>
-            public void Begin(Player[] huntedPlayers, ulong prepPhaseSeconds = 0)
+            public void Begin(Player[] huntedPlayers, TimeSpan? huntDuration = null, ulong prepPhaseSeconds = 0)
             {
+                if(!huntDuration.HasValue)
+                {
+                    huntDuration = SharedConstants.HuntDuration;
+                }
+
                 IsStarted = true;
                 HuntedPlayers = huntedPlayers;
                 WinningTeam = Teams.Team.Hunted;
@@ -107,6 +117,7 @@ namespace SurviveTheHuntServer
                 LastPingTime = DateTime.UtcNow + TimeSpan.FromSeconds(prepPhaseSeconds) - SharedConstants.HuntedPingInterval;
                 PrepPhaseEndTime = StartTime + TimeSpan.FromSeconds(prepPhaseSeconds);
                 EndTimeOffset = TimeSpan.FromSeconds(prepPhaseSeconds);
+                _huntDuration = huntDuration.Value;
 
                 _pluginStates.Clear();// = new Dictionary<PluginIndex, IPluginState>();
             }
