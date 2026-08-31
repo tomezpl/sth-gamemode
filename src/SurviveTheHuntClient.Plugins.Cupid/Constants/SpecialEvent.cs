@@ -8,7 +8,10 @@
             BlockCopCarSpawn,
             FreeCopCarSpawn,
             SetInvisible,
-            SyncHuntedTargetPos
+            SyncHuntedTargetPos,
+            SyncHeliFerry,
+            ToggleHeliFerry,
+            CancelHeliFerryTask
         }
     }
 }

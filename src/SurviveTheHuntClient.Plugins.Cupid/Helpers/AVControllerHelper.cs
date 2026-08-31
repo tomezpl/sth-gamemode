@@ -1,5 +1,6 @@
 ﻿using CitizenFX.Core;
 using SurviveTheHuntClient.Models;
+using System.Collections.Generic;
 using System.Security.Policy;
 
 namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
@@ -23,6 +24,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
             EndStage,
             ShowStation,
             SetStationCoords,
+            SetPlayerNames
         }
 
         internal static string BuildEventName(EventName eventName)
@@ -80,6 +82,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                 _prevStationY = y;
                 TriggerEventProxy(BuildEventName(EventName.SetStationCoords), x * 100f, y * 100f);
             }
+        }
+
+        internal void SetPlayerNames(string[] names)
+        {
+            TriggerEventProxy(BuildEventName(EventName.SetPlayerNames), new List<string>(names));
         }
     }
 }

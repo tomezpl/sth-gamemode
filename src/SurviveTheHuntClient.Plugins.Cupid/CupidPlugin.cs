@@ -118,6 +118,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         private CellTowerPingController CellTowerPingController = null;
 
+        private HeliFerryHelper ShipHeliFerryHelper = null;
+
         private static bool Init()
         {
             if(!s_HasInit)
@@ -364,6 +366,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             CellTowerPingController?.Cleanup();
             CellTowerPingController = null;
+
+            ShipHeliFerryHelper?.Cleanup();
+            ShipHeliFerryHelper = null;
         }
 
         public override void OnHuntStarted(IGameState gameState, IPlayerState playerState)
@@ -410,6 +415,18 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             // Create a ping controller for HuntedL - though for testing purposes allow HuntedJ to be considered too
             CellTowerPingController = new CellTowerPingController(GameState.Hunt.HuntedPlayers[Math.Min(GameState.Hunt.HuntedPlayers.Length - 1, 1)].PlayerHandle, TriggerServerEventProxy);
             Subscribers.SpecialEvent.Add(CellTowerPingController);
+
+            ShipHeliFerryHelper = new HeliFerryHelper(TriggerServerEventProxy, "ship", (uint)GetHashKey("U_M_Y_SmugMech_01"), (uint)VehicleHash.Supervolito, new Vector4(-1716.768f, -1010.044f, 5.556772f, 50.3356f), new Vector4(-2043.615f, -1031.756f, 11.98072f, 72.11658f));
+            Subscribers.SpecialEvent.Add(ShipHeliFerryHelper);
+            Subscribers.HuntLifecycle.Add(ShipHeliFerryHelper);
+
+            string[] playerNames =
+            {
+                GetPlayerName(GameState.Hunt.HuntedPlayers[0].PlayerHandle),
+                GetPlayerName(GameState.Hunt.HuntedPlayers[Math.Min(GameState.Hunt.HuntedPlayers.Length - 1, 1)].PlayerHandle)
+            };
+
+            new AVControllerHelper(TriggerEventProxy).SetPlayerNames(playerNames);
 
             foreach(IHuntLifecycleListener huntLifecycleListener in Subscribers.HuntLifecycle)
             {
@@ -494,8 +511,20 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             UIMenuHelper.SetItemBlocked(SurviveTheHuntShared.Models.UI.BlockedItem.Appearance, false);
 
-            CellTowerPingController?.Cleanup();
-            CellTowerPingController = null;
+            if (CellTowerPingController != null)
+            {
+                CellTowerPingController.Cleanup();
+                Subscribers.SpecialEvent.Remove(CellTowerPingController);
+                CellTowerPingController = null;
+            }
+
+            if(ShipHeliFerryHelper != null)
+            {
+                ShipHeliFerryHelper.Cleanup();
+                Subscribers.HuntLifecycle.Remove(ShipHeliFerryHelper);
+                Subscribers.SpecialEvent.Remove(ShipHeliFerryHelper);
+                ShipHeliFerryHelper = null;
+            }
 
             // Start the outro scene
             switch(gameState.Hunt.WinningTeam)
@@ -845,6 +874,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             CopSpawnController?.Tick(deltaTime);
             RepairShopManager.Tick(deltaTime);
             CellTowerPingController?.Tick(deltaTime);
+            ShipHeliFerryHelper?.Tick(deltaTime);
 
             if(NetworkDoesNetworkIdExist(State.TulipNetId) && NetworkDoesEntityExistWithNetworkId(State.TulipNetId))
             {
@@ -932,7 +962,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         public sealed override TimeSpan HuntDurationOverride
         {
-            get => TimeSpan.FromSeconds(75);
+            // TODO: this needs to be 36 min
+            get => TimeSpan.FromMinutes(10);
         }
     }
 }

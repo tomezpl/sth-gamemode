@@ -70,6 +70,7 @@
     <Compile Include="CupidPlugin.cs" />
     <Compile Include="Helpers\AVControllerHelper.cs" />
     <Compile Include="Helpers\CarModHelper.cs" />
+    <Compile Include="Helpers\HeliFerryHelper.cs" />
     <Compile Include="Helpers\MinimapHelper.cs" />
     <Compile Include="Helpers\PhoneTextHelper.cs" />
     <Compile Include="Helpers\ShipPedSpawnHelper.cs" />

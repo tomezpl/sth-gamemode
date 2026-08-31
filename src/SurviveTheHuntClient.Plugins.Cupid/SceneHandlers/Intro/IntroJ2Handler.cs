@@ -485,6 +485,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     SetEntityHeading(state.JasPed, Constants.JasPrison1Heading);
 
                     CupidPlugin.SetPlayerClothing(state.JasPed, PlayerType.HuntedJ, Cupid.Constants.DirectedScene.JasonDrivingHood);
+                    state.Handler.AVControllerHelper.StartStage("PrisonPreTalk");
                 }
 
                 const float camStartPosX = 1901.8f, camStartPosY = 2645.8f, camStartPosZ = 45.08f;
