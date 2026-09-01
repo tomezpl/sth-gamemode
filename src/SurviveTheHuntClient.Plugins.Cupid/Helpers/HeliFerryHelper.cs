@@ -57,6 +57,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
 
         private int _blipId = 0;
 
+        internal const float FullAlphaDistance = 180f;
+        private const float FullAlphaDistanceSq = FullAlphaDistance * FullAlphaDistance;
+        internal const float ZeroAlphaDistance = 900f;
+        private const float ZeroAlphaDistanceSq = ZeroAlphaDistance * ZeroAlphaDistance;
+
+        private const float DistanceCheckIntervalSeconds = 0.8f;
+        private float _timeSinceDistanceCheckSeconds = 0f;
+
         private static bool Init()
         {
             if(!s_HasInit)
@@ -244,6 +252,32 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                         }
                     }
                 }
+
+                _timeSinceDistanceCheckSeconds += deltaTime;
+
+                if(_timeSinceDistanceCheckSeconds >= DistanceCheckIntervalSeconds && _blipId != 0)
+                {
+                    _timeSinceDistanceCheckSeconds = 0f;
+
+                    bool canShowBlip = IsPauseMenuActive();
+                    int alpha = 255;
+                    if (!canShowBlip)
+                    {
+                        Vector3 playerPos = GetEntityCoords(PlayerPedId(), false);
+
+                        float a1 = playerPos.X - _landingSpotA.X, b1 = playerPos.Y - _landingSpotA.Y;
+                        float a2 = playerPos.X - _landingSpotB.X, b2 = playerPos.Y - _landingSpotB.Y;
+
+                        float distSq = Math.Max(FullAlphaDistanceSq, Math.Min((a1 * a1) + (b1 * b1), (a2 * a2) + (b2 * b2)));
+                        float interp = distSq >= ZeroAlphaDistanceSq ? 0f : (1f - (distSq - FullAlphaDistanceSq) / (ZeroAlphaDistanceSq - FullAlphaDistanceSq));
+                        alpha = (int)Math.Floor(255 * interp);
+                    }
+
+                    if (DoesBlipExist(_blipId))
+                    {
+                        SetBlipAlpha(_blipId, alpha);
+                    }
+                }
             }
         }
 
@@ -340,7 +374,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                     SetBlipCoords(_blipId, _currentTarget.Value.X, _currentTarget.Value.Y, _currentTarget.Value.Z);
 
                     // FIXME: currently this doesn't work if the sender is non-pedgod, maybe let's have all clients task the ped so we don't have to negotiate ownership
-                    if (sender == GetPlayerServerId(PlayerId()))
+                    if (true || sender == GetPlayerServerId(PlayerId()))
                     {
                         Debug.WriteLine($"{Constants.SpecialEvent.ToggleHeliFerry} sender was local player - tasking pilot ped");
                         if (_spawnResult.HasValue && NetworkDoesNetworkIdExist(_spawnResult.Value.PilotPedNetId) && NetworkDoesEntityExistWithNetworkId(_spawnResult.Value.PilotPedNetId))
@@ -354,7 +388,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                             float dirX = offsetX / length, dirY = offsetY / length;
                             const float fwdX = 0f, fwdY = 1f;
                             float dot = (dirX * fwdX) + (dirY * fwdY);
-                            float angle = (float)Math.Acos(dot) * (180f / (float)Math.PI) - 90f;
+                            float angle = (float)Math.Acos(dot) * (180f / (float)Math.PI) * -Math.Sign(dot);
+
+                            if(angle < 0f)
+                            {
+                                angle += 360f;
+                            }
 
                             Debug.WriteLine($"Flying to {_currentTarget.Value} with heading {Math.Round(angle)}deg");
 
