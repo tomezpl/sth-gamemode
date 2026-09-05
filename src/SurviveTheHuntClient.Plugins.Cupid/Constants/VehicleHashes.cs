@@ -4,6 +4,6 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 {
     internal partial class Constants
     {
-        internal static readonly uint TulipHashKey = (uint)GetHashKey("deviant");
+        internal static readonly uint TulipHashKey = (uint)GetHashKey("dominator8");
     }
 }
