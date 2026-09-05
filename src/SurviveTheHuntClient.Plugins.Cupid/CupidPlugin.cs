@@ -389,7 +389,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             SetScene(DirectedScene.IntroJason);
 
             BleedoutController.Enabled = true;
-            BleedoutController.Reset();
+            BleedoutController.Reset(State.LocalRole == PlayerType.Cop ? Teams.Team.Hunters : Teams.Team.Hunted);
 
             if(JobManager != null)
             {

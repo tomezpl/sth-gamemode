@@ -2,6 +2,8 @@
 using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Models.UI;
+using SurviveTheHuntClient.Plugins.Cupid.Utils;
+using SurviveTheHuntShared.Core;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 
@@ -16,6 +18,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
         {
             ChangeGameModeSetting = changeGameModeSetting;
             TriggerServerEventProxy = triggerServerEventProxy;
+
+            _uiState = new BleedoutUIState(MaxBleedoutTimeSeconds);
         }
 
         private bool _wasDyingLastTick = false;
@@ -43,7 +47,22 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 
         private float _elapsedBleedoutTime = 0f;
 
-        internal const float MaxBleedoutTimeSeconds = 10f;
+        internal const float MaxBleedoutTimeSecondsHunter = 10f;
+        internal const float MaxBleedoutTimeSecondsHunted = 30f;
+
+        internal float MaxBleedoutTimeSeconds
+        {
+            get
+            {
+                if(_localPlayerTeam == Teams.Team.Hunted)
+                {
+                    return MaxBleedoutTimeSecondsHunted;
+                }
+
+                return MaxBleedoutTimeSecondsHunter;
+            }
+        }
+
         internal const float SecondsToRevive = 2.5f;
 
         private Dictionary<int, float> RevivableTimeRemaining = new Dictionary<int, float>();
@@ -62,19 +81,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             private LabelledItem _reviveProgress = new LabelledItem("REVIVE", 0f, SurviveTheHuntShared.Utils.EncodingHelper.PackRgba(248, 162, 70, 255));
             
             private float _lastProgress = 0f;
-            private uint _lastBleedoutSeconds = (uint)MaxBleedoutTimeSeconds;
+            private uint _lastBleedoutSeconds;
 
             internal bool IsReviving = false;
             internal bool IsBleedingOut = false;
 
             private LabelledItem[] _justBleedoutUI, _bleedoutAndReviveUI, _justReviveUI, _noUI;
 
-            internal BleedoutUIState()
+            internal BleedoutUIState(float maxBleedoutTimeSeconds)
             {
                 _justBleedoutUI = new LabelledItem[] { _bleedoutTimer };
                 _bleedoutAndReviveUI = new LabelledItem[] { _bleedoutTimer, _reviveProgress };
                 _justReviveUI = new LabelledItem[] { _reviveProgress };
                 _noUI = new LabelledItem[0];
+
+                _lastBleedoutSeconds = (uint)maxBleedoutTimeSeconds;
             }
 
             internal LabelledItem[] CurrentItems
@@ -116,7 +137,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             }
         }
 
-        internal readonly BleedoutUIState UIState = new BleedoutUIState();
+        private BleedoutUIState _uiState;
+        internal BleedoutUIState UIState => _uiState;
 
         internal void SetRevivable(int pedId, bool revivable)
         {
@@ -159,8 +181,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             }
         }
 
-        internal void Reset()
+        private Teams.Team _localPlayerTeam = Teams.Team.Hunters;
+
+        internal void Reset(Teams.Team localPlayerTeam)
         {
+            _localPlayerTeam = localPlayerTeam;
+
+            _uiState = new BleedoutUIState(MaxBleedoutTimeSeconds);
+
             _bledOutPeds.Clear();
             _elapsedBleedoutTime = 0f;
             _wasDyingLastTick = false;
