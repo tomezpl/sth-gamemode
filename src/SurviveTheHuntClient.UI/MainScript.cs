@@ -11,6 +11,7 @@ using LemonUI.Elements;
 using LemonUI.Tools;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntShared.Models.UI;
+using System.IO;
 
 namespace SurviveTheHuntClient.UI
 {
@@ -25,13 +26,36 @@ namespace SurviveTheHuntClient.UI
         private NativeItem SpawnCarsButton;
         private NativeItem AboutButton;
 
+        private struct ParsedGameModeInfo
+        {
+            internal readonly string Title;
+            internal readonly string Name;
+            internal readonly string Description;
+            internal readonly TimeSpan? Duration;
+            internal readonly ushort HuntedCount;
+
+            internal ParsedGameModeInfo(string name, string title, string description, TimeSpan? duration = null, ushort huntedCount = 1)
+            {
+                if(huntedCount == 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(huntedCount), "Game mode needs to allow for at least 1 hunted.");
+                }
+
+                Name = name;
+                Title = title;
+                Description = description;
+                Duration = duration;
+                HuntedCount = huntedCount;
+            }
+        }
+
         private NativeMenu StartHuntMenu;
         private NativeListItem<string> SelectModeItem;
-        private Dictionary<string, string> ModeDescriptions = new Dictionary<string, string>();
-        private List<string> GameModeNames = new List<string> { "" };
-        private List<string> GameModeTitles = new List<string> { "Default" };
-        private Dictionary<string, TimeSpan> GameModeDuration = new Dictionary<string, TimeSpan>();
-        private NativeListItem<string> SelectPlayerItem;
+        private List<ParsedGameModeInfo> GameModeInfo = new List<ParsedGameModeInfo>
+        {
+            new ParsedGameModeInfo("" ,"Default", "")
+        };
+        private NativeListItem<string>[] SelectPlayerItems = new NativeListItem<string>[0];
         private NativeItem StartHuntButton;
 
         private NativeMenu PlayerMenu;
@@ -231,29 +255,49 @@ namespace SurviveTheHuntClient.UI
         private void UpdateSelectablePlayers()
         {
             SelectablePlayerHandles.Clear();
-            bool menuItemExists = SelectPlayerItem != null;
-            if (menuItemExists)
-            {
-                SelectPlayerItem.Items.Clear();
-            }
-
-            List<string> players = new List<string>(GetNumberOfPlayers() + 1);
-            players.Add(GetLabelText("FMMC_VEH_RAND"));
+            List<string> playerNames = new List<string>(GetNumberOfPlayers() + 1);
+            playerNames.Add(GetLabelText("FMMC_VEH_RAND"));
             SelectablePlayerHandles.Add(-1);
+
             foreach (Player player in Players)
             {
-                players.Add(player.Handle == Game.Player.Handle ? $"{player.Name} (you)" : player.Name);
+                playerNames.Add(player.Handle == Game.Player.Handle ? $"{player.Name} (you)" : player.Name);
                 SelectablePlayerHandles.Add(player.Handle);
             }
 
-            if(!menuItemExists)
+            string[] playerNamesArray = playerNames.ToArray();
+
+            int firstIndex = StartHuntMenu.Items.IndexOf(SelectModeItem) + 1;
+
+            bool needToReAddStartButton = false;
+
+            for (int i = 0; i < SelectPlayerItems.Length; i++)
             {
-                SelectPlayerItem = new NativeListItem<string>("Hunted Player", DefaultSelectPlayerDescription, players.ToArray());
+                NativeListItem<string> selectPlayer = SelectPlayerItems[i];
+                bool menuItemExists = selectPlayer != null;
+                if (menuItemExists)
+                {
+                    selectPlayer.Items.Clear();
+                    selectPlayer.Items = playerNames;
+                    selectPlayer.SelectedIndex = 0;
+                }
+                else
+                {
+                    if (!needToReAddStartButton)
+                    {
+                        needToReAddStartButton = true;
+                        StartHuntMenu.Remove(StartHuntButton);
+                    }
+
+                    SelectPlayerItems[i] = new NativeListItem<string>($"Hunted Player #{i + 1}", DefaultSelectPlayerDescription, playerNamesArray);
+                    StartHuntMenu.Add(SelectPlayerItems[i]);
+                    //StartHuntMenu.Items.Insert(firstIndex++, SelectPlayerItems[i]);
+                }
             }
-            else
+
+            if(needToReAddStartButton)
             {
-                SelectPlayerItem.Items = players;
-                SelectPlayerItem.SelectedIndex = 0;
+                StartHuntMenu.Add(StartHuntButton);
             }
         }
 
@@ -269,7 +313,13 @@ namespace SurviveTheHuntClient.UI
 
         private NativeListItem<string> CreateSelectModeItem()
         {
-            return new NativeListItem<string>("Game mode", GameModeTitles.ToArray());
+            string[] gameModeTitles = new string[GameModeInfo.Count];
+            for(int i = 0; i < gameModeTitles.Length; i++)
+            {
+                gameModeTitles[i] = GameModeInfo[i].Title;
+            }
+
+            return new NativeListItem<string>("Game mode", gameModeTitles);
         }
 
         private void InitUI()
@@ -292,8 +342,8 @@ namespace SurviveTheHuntClient.UI
             StartHuntButton = new NativeItem("Start", "Start a new round of Survive the Hunt with the selected settings.");
             SelectModeItem = CreateSelectModeItem();
             StartHuntMenu.Add(SelectModeItem);
-            StartHuntMenu.Add(SelectPlayerItem);
-            StartHuntMenu.Add(StartHuntButton);
+            UpdateHuntedCount(GameModeInfo[0].HuntedCount, true);
+            //StartHuntMenu.Add(StartHuntButton);
 
             ObjectPool.Add(MainMenu);
             ObjectPool.Add(PlayerMenu);
@@ -340,7 +390,10 @@ namespace SurviveTheHuntClient.UI
 
             MainMenu.Add(AboutButton);
 
-            SelectPlayerItem.ItemChanged += SelectedPlayerChanged;
+            foreach(NativeListItem<string> item in SelectPlayerItems)
+            {
+                item.ItemChanged += SelectedPlayerChanged;
+            }
             SelectModeItem.ItemChanged += SelectedModeChanged;
             StartHuntMenuItem.Activated += OpenedStartHuntMenu;
 
@@ -366,14 +419,26 @@ namespace SurviveTheHuntClient.UI
 
         private void SelectedModeChanged(object sender, ItemChangedEventArgs<string> e)
         {
-            string mode = GameModeNames[e.Index];
-            if(ModeDescriptions.TryGetValue(mode, out string description))
+            ParsedGameModeInfo gameMode = GameModeInfo[e.Index];
+
+            StartHuntMenu.Description = gameMode.Description ?? "";
+
+            UpdateHuntedCount(gameMode.HuntedCount);
+        }
+
+        private void UpdateHuntedCount(int huntedCount, bool force = false)
+        {
+            if (force || huntedCount != SelectPlayerItems.Length)
             {
-                StartHuntMenu.Description = description;
-            }
-            else
-            {
-                StartHuntMenu.Description = "";
+                // Remove old selectors
+                foreach (NativeListItem<string> selectPlayer in SelectPlayerItems)
+                {
+                    StartHuntMenu.Remove(selectPlayer);
+                }
+
+                SelectPlayerItems = new NativeListItem<string>[huntedCount];
+
+                UpdateSelectablePlayers();
             }
         }
 
@@ -435,13 +500,15 @@ namespace SurviveTheHuntClient.UI
 
         private void SelectedPlayerChanged(object sender, ItemChangedEventArgs<string> e)
         {
-            if(SelectablePlayerHandles[SelectPlayerItem.SelectedIndex] == Game.Player.Handle)
+            NativeListItem<string> target = sender as NativeListItem<string>;
+
+            if(SelectablePlayerHandles[e.Index] == Game.Player.Handle)
             {
-                SelectPlayerItem.Description = "Choose yourself as the next hunted player.";
+                target.Description = "Choose yourself as the next hunted player.";
             }
             else
             {
-                SelectPlayerItem.Description = DefaultSelectPlayerDescription;
+                target.Description = DefaultSelectPlayerDescription;
             }
         }
 
@@ -471,21 +538,24 @@ namespace SurviveTheHuntClient.UI
 
         private void StartHuntClicked(object sender, EventArgs e)
         {
-            string modeName = GameModeNames[SelectModeItem.SelectedIndex];
+            string modeName = GameModeInfo[SelectModeItem.SelectedIndex].Name;
 
-            if(!GameModeDuration.TryGetValue(modeName, out TimeSpan huntDuration))
+            TimeSpan? huntDuration = GameModeInfo[SelectModeItem.SelectedIndex].Duration;
+            if (!huntDuration.HasValue)
             {
                 huntDuration = Constants.HuntDuration;
             }
 
-            if (SelectPlayerItem.SelectedIndex != 0)
+            List<int> selectedPlayers = new List<int>(SelectPlayerItems.Length);
+
+            for(int i = 0; i < SelectPlayerItems.Length; i++)
             {
-                TriggerServerEvent(Events.Server.RequestStartHunt, new { Player = GetPlayerServerId(SelectablePlayerHandles[SelectPlayerItem.SelectedIndex]), Mode = modeName, HuntDurationSeconds = Convert.ToInt32(huntDuration.TotalSeconds) });
+                // Pass maximum integer for random
+                selectedPlayers.Add(SelectPlayerItems[i].SelectedIndex == 0 ? int.MaxValue : GetPlayerServerId(SelectablePlayerHandles[SelectPlayerItems[i].SelectedIndex]));
             }
-            else
-            {
-                TriggerServerEvent(Events.Server.RequestStartHunt, new { Mode = modeName, HuntDurationSeconds = Convert.ToInt32(huntDuration.TotalSeconds) } );
-            }
+
+            TriggerServerEvent(Events.Server.RequestStartHunt, new { HuntedPlayers = selectedPlayers, Mode = modeName, HuntDurationSeconds = Convert.ToInt32(huntDuration.Value.TotalSeconds) });
+
             MainMenu.Visible = false;
             StartHuntMenu.Visible = false;
         }
@@ -540,35 +610,40 @@ namespace SurviveTheHuntClient.UI
             Debug.WriteLine($"{nameof(ReceiveExtraGameModes)}, {info.GetType()}");
 
             // Remove all but the default mode
-            if(GameModeNames.Count > 1)
+            if(GameModeInfo.Count > 1)
             {
-                GameModeNames.RemoveRange(1, GameModeNames.Count - 1);
-                GameModeTitles.RemoveRange(1, GameModeTitles.Count - 1);
+                GameModeInfo.RemoveRange(1, GameModeInfo.Count - 1);
             }
 
             Debug.WriteLine($"info count: {info.Count}");
+
+            List<string> newTitles = new List<string>(info.Count + 1);
+            newTitles.Add(GameModeInfo[0].Title);
+
             foreach (string gameModeSerialized in info)
             {
                 Debug.WriteLine(gameModeSerialized);
                 string serializedInfo = gameModeSerialized;
 
-                string huntDurationSecondsString = serializedInfo.Substring(0, serializedInfo.IndexOf('\n'));
-                serializedInfo = serializedInfo.Substring(huntDurationSecondsString.Length + 1);
-                string gameModeName = serializedInfo.Substring(0, serializedInfo.IndexOf('\n'));
-                string titleAndDesc = serializedInfo.Substring(gameModeName.Length + 1);
-                int newlineIndex = titleAndDesc.IndexOf('\n');
-                string gameModeTitle = newlineIndex == -1 ? titleAndDesc : titleAndDesc.Substring(0, newlineIndex);
-                string gameModeDescription = newlineIndex == -1 ? "" : serializedInfo.Substring(newlineIndex + 1);
+                using (StringReader reader = new StringReader(serializedInfo))
+                {
+                    ushort huntedCount = ushort.Parse(reader.ReadLine());
+                    TimeSpan huntDuration = TimeSpan.FromSeconds(int.Parse(reader.ReadLine()));
+                    string gameModeName = reader.ReadLine();
+                    string titleAndDesc = reader.ReadToEnd();
+                    int newlineIndex = titleAndDesc.IndexOf('\n');
+                    string gameModeTitle = newlineIndex == -1 ? titleAndDesc : titleAndDesc.Substring(0, newlineIndex);
+                    string gameModeDescription = newlineIndex == -1 ? "" : titleAndDesc.Substring(newlineIndex + 1);
 
-                GameModeNames.Add(gameModeName);
-                GameModeTitles.Add(gameModeTitle);
-                GameModeDuration[gameModeName] = TimeSpan.FromSeconds(Convert.ToInt32(huntDurationSecondsString));
-                ModeDescriptions[gameModeName] = gameModeDescription;
+                    Debug.WriteLine($"{nameof(gameModeName)} = {gameModeName}, {nameof(gameModeTitle)} = {gameModeTitle}, {nameof(huntedCount)} = {huntedCount}, {nameof(huntDuration)} = {Math.Floor(huntDuration.TotalMinutes)}m{huntDuration.Seconds.ToString().PadLeft(2, '0')}s, {nameof(gameModeDescription)} = {gameModeDescription}");
+                    GameModeInfo.Add(new ParsedGameModeInfo(gameModeName, gameModeTitle, gameModeDescription, huntDuration, huntedCount));
+                    newTitles.Add(gameModeTitle);
+                }
             }
 
             if (SelectModeItem != null)
             {
-                SelectModeItem.Items = GameModeTitles;
+                SelectModeItem.Items = newTitles;
             }
         }
 

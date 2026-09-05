@@ -328,5 +328,7 @@ namespace SurviveTheHuntClient.Models
         {
             get => SurviveTheHuntShared.Constants.HuntDuration;
         }
+
+        public virtual ushort HuntedCount => 1;
     }
 }

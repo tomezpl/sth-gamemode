@@ -405,7 +405,7 @@ namespace SurviveTheHuntClient
                     PluginInfo info = new PluginInfo(plugin);
                     string nameAndTitle = $"{info.Name}\n{info.Title}";
                     string serialised = string.IsNullOrWhiteSpace(info.Description) ? nameAndTitle : $"{nameAndTitle}\n{info.Description}";
-                    serialised = $"{Convert.ToInt32(plugin.HuntDurationOverride.TotalSeconds)}\n{serialised}";
+                    serialised = $"{plugin.HuntedCount}\n{Convert.ToInt32(plugin.HuntDurationOverride.TotalSeconds)}\n{serialised}";
                     gameModeInfo.Add(serialised);
                 }
             }, true);

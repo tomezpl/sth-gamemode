@@ -215,8 +215,32 @@ namespace SurviveTheHuntServer
                             SetConvarReplicated("sth_huntedPingRadius", "200");
                         }
 
+                        List<object> requestedHuntedPlayerServerIds = data.HuntedPlayers;
+
                         // Check if a specific player was requested when the hunt was started.
-                        int? requestedPlayer = null;
+                        int?[] requestedHuntPlayers = new int?[requestedHuntedPlayerServerIds.Count];
+                        
+                        for(int i = 0; i < requestedHuntPlayers.Length; i++)
+                        {
+                            try
+                            {
+                                int? requestedServerId = Convert.ToInt32(requestedHuntedPlayerServerIds[i]);
+                                
+                                // int.MaxValue is reserved for "random"
+                                if(requestedServerId == int.MaxValue)
+                                {
+                                    requestedServerId = null;
+                                }
+
+                                requestedHuntPlayers[i] = requestedServerId;
+                            }
+                            catch
+                            {
+                                requestedHuntPlayers[i] = null;
+                            }
+                        }
+
+                        /*
                         try
                         {
                             requestedPlayer = data.Player as int?;
@@ -224,37 +248,32 @@ namespace SurviveTheHuntServer
                         catch
                         {
                             requestedPlayer = null;
-                        }
+                        }*/
 
                         Player[] randomPlayers = new Player[Utils.Mode.GetHuntedPlayerCount(mode, GetNumPlayerIndices())];
                         
-                        // If a specific player was requested, include them as the first player.
-                        int counter = 0;
-                        if(requestedPlayer != null)
+                        // Choose the requested players, or alternatively pick random if they weren't specified
+                        for(int i = 0; i < randomPlayers.Length; i++)
                         {
-                            foreach(Player player in Players)
+                            int? requestedServerId = requestedHuntPlayers[i];
+
+                            bool hasValue = false;
+                            if(requestedServerId.HasValue)
                             {
-                                if(player.Handle == requestedPlayer.Value.ToString())
+                                foreach(Player player in Players)
                                 {
-                                    randomPlayers[0] = player;
-                                    counter = 1;
-                                    break;
+                                    if(player.Handle == $"{requestedServerId.Value}")
+                                    {
+                                        hasValue = true;
+                                        randomPlayers[i] = player;
+                                        break;
+                                    }
                                 }
                             }
-                        }
 
-                        if(randomPlayers.Length != 1)
-                        {
-                            for(; counter < randomPlayers.Length; counter++)
+                            if(!hasValue)
                             {
-                                randomPlayers[counter] = Hunt.ChooseRandomPlayer(Players, randomPlayers, ref GameState);
-                            }
-                        }
-                        else
-                        {
-                            if(randomPlayers[0] == null)
-                            {
-                                randomPlayers[0] = Hunt.ChooseRandomPlayer(Players, ref GameState);
+                                randomPlayers[i] = Hunt.ChooseRandomPlayer(Players, randomPlayers, ref GameState);
                             }
                         }
 

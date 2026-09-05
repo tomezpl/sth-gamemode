@@ -962,8 +962,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         public sealed override TimeSpan HuntDurationOverride
         {
-            // TODO: this needs to be 36 min
-            get => TimeSpan.FromMinutes(10);
+            get => TimeSpan.FromMinutes(36);
         }
+
+        public sealed override ushort HuntedCount => 2;
     }
 }

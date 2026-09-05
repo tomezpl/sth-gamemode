@@ -58,5 +58,7 @@ namespace SurviveTheHuntClient.Interfaces
         bool CanPedBlipBeDeleted(int pedHandle);
 
         TimeSpan HuntDurationOverride { get; }
+
+        ushort HuntedCount { get; }
     }
 }
