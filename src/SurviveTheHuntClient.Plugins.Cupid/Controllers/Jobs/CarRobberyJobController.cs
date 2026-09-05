@@ -1051,7 +1051,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 if (GetTruckDoorCoord(out Vector3 doorCoord))
                 {
-                    DrawMarker((int)MarkerType.DebugSphere, doorCoord.X, doorCoord.Y, doorCoord.Z, 0f, 0f, 0f, 0f, 0f, 0f, HitRadius, HitRadius, HitRadius, 255, 32, 32, 192, false, true, 2, false, null, null, false);
+                    //DrawMarker((int)MarkerType.DebugSphere, doorCoord.X, doorCoord.Y, doorCoord.Z, 0f, 0f, 0f, 0f, 0f, 0f, HitRadius, HitRadius, HitRadius, 255, 32, 32, 192, false, true, 2, false, null, null, false);
                     if (IsBulletInArea(doorCoord.X, doorCoord.Y, doorCoord.Z, HitRadius, false))
                     {
                         _state.Stage = JobState.JobStage.ShootingDoors + 1;
