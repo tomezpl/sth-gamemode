@@ -1354,10 +1354,17 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                         if(i != (uint)PedComponents.Hair && i != (uint)PedComponents.Head)
                         {
                             int drawable = -1;
-                            // FIXME: need to use something else here, doesn't seem to sync properly
                             if(i == (uint)PedComponents.Torso || i == (uint)PedComponents.Legs)
                             {
                                 drawable = i == (uint)PedComponents.Legs && isMale ? 14 : 15;
+                            }
+                            if(i == (uint)PedComponents.Special2)
+                            {
+                                drawable = isMale ? 15 : 14;
+                            }
+                            if(i == (uint)PedComponents.Torso2)
+                            {
+                                drawable = 15;
                             }
                             if(i == (uint)PedComponents.Shoes)
                             {
