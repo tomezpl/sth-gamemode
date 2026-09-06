@@ -1076,6 +1076,9 @@ namespace SurviveTheHuntClient
                     break;
             }
 
+            // Reset loadout to default
+            PlayerState.LoadoutIndex = 0;
+
             PlayerState.TakeAwayWeapons(playerPed);
             AmmoCheckTimer = 0;
 
