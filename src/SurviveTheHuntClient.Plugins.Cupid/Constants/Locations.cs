@@ -10,12 +10,24 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         {
             internal static class RobberyJob
             {
-                internal static Vector3 FleecaLegion => new Vector3(152.26f, -1034.67f, 29.15f);
+                internal static Vector4 FleecaLegion => new Vector4(151.56f, -1036.936f, 28.25f, 137.2f);
 
                 internal static Vector3 FleecaRockford => new Vector3(-1216.75f, -322.44f, 36.3f);
                 internal static Vector3 FleecaRockfordObjective => new Vector3(-1210.809f, -336.4966f, 36.38103f);
 
-                internal static Vector3 FleecaChumash => new Vector3(-2967.11f, 483f, 14.08f);
+                internal static Vector4 FleecaChumash => new Vector4(-2967.11f, 483f, 14.08f, 262f);
+
+                internal static Vector4 ConvenienceSandy => new Vector4(1966.389f, 3739.121f, 30.93134f, 28.22922f);
+
+                internal static Vector4 ConvenienceLitSeoul => new Vector4(-710.96f, -916.9661f, 19.2142f, 326.4774f);
+
+                internal static Vector4 ConvenienceHarmony => new Vector4(1166.5f, 2703.14f, 38.17931f, 2.8271f);
+
+                internal static Vector4 FleecaHarmony => new Vector4(1175.372f, 2701.761f, 38.17931f, 341.078f);
+
+                internal static Vector3 BankPaleto => new Vector3(-112.496f, 6460.942f, 31.468f);
+
+                internal static Vector3 BankPaletoObjective => new Vector3(-104.924f, 6476.459f, 31.626f);
             }
 
             internal static class CarRobberyJob
@@ -98,10 +110,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                     carLayout: new CopSpawnInfo.CarPosInfo(origin: PaletoCarOrigin, step: new Vector2(-472.7902f, 6035.144f) - (Vector2)PaletoCarOrigin, end: new Vector3(-483.4076f, 6025.106f, 31.34056f), 224f),
                     copCarModels: new uint[]
                     {
-                        //(uint)VehicleHash.Sheriff,
-                        //(uint)VehicleHash.Sheriff2,
+                        (uint)VehicleHash.Sheriff,
+                        (uint)VehicleHash.Sheriff2,
                         (uint)VehicleHash.Policeb,
-                        //(uint)VehicleHash.Pranger,
+                        (uint)VehicleHash.Pranger,
                     }
                 );
 

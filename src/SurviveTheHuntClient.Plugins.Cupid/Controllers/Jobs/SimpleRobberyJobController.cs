@@ -307,6 +307,27 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             RegisterStrings();
         }
 
+        internal SimpleRobberyJobController(string jobId, JobStateRpcUpdateDelegate updateState, TriggerEventProxyDelegate triggerEvent, RobberyType type, in Vector4 start, float radius = DefaultStartTriggerRadius)
+            : this(jobId, updateState, triggerEvent, type, ((Vector3)start), GetObjectivePosFromStartPosAndAngle(start), radius)
+        {
+        }
+
+        private static Vector3 GetObjectivePosFromStartPosAndAngle(Vector4 spot)
+        {
+            Vector3 pos = (Vector3)spot;
+
+            float headingRad = (spot.W) * ((float)Math.PI / 180f);
+
+            float y = (float)Math.Cos(headingRad);
+            float x = (float)Math.Sin(headingRad) * -1f;
+
+            const float ObjectiveDistance = 10.25f;
+
+            pos += new Vector3(x, y, 0f) * ObjectiveDistance;
+
+            return pos;
+        }
+
         private static bool _registeredStrings = false;
         private static void RegisterStrings()
         {
@@ -551,10 +572,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 {
                     streetName = GetStreetNameFromHashKey(streetNameHash);
                 }
-                // TODO: blips should remain hidden at first, and then this should make them blip forever until the robbery is over
+
                 SetBlipDisplay(_startBlipId, 6);
                 SetBlipFlashes(_startBlipId, true);
-                PhoneTextHelper.SendText(Constants.PhoneContacts.Police, "Robbery", $"We've got reports of a robbery at a Fleeca branch{(streetNameHash != 0 ? $" at {streetName}" : "")}. Location marked.");
+                PhoneTextHelper.SendText(Constants.PhoneContacts.Police, "Robbery", $"We've got reports of a robbery at a {(Type == RobberyType.Bank ? "Fleeca branch" : "24/7 store")}{(streetNameHash != 0 ? $" at {streetName}" : "")}. Location marked.");
             }
         }
 

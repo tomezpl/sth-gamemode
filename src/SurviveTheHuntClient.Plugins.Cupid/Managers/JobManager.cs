@@ -19,9 +19,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
         {
             return new JobControllerBase[]
             {
-                new SimpleRobberyJobController("fleeca_legion", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaLegion, Constants.Location.RobberyJob.FleecaLegion),
+                new SimpleRobberyJobController("fleeca_legion", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaLegion),
                 new SimpleRobberyJobController("fleeca_rockford", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaRockford, Constants.Location.RobberyJob.FleecaRockfordObjective),
-                new SimpleRobberyJobController("fleeca_chumash", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaChumash, Constants.Location.RobberyJob.FleecaChumash),
+                new SimpleRobberyJobController("fleeca_chumash", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaChumash),
+                new SimpleRobberyJobController("247_sandy", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Store, Constants.Location.RobberyJob.ConvenienceSandy),
+                new SimpleRobberyJobController("247_lsoul", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Store, Constants.Location.RobberyJob.ConvenienceLitSeoul),
+                new SimpleRobberyJobController("247_hrmny", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Store, Constants.Location.RobberyJob.ConvenienceHarmony),
+                new SimpleRobberyJobController("fleeca_hrmny", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaHarmony),
+                new SimpleRobberyJobController("bank_paleto", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.BankPaleto, Constants.Location.RobberyJob.BankPaletoObjective),
 
                 new CarRobberyJobController("car_elysian", syncState, Constants.Location.CarRobberyJob.Elysian, Constants.Location.CarRobberyJob.ElysianHeading, triggerEventProxy),
                 new CarRobberyJobController("car_delperro", syncState, Constants.Location.CarRobberyJob.DelPerro, Constants.Location.CarRobberyJob.DelPerroHeading,  triggerEventProxy),
