@@ -54,8 +54,10 @@ namespace SurviveTheHuntServer.Utils
         {
             int maxHuntedPlayers = GetHuntedPlayerCount(modeName);
 
+            const bool RequireAtLeastOneHunter = true;
+
             // Require at least 1 hunted and 1 hunter. Allow a single hunted to start a hunt if there is no one else on the server.
-            return Math.Max(1, Math.Min(maxHuntedPlayers, playersInSession - 1));
+            return Math.Max(1, Math.Min(maxHuntedPlayers, playersInSession - (RequireAtLeastOneHunter ? 1 : 0)));
         }
     }
 }

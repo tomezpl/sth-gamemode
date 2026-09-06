@@ -1216,7 +1216,8 @@ namespace SurviveTheHuntClient
                             }
                         });
 
-                        if(winningTeamOverride != null)
+                        // a hunted death should always be a loss for the hunted, and can't be overridden - make the override only apply if the winning team is Hunted
+                        if(winningTeam == (int)Teams.Team.Hunted && winningTeamOverride != null)
                         {
                             winningTeam = (int)(winningTeamOverride.Value);
                         }

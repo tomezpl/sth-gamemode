@@ -775,16 +775,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
         {
             get
             {
-                // FIXME: REMOVEE!!!!!!!!!!!!!!!!!!!
-                return Teams.Team.Hunted;
-
                 if(IsActive && GameState != null)
                 {
-                    bool anyHuntedDead = false;
-                    foreach(HuntPlayer huntedPlayer in GameState.Hunt.HuntedPlayers)
-                    {
-                        // TODO: need to check if the players have died - but not through IsPedDeadOrDying as that'll consider bleedout states
-                    }
                     return HeatController.CurrentHeat < (ushort)HeatThresholds.Target ? Teams.Team.Hunters : Teams.Team.Hunted;
                 }
 
