@@ -27,6 +27,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Managers
                 new SimpleRobberyJobController("247_hrmny", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Store, Constants.Location.RobberyJob.ConvenienceHarmony),
                 new SimpleRobberyJobController("fleeca_hrmny", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.FleecaHarmony),
                 new SimpleRobberyJobController("bank_paleto", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Bank, Constants.Location.RobberyJob.BankPaleto, Constants.Location.RobberyJob.BankPaletoObjective),
+                new SimpleRobberyJobController("247_mrngwd", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Store, Constants.Location.RobberyJob.ConvenienceMorningwood),
+                new SimpleRobberyJobController("247_choom", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Store, Constants.Location.RobberyJob.ConvenienceChumash),
+                new SimpleRobberyJobController("247_strbry", syncState, triggerEventProxy, SimpleRobberyJobController.RobberyType.Store, Constants.Location.RobberyJob.ConvenienceStrawberry),
 
                 new CarRobberyJobController("car_elysian", syncState, Constants.Location.CarRobberyJob.Elysian, Constants.Location.CarRobberyJob.ElysianHeading, triggerEventProxy),
                 new CarRobberyJobController("car_delperro", syncState, Constants.Location.CarRobberyJob.DelPerro, Constants.Location.CarRobberyJob.DelPerroHeading,  triggerEventProxy),
