@@ -62,6 +62,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Helpers
                 SetVehicleExtraColours(vehicle, (int)VehicleColor.MetallicRaceYellow, (int)VehicleColor.MetallicBlack);
                 // livery
                 SetVehicleMod(vehicle, 48, 3, false);
+
+                // louvers
+                SetVehicleMod(vehicle, (int)VehicleModType.Roof, 1, false);
             }
         }
 
