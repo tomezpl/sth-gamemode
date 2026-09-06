@@ -248,7 +248,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         internal const float TargetGrabRadius = 3.35f;
         internal const float TargetGrabRadiusSq = TargetGrabRadius * TargetGrabRadius;
 
-        internal const float TargetGrabRate = 0.1f;
+        internal const float TargetGrabRate = 0.065f;
         internal const float TargetGrabInterval = 0.1f;
 
         internal enum RobberyType
