@@ -321,7 +321,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             float y = (float)Math.Cos(headingRad);
             float x = (float)Math.Sin(headingRad) * -1f;
 
-            const float ObjectiveDistance = 10.25f;
+            const float ObjectiveDistance = 11f;
 
             pos += new Vector3(x, y, 0f) * ObjectiveDistance;
 

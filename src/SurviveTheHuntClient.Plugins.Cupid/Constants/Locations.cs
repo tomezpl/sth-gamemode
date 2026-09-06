@@ -19,15 +19,21 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
                 internal static Vector4 ConvenienceSandy => new Vector4(1966.389f, 3739.121f, 30.93134f, 28.22922f);
 
-                internal static Vector4 ConvenienceLitSeoul => new Vector4(-710.96f, -916.9661f, 19.2142f, 326.4774f);
+                internal static Vector4 ConvenienceLitSeoul => new Vector4(-710.64f, -916.983f, 18.2142f, 358.1774f);
 
-                internal static Vector4 ConvenienceHarmony => new Vector4(1166.5f, 2703.14f, 38.17931f, 2.8271f);
+                internal static Vector4 ConvenienceHarmony => new Vector4(1166.5f, 2703.14f, 37.17931f, 2.8271f);
 
-                internal static Vector4 FleecaHarmony => new Vector4(1175.372f, 2701.761f, 38.17931f, 341.078f);
+                internal static Vector4 FleecaHarmony => new Vector4(1175.372f, 2701.761f, 37.17931f, 341.078f);
 
                 internal static Vector3 BankPaleto => new Vector3(-112.496f, 6460.942f, 31.468f);
 
                 internal static Vector3 BankPaletoObjective => new Vector3(-104.924f, 6476.459f, 31.626f);
+
+                internal static Vector4 ConvenienceChumash => new Vector4(-3239.714f, 1004.341f, 11.87006f, 86.8f);
+
+                internal static Vector4 ConvenienceMorningwood => new Vector4(-1491.325f, -383.9049f, 39.13138f, 314.7f);
+
+                internal static Vector4 ConvenienceStrawberry => new Vector4(29.018f, -1349.404f, 28.31248f, 9.664784f);
             }
 
             internal static class CarRobberyJob
