@@ -404,6 +404,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
             {
                 TriggerServerEvent(SurviveTheHuntShared.Events.Server.CupidBroadcastSpecialEvent, Constants.SpecialEvent.BlockCopCarSpawn, _selectedSpawn.SpawnInfo.Name, carSlotIndex);
             }*/
+
+            // Give cops armour
+            SetPedArmour(PlayerPedId(), 100);
         }
 
         private static Vector3 GetSpawnPosForCar(CopSpawnInfo.CarPosInfo carLayout, byte slot, out float heading)

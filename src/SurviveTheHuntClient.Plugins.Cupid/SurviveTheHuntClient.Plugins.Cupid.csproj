@@ -62,6 +62,7 @@
     <Compile Include="Controllers\CellTowerPingController.cs" />
     <Compile Include="Controllers\CopSpawnController.cs" />
     <Compile Include="Controllers\HeatController.cs" />
+    <Compile Include="Controllers\HuntedPassiveHealController.cs" />
     <Compile Include="Controllers\Jobs\CarRobberyJobController.cs" />
     <Compile Include="Controllers\Jobs\JobControllerBase.cs" />
     <Compile Include="Controllers\Jobs\ShipJobController.cs" />

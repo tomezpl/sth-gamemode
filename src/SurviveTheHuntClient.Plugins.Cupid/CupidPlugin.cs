@@ -120,6 +120,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
         private HeliFerryHelper ShipHeliFerryHelper = null;
 
+        private HuntedPassiveHealController HuntedPassiveHealController = null;
+
         private static bool Init()
         {
             if(!s_HasInit)
@@ -434,6 +436,10 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 huntLifecycleListener.OnHuntStarted(gameState, playerState);
             }
+
+            // Give all players armour
+            SetPedArmour(PlayerPedId(), 100);
+            HuntedPassiveHealController = new HuntedPassiveHealController(PlayerId(), GameState.Hunt.HuntedPlayers);
         }
 
         private void OnJobCompleted(ushort heatValue)
@@ -528,9 +534,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid
                 ShipHeliFerryHelper = null;
             }
 
+            HuntedPassiveHealController = null;
+
             // Start the outro scene
-                    PostGameScene = new SceneHandlers.Outro.OutroHuntedWinSceneHandler(gameState.Hunt.WinningTeam == localPlayerTeam, gameState.Hunt.WinningTeam, gameState.Hunt.HuntedPlayers, TriggerEventProxy, TriggerServerEventProxy);
-                    PostGameScene.StartScene(gameState, -1);
+            PostGameScene = new SceneHandlers.Outro.OutroHuntedWinSceneHandler(gameState.Hunt.WinningTeam == localPlayerTeam, gameState.Hunt.WinningTeam, gameState.Hunt.HuntedPlayers, TriggerEventProxy, TriggerServerEventProxy);
+            PostGameScene.StartScene(gameState, -1);
 
             // CopSpawnController may have us frozen
             FreezeEntityPosition(PlayerPedId(), false);
@@ -864,6 +872,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             RepairShopManager.Tick(deltaTime);
             CellTowerPingController?.Tick(deltaTime);
             ShipHeliFerryHelper?.Tick(deltaTime);
+            HuntedPassiveHealController?.Tick(deltaTime);
             TutorialHelper.Instance.Tick(deltaTime);
 
             if(NetworkDoesNetworkIdExist(State.TulipNetId) && NetworkDoesEntityExistWithNetworkId(State.TulipNetId))
