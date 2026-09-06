@@ -179,6 +179,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             {
                 CopSpawnController.Enabled = true;
             }
+
+            TutorialHelper.Instance.Start(PlayerState.Team);
         }
 
         private CopSpawnController CreateCopSpawnController(CopSpawnController old = null)
@@ -862,6 +864,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             RepairShopManager.Tick(deltaTime);
             CellTowerPingController?.Tick(deltaTime);
             ShipHeliFerryHelper?.Tick(deltaTime);
+            TutorialHelper.Instance.Tick(deltaTime);
 
             if(NetworkDoesNetworkIdExist(State.TulipNetId) && NetworkDoesEntityExistWithNetworkId(State.TulipNetId))
             {

@@ -10,13 +10,16 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Models
         internal float Duration;
         internal float RemainingTime;
 
-        internal PendingText(float delay, PhoneContactInfo sender, string subject, string message, float duration = PhoneTextHelper.DefaultMessageDurationSeconds)
+        internal readonly byte Tag;
+
+        internal PendingText(float delay, PhoneContactInfo sender, string subject, string message, float duration = PhoneTextHelper.DefaultMessageDurationSeconds, byte tag = 0)
         {
             Sender = sender;
             Subject = subject;
             Message = message;
             Duration = duration;
             RemainingTime = delay;
+            Tag = tag;
         }
     }
 }

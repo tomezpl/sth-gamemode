@@ -561,6 +561,9 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
         private const string PartyDisguisePickUpHelpKey = "STH_CUPID_HELP_HUNTED_DISGUISE";
         private const string PartyDisguisePickUpHelpText = "Press ~INPUT_CONTEXT~ to put on some party clothing.";
 
+        private const string DisguiseWarningHelpTextKey = "STH_CUPID_HELP_HUNTED_DISGUISEWARN";
+        private const string DisguiseWarningHelpTextContent = "You and your teammate need to head to a Clothing Store ~BLIP_CLOTHES_STORE~ to obtain a disguise for the party. You will only have access to a pistol until the end of the match.";
+
         private static bool Init()
         {
             if(!s_HasDoneInit)
@@ -577,6 +580,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 AddTextEntry(PartyDisguiseBlipNameKey, PartyDisguiseBlipNameContent);
                 AddTextEntry(PartyDisguisePickUpHelpKey, PartyDisguisePickUpHelpText);
                 AddTextEntry(HunterObjectiveTextKey, HunterObjectiveTextLabel);
+                AddTextEntry(DisguiseWarningHelpTextKey, DisguiseWarningHelpTextContent);
 
                 foreach (KeyValuePair<string, string> label in s_ObjectiveText.Values)
                 {
@@ -754,6 +758,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 TrySendTextAboutDisguisesReady();
             }
+        }
+
+        private enum SpecialTextTag
+        {
+            DisguiseWarning = 1,
         }
 
         private bool _hasSentTextAboutDisguisesReady = false;
@@ -1017,7 +1026,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 {
                     if (PlayerState.Team == SurviveTheHuntShared.Core.Teams.Team.Hunted)
                     {
-                        _pendingTexts.Add(new PendingText(7.5f + (float)s_RNG.NextDouble() * 20f, Constants.PhoneContacts.Esther, "jammers", "oh btw. LSPD probs headed your way. watch out for signal trackers"));
+                        _pendingTexts.Add(new PendingText(7.5f + (float)s_RNG.NextDouble() * 20f, Constants.PhoneContacts.Esther, "trackers", "oh btw. LSPD probs headed your way. watch out for signal trackers"));
                     }
                     else
                     {
@@ -1595,7 +1604,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
             {
                 if (isHunted)
                 {
-                    _pendingTexts.Add(new PendingText(40f, PhoneContacts.Esther, "a job", "hey lovebirds. heard of the party at the Dignity? dress up and head there. i'll be in touch"));
+                    _pendingTexts.Add(new PendingText(40f, PhoneContacts.Esther, "a job", "hey lovebirds. heard of the party at the Dignity? dress up and head there. i'll be in touch", tag: (byte)SpecialTextTag.DisguiseWarning));
                 }
             }
 
@@ -1772,6 +1781,22 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers.Jobs
                 PendingText pendingText = _pendingTexts[pendingTextToProcess];
                 _pendingTexts.RemoveAt(pendingTextToProcess);
                 PhoneTextHelper.SendText(pendingText.Sender, pendingText.Subject, pendingText.Message, pendingText.Duration);
+
+                if(pendingText.Tag != 0)
+                {
+                    OnSpecialTextSent(pendingText.Tag);
+                }
+            }
+        }
+
+        private void OnSpecialTextSent(byte tag)
+        {
+            switch(tag)
+            {
+                case (byte)SpecialTextTag.DisguiseWarning:
+                    BeginTextCommandDisplayHelp(DisguiseWarningHelpTextKey);
+                    EndTextCommandDisplayHelp(0, false, true, 15000);
+                    break;
             }
         }
 

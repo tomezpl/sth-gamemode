@@ -74,6 +74,7 @@
     <Compile Include="Helpers\MinimapHelper.cs" />
     <Compile Include="Helpers\PhoneTextHelper.cs" />
     <Compile Include="Helpers\ShipPedSpawnHelper.cs" />
+    <Compile Include="Helpers\TutorialHelper.cs" />
     <Compile Include="Helpers\UIMenuHelper.cs" />
     <Compile Include="Interfaces\IDisguiseEmitter.cs" />
     <Compile Include="Interfaces\IDisguiseListener.cs" />
