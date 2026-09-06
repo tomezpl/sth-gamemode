@@ -641,19 +641,20 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
 
                     if (playerType != PlayerType.Cop)
                     {
-                        SetEntityCoords(state.Car2, Constants.Car2X, Constants.Car2Y, Constants.Car2Z, false, false, false, true);
-                        Debug.WriteLine($"{nameof(IntroJ2Handler)}.{nameof(Tickers)}.{nameof(DriveTogether)}: setting local player {playerType} into seat. car handle is {state.Car2}, exists: {DoesEntityExist(state.Car2)}, is vehicle: {IsEntityAVehicle(state.Car2)}");
+                        int car = NetToVeh(state.Car2NetId);
+                        SetEntityCoords(car, Constants.Car2X, Constants.Car2Y, Constants.Car2Z, false, false, false, true);
+                        Debug.WriteLine($"{nameof(IntroJ2Handler)}.{nameof(Tickers)}.{nameof(DriveTogether)}: setting local player {playerType} into seat. car handle is {car}, exists: {DoesEntityExist(car)}, is vehicle: {IsEntityAVehicle(car)}");
                         // prevent shuffling into driver seat
                         SetPedConfigFlag(playerPed, 184, true);
-                        SetPedIntoVehicle(playerPed, state.Car2, state.LocalPlayerType == PlayerType.HuntedJ ? -1 : 0);
-                        SetVehicleRadioEnabled(state.Car2, false);
-                        FreezeEntityPosition(state.Car2, false);
+                        SetPedIntoVehicle(playerPed, car, state.LocalPlayerType == PlayerType.HuntedJ ? -1 : 0);
+                        SetVehicleRadioEnabled(car, false);
+                        FreezeEntityPosition(car, false);
                         
                         if(playerType == PlayerType.HuntedJ)
                         {
                             const float carDestX = 2821.6f, carDestY = 4383.233f, carDestZ = 48.84974f, carDestHeading = 22.7f;
-                            SetVehicleForwardSpeed(state.Car2, 27.5f);
-                            TaskVehicleDriveToCoord(playerPed, state.Car2, carDestX, carDestY, carDestZ, 75f, 1, (uint)_carHash2, 5 | 32, 1f, 1f);
+                            SetVehicleForwardSpeed(car, 27.5f);
+                            TaskVehicleDriveToCoord(playerPed, car, carDestX, carDestY, carDestZ, 75f, 1, (uint)_carHash2, 5 | 32, 1f, 1f);
                             //TaskVehicleDriveWander(playerPed, state.Car2, 15f, 0);
                         }
                     }
@@ -774,6 +775,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                 if (NetworkDoesEntityExistWithNetworkId(netId))
                 {
                     CurrentState.Car2 = NetToVeh(netId);
+                    SetEntityAsMissionEntity(CurrentState.Car2, true, true);
                 }
                 CurrentState.Car2NetId = netId;
             }
@@ -874,7 +876,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Intro
                     {
                         CurrentState.Car2 = CreateVehicle((uint)_carHash2, Constants.Car2X, Constants.Car2Y, Constants.Car2Z, Constants.Car2Heading, true, true);
                         FreezeEntityPosition(CurrentState.Car2, true);
-                        TriggerServerEventProxy(SurviveTheHuntShared.Events.Server.NotifyNetEntity, NetworkGetNetworkIdFromEntity(CurrentState.Car2), TulipNetEntName);
+                        TriggerServerEventProxy(SurviveTheHuntShared.Events.Server.NotifyNetEntity, VehToNet(CurrentState.Car2), TulipNetEntName);
                         CarModHelper.ApplyModsForSpecialSpawnedCar(CurrentState.Car2, (uint)_carHash2);
                     }
                 }
