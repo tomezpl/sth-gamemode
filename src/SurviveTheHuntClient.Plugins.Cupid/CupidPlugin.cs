@@ -527,13 +527,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid
             }
 
             // Start the outro scene
-            switch(gameState.Hunt.WinningTeam)
-            {
-                case Teams.Team.Hunted:
-                    PostGameScene = new SceneHandlers.Outro.OutroHuntedWinSceneHandler(gameState.Hunt.WinningTeam == localPlayerTeam, gameState.Hunt.HuntedPlayers, TriggerEventProxy, TriggerServerEventProxy);
+                    PostGameScene = new SceneHandlers.Outro.OutroHuntedWinSceneHandler(gameState.Hunt.WinningTeam == localPlayerTeam, gameState.Hunt.WinningTeam, gameState.Hunt.HuntedPlayers, TriggerEventProxy, TriggerServerEventProxy);
                     PostGameScene.StartScene(gameState, -1);
-                    break;
-            }
 
             // CopSpawnController may have us frozen
             FreezeEntityPosition(PlayerPedId(), false);

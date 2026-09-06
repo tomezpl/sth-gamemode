@@ -1,7 +1,9 @@
-﻿using SurviveTheHuntClient.Interfaces;
+﻿using CitizenFX.Core;
+using SurviveTheHuntClient.Interfaces;
 using SurviveTheHuntClient.Models;
 using SurviveTheHuntClient.Plugins.Cupid.Helpers;
 using SurviveTheHuntClient.Plugins.Cupid.Utils;
+using SurviveTheHuntShared.Core;
 using System;
 using static CitizenFX.Core.Native.API;
 
@@ -9,8 +11,12 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Outro
 {
     internal class OutroHuntedWinSceneHandler : SceneHandlerBase<OutroHuntedWinSceneHandler.SceneStage, OutroHuntedWinSceneHandler.Tickers, OutroHuntedWinSceneHandler.State>
     {
-        internal OutroHuntedWinSceneHandler(bool isWinner, HuntPlayer[] huntedPlayers, TriggerEventProxyDelegate triggerEventProxyDelegate, TriggerServerEventProxyDelegate triggerServerEventProxyDelegate) : base(triggerEventProxyDelegate, triggerServerEventProxyDelegate)
+        private readonly uint VehicleToSpawn;
+
+        internal OutroHuntedWinSceneHandler(bool isWinner, Teams.Team winningTeam, HuntPlayer[] huntedPlayers, TriggerEventProxyDelegate triggerEventProxyDelegate, TriggerServerEventProxyDelegate triggerServerEventProxyDelegate) : base(triggerEventProxyDelegate, triggerServerEventProxyDelegate)
         {
+            VehicleToSpawn = winningTeam == Teams.Team.Hunters ? (uint)VehicleHash.PoliceT : Constants.TulipHashKey;
+
             CurrentState.JPlayer = huntedPlayers[0].PlayerHandle;
             if(huntedPlayers.Length >= 2)
             {
@@ -19,6 +25,8 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Outro
 
             CurrentState.AVControllerHelper = AVControllerHelper;
             CurrentState.Winner = isWinner;
+
+            CurrentState.Handler = this;
         }
 
         internal enum SceneStage
@@ -75,13 +83,13 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Outro
 
                 RequestCollisionAtCoord(DrivingStartX, DrivingStartY, DrivingStartZ);
 
-                if(!HasModelLoaded(Constants.TulipHashKey))
+                if(!HasModelLoaded(state.Handler.VehicleToSpawn))
                 {
-                    RequestModel(Constants.TulipHashKey);
+                    RequestModel(state.Handler.VehicleToSpawn);
                 }
                 else
                 {
-                    state.Car = CreateVehicle(Constants.TulipHashKey, DrivingStartX, DrivingStartY, DrivingStartZ, DrivingStartHeading, false, false);
+                    state.Car = CreateVehicle(state.Handler.VehicleToSpawn, DrivingStartX, DrivingStartY, DrivingStartZ, DrivingStartHeading, false, false);
                     SetVehicleEngineOn(state.Car, true, true, false);
                     SetPedIntoVehicle(state.JPed, state.Car, -1);
                     if(state.LPed != 0)
@@ -89,8 +97,14 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Outro
                         SetPedIntoVehicle(state.LPed, state.Car, 0);
                     }
                     SetVehicleForwardSpeed(state.Car, 5f);
-                    TaskVehicleDriveToCoord(state.JPed, state.Car, DrivingEndX, DrivingEndY, DrivingEndZ, 100f, 0, Constants.TulipHashKey, 0, 0.2f, 1f);
+                    TaskVehicleDriveToCoord(state.JPed, state.Car, DrivingEndX, DrivingEndY, DrivingEndZ, 100f, 0, state.Handler.VehicleToSpawn, 0, 0.2f, 1f);
                     state.CurrentStageTime = state.CurrentStageDuration;
+
+                    // cop car
+                    if(state.Handler.VehicleToSpawn != Constants.TulipHashKey)
+                    {
+                        SetVehicleSiren(state.Car, true);
+                    }
                 }
             }
 
@@ -192,6 +206,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Outro
 
             internal AVControllerHelper AVControllerHelper = null;
             internal bool Winner = false;
+            internal OutroHuntedWinSceneHandler Handler = null;
         }
     }
 }
