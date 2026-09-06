@@ -439,7 +439,11 @@ namespace SurviveTheHuntClient.Plugins.Cupid
 
             // Give all players armour
             SetPedArmour(PlayerPedId(), 100);
-            HuntedPassiveHealController = new HuntedPassiveHealController(PlayerId(), GameState.Hunt.HuntedPlayers);
+
+            if (State.LocalRole != PlayerType.Cop)
+            {
+                HuntedPassiveHealController = new HuntedPassiveHealController(PlayerId(), GameState.Hunt.HuntedPlayers);
+            }
         }
 
         private void OnJobCompleted(ushort heatValue)

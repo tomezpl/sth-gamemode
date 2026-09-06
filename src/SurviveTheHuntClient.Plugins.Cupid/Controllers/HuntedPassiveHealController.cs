@@ -12,7 +12,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
         private readonly int[] PlayerIdsToHealFrom;
 
         internal const float HealIntervalSeconds = 3f;
-        internal const int HealRate = 2;
+        internal const int HealRate = 5;
 
         internal const float HealRadius = 4.5f;
         private const float HealRadiusSquared = HealRadius * HealRadius;
@@ -65,7 +65,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.Controllers
 
                                 if (pos.DistanceToSquared(myPos) <= HealRadiusSquared)
                                 {
-                                    SetEntityHealth(playerPed, GetEntityHealth(localPlayerPed) + HealRate);
+                                    SetEntityHealth(localPlayerPed, GetEntityHealth(localPlayerPed) + HealRate);
                                     break;
                                 }
                             }
