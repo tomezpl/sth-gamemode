@@ -15,7 +15,7 @@ namespace SurviveTheHuntClient.Plugins.Cupid.SceneHandlers.Outro
 
         internal OutroHuntedWinSceneHandler(bool isWinner, Teams.Team winningTeam, HuntPlayer[] huntedPlayers, TriggerEventProxyDelegate triggerEventProxyDelegate, TriggerServerEventProxyDelegate triggerServerEventProxyDelegate) : base(triggerEventProxyDelegate, triggerServerEventProxyDelegate)
         {
-            VehicleToSpawn = winningTeam == Teams.Team.Hunters ? (uint)VehicleHash.PoliceT : Constants.TulipHashKey;
+            VehicleToSpawn = winningTeam == Teams.Team.Hunters ? (uint)GetHashKey("policet") : Constants.TulipHashKey;
 
             CurrentState.JPlayer = huntedPlayers[0].PlayerHandle;
             if(huntedPlayers.Length >= 2)
